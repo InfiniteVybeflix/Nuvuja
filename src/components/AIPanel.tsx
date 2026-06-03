@@ -154,81 +154,150 @@ export function AIPanel({
   const [zoom, setZoom] = useState(1);
   const lastTouchDist = useRef<number | null>(null);
 
+  // Panel geometry
   const [panelWidth, setPanelWidth] = useState(384);
   const [panelHeight, setPanelHeight] = useState(0);
   const [panelTop, setPanelTop] = useState(44);
+
+  // Resize state (for UI feedback only — actual logic uses refs)
   const [isResizing, setIsResizing] = useState(false);
   const [resizeDir, setResizeDir] = useState<string | null>(null);
+
+  // Refs for resize math (avoid stale closures)
+  const isResizingRef = useRef(false);
+  const resizeDirRef = useRef<string | null>(null);
   const startXRef = useRef(0);
   const startYRef = useRef(0);
   const startWidthRef = useRef(384);
   const startHeightRef = useRef(0);
   const startTopRef = useRef(44);
 
+  // Init height from viewport
   useEffect(() => {
     const update = () => {
       const h = window.innerHeight - 44;
       setPanelHeight(h);
-      setPanelTop(44);
+      startHeightRef.current = h;
     };
     update();
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
   }, []);
 
+  // Auto-scroll
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [conversations, isLoading]);
 
-  const startResize = useCallback((dir: string) => (e: React.MouseEvent) => {
-    setIsResizing(true);
-    setResizeDir(dir);
-    startXRef.current = e.clientX;
-    startYRef.current = e.clientY;
-    startWidthRef.current = panelWidth;
-    startHeightRef.current = panelHeight;
-    startTopRef.current = panelTop;
-    e.preventDefault();
-    e.stopPropagation();
-  }, [panelWidth, panelHeight, panelTop]);
-
+  // Global resize listeners — always active, uses refs for state
   useEffect(() => {
     const handleMove = (e: MouseEvent) => {
-      if (!isResizing || !resizeDir) return;
+      if (!isResizingRef.current || !resizeDirRef.current) return;
+
       const dx = e.clientX - startXRef.current;
       const dy = e.clientY - startYRef.current;
+      const dir = resizeDirRef.current;
+
       let newW = startWidthRef.current;
       let newH = startHeightRef.current;
       let newT = startTopRef.current;
 
-      if (resizeDir.includes("w")) newW = Math.max(280, Math.min(800, startWidthRef.current - dx));
-      if (resizeDir.includes("e")) newW = Math.max(280, Math.min(800, startWidthRef.current + dx));
-      if (resizeDir.includes("n")) {
+      if (dir.includes("w")) newW = Math.max(280, Math.min(800, startWidthRef.current - dx));
+      if (dir.includes("e")) newW = Math.max(280, Math.min(800, startWidthRef.current + dx));
+      if (dir.includes("n")) {
         newT = Math.max(0, Math.min(window.innerHeight - 200, startTopRef.current + dy));
         newH = Math.max(200, startHeightRef.current - dy);
       }
-      if (resizeDir.includes("s")) newH = Math.max(200, Math.min(window.innerHeight - panelTop, startHeightRef.current + dy));
+      if (dir.includes("s")) {
+        newH = Math.max(200, Math.min(window.innerHeight - panelTop, startHeightRef.current + dy));
+      }
 
       setPanelWidth(newW);
       setPanelHeight(newH);
       setPanelTop(newT);
     };
+
     const handleUp = () => {
+      isResizingRef.current = false;
+      resizeDirRef.current = null;
       setIsResizing(false);
       setResizeDir(null);
     };
-    if (isResizing) {
-      window.addEventListener("mousemove", handleMove);
-      window.addEventListener("mouseup", handleUp);
-    }
+
+    window.addEventListener("mousemove", handleMove);
+    window.addEventListener("mouseup", handleUp);
     return () => {
       window.removeEventListener("mousemove", handleMove);
       window.removeEventListener("mouseup", handleUp);
     };
-  }, [isResizing, resizeDir, panelTop]);
+  }, [panelTop]); // only panelTop needed for s-boundary math
 
+  // Touch resize support
+  useEffect(() => {
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!isResizingRef.current || !resizeDirRef.current || e.touches.length !== 1) return;
+      e.preventDefault();
+      const touch = e.touches[0];
+      const dx = touch.clientX - startXRef.current;
+      const dy = touch.clientY - startYRef.current;
+      const dir = resizeDirRef.current;
+
+      let newW = startWidthRef.current;
+      let newH = startHeightRef.current;
+      let newT = startTopRef.current;
+
+      if (dir.includes("w")) newW = Math.max(280, Math.min(800, startWidthRef.current - dx));
+      if (dir.includes("e")) newW = Math.max(280, Math.min(800, startWidthRef.current + dx));
+      if (dir.includes("n")) {
+        newT = Math.max(0, Math.min(window.innerHeight - 200, startTopRef.current + dy));
+        newH = Math.max(200, startHeightRef.current - dy);
+      }
+      if (dir.includes("s")) {
+        newH = Math.max(200, Math.min(window.innerHeight - panelTop, startHeightRef.current + dy));
+      }
+
+      setPanelWidth(newW);
+      setPanelHeight(newH);
+      setPanelTop(newT);
+    };
+
+    const handleTouchEnd = () => {
+      isResizingRef.current = false;
+      resizeDirRef.current = null;
+      setIsResizing(false);
+      setResizeDir(null);
+    };
+
+    window.addEventListener("touchmove", handleTouchMove, { passive: false });
+    window.addEventListener("touchend", handleTouchEnd);
+    return () => {
+      window.removeEventListener("touchmove", handleTouchMove);
+      window.removeEventListener("touchend", handleTouchEnd);
+    };
+  }, [panelTop]);
+
+  const startResize = useCallback((dir: string) => (e: React.MouseEvent | React.TouchEvent) => {
+    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
+    const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
+
+    isResizingRef.current = true;
+    resizeDirRef.current = dir;
+    startXRef.current = clientX;
+    startYRef.current = clientY;
+    startWidthRef.current = panelWidth;
+    startHeightRef.current = panelHeight;
+    startTopRef.current = panelTop;
+
+    setIsResizing(true);
+    setResizeDir(dir);
+
+    if ("preventDefault" in e) e.preventDefault();
+    if ("stopPropagation" in e) e.stopPropagation();
+  }, [panelWidth, panelHeight, panelTop]);
+
+  // Pinch zoom
   const handleWheel = useCallback((e: React.WheelEvent) => {
     if (e.ctrlKey || e.metaKey) {
       e.preventDefault();
@@ -319,59 +388,93 @@ export function AIPanel({
               isResizing && "select-none"
             )}
           >
-            {/* BOUNDARY INDICATOR OVERLAY — shows when hovering/resizing */}
+            {/* GLOBAL RESIZE OVERLAY — captures mouse even if you leave the handle */}
+            {isResizing && (
+              <div className="fixed inset-0 z-[9999] cursor-none" />
+            )}
+
+            {/* BOUNDARY INDICATOR OVERLAY */}
             <div className={cn(
               "absolute inset-0 pointer-events-none z-[100] border-2 border-dashed transition-opacity duration-200",
-              isResizing ? "border-purple-500/60 opacity-100" : "border-purple-500/0 opacity-0 hover:opacity-100"
+              isResizing ? "border-purple-500/80 opacity-100" : "border-purple-500/0 opacity-0 hover:opacity-100"
             )}>
-              {/* Corner dots */}
               <div className="absolute top-0 left-0 w-3 h-3 bg-purple-500 rounded-full -translate-x-1/2 -translate-y-1/2" />
               <div className="absolute top-0 right-0 w-3 h-3 bg-purple-500 rounded-full translate-x-1/2 -translate-y-1/2" />
               <div className="absolute bottom-0 left-0 w-3 h-3 bg-purple-500 rounded-full -translate-x-1/2 translate-y-1/2" />
               <div className="absolute bottom-0 right-0 w-3 h-3 bg-purple-500 rounded-full translate-x-1/2 translate-y-1/2" />
-              {/* Edge midpoints */}
               <div className="absolute top-0 left-1/2 w-3 h-3 bg-sky-400 rounded-full -translate-x-1/2 -translate-y-1/2" />
               <div className="absolute bottom-0 left-1/2 w-3 h-3 bg-sky-400 rounded-full -translate-x-1/2 translate-y-1/2" />
               <div className="absolute left-0 top-1/2 w-3 h-3 bg-sky-400 rounded-full -translate-x-1/2 -translate-y-1/2" />
               <div className="absolute right-0 top-1/2 w-3 h-3 bg-sky-400 rounded-full translate-x-1/2 -translate-y-1/2" />
-              {/* Dimensions label */}
               <div className="absolute top-2 left-2 bg-purple-500/90 text-white text-[10px] px-2 py-0.5 rounded font-mono">
-                {Math.round(panelWidth)}×{Math.round(panelHeight)}
+                {Math.round(panelWidth)}×{Math.round(panelHeight)} @ {Math.round(panelTop)}px
               </div>
             </div>
 
-            {/* RESIZE HANDLES — 8 directions with visible hit areas */}
+            {/* RESIZE HANDLES — 8 directions, thick hit areas */}
             {/* Top */}
-            <div onMouseDown={startResize("n")} className="absolute top-0 left-6 right-6 h-3 cursor-ns-resize z-40 group">
-              <div className={cn("absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-1 w-12 rounded-full transition-all", isResizing && resizeDir === "n" ? "bg-purple-500 w-20" : "bg-slate-600/0 group-hover:bg-slate-500/50")} />
+            <div
+              onMouseDown={startResize("n")}
+              onTouchStart={startResize("n")}
+              className="absolute top-0 left-8 right-8 h-4 cursor-ns-resize z-50 group flex items-center justify-center"
+            >
+              <div className={cn("h-1 w-16 rounded-full transition-all", isResizing && resizeDir === "n" ? "bg-purple-500 w-24" : "bg-slate-600/0 group-hover:bg-slate-400/60")} />
             </div>
             {/* Bottom */}
-            <div onMouseDown={startResize("s")} className="absolute bottom-0 left-6 right-6 h-3 cursor-ns-resize z-40 group">
-              <div className={cn("absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-1 w-12 rounded-full transition-all", isResizing && resizeDir === "s" ? "bg-purple-500 w-20" : "bg-slate-600/0 group-hover:bg-slate-500/50")} />
+            <div
+              onMouseDown={startResize("s")}
+              onTouchStart={startResize("s")}
+              className="absolute bottom-0 left-8 right-8 h-4 cursor-ns-resize z-50 group flex items-center justify-center"
+            >
+              <div className={cn("h-1 w-16 rounded-full transition-all", isResizing && resizeDir === "s" ? "bg-purple-500 w-24" : "bg-slate-600/0 group-hover:bg-slate-400/60")} />
             </div>
             {/* Left */}
-            <div onMouseDown={startResize("w")} className="absolute top-6 bottom-6 left-0 w-3 cursor-ew-resize z-40 group">
-              <div className={cn("absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1 h-12 rounded-full transition-all", isResizing && resizeDir === "w" ? "bg-purple-500 h-20" : "bg-slate-600/0 group-hover:bg-slate-500/50")} />
+            <div
+              onMouseDown={startResize("w")}
+              onTouchStart={startResize("w")}
+              className="absolute top-8 bottom-8 left-0 w-4 cursor-ew-resize z-50 group flex items-center justify-center"
+            >
+              <div className={cn("w-1 h-16 rounded-full transition-all", isResizing && resizeDir === "w" ? "bg-purple-500 h-24" : "bg-slate-600/0 group-hover:bg-slate-400/60")} />
             </div>
             {/* Right */}
-            <div onMouseDown={startResize("e")} className="absolute top-6 bottom-6 right-0 w-3 cursor-ew-resize z-40 group">
-              <div className={cn("absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1 h-12 rounded-full transition-all", isResizing && resizeDir === "e" ? "bg-purple-500 h-20" : "bg-slate-600/0 group-hover:bg-slate-500/50")} />
+            <div
+              onMouseDown={startResize("e")}
+              onTouchStart={startResize("e")}
+              className="absolute top-8 bottom-8 right-0 w-4 cursor-ew-resize z-50 group flex items-center justify-center"
+            >
+              <div className={cn("w-1 h-16 rounded-full transition-all", isResizing && resizeDir === "e" ? "bg-purple-500 h-24" : "bg-slate-600/0 group-hover:bg-slate-400/60")} />
             </div>
             {/* Top-Left */}
-            <div onMouseDown={startResize("nw")} className="absolute top-0 left-0 w-6 h-6 cursor-nwse-resize z-50 group">
-              <div className={cn("absolute bottom-1 right-1 w-3 h-3 rounded-full transition-all", isResizing && resizeDir === "nw" ? "bg-purple-500 scale-125" : "bg-slate-600/0 group-hover:bg-slate-500/70")} />
+            <div
+              onMouseDown={startResize("nw")}
+              onTouchStart={startResize("nw")}
+              className="absolute top-0 left-0 w-8 h-8 cursor-nwse-resize z-50 flex items-start justify-start p-1"
+            >
+              <div className={cn("w-4 h-4 rounded-full transition-all", isResizing && resizeDir === "nw" ? "bg-purple-500 scale-125" : "bg-slate-600/0 hover:bg-slate-400/70")} />
             </div>
             {/* Top-Right */}
-            <div onMouseDown={startResize("ne")} className="absolute top-0 right-0 w-6 h-6 cursor-nesw-resize z-50 group">
-              <div className={cn("absolute bottom-1 left-1 w-3 h-3 rounded-full transition-all", isResizing && resizeDir === "ne" ? "bg-purple-500 scale-125" : "bg-slate-600/0 group-hover:bg-slate-500/70")} />
+            <div
+              onMouseDown={startResize("ne")}
+              onTouchStart={startResize("ne")}
+              className="absolute top-0 right-0 w-8 h-8 cursor-nesw-resize z-50 flex items-start justify-end p-1"
+            >
+              <div className={cn("w-4 h-4 rounded-full transition-all", isResizing && resizeDir === "ne" ? "bg-purple-500 scale-125" : "bg-slate-600/0 hover:bg-slate-400/70")} />
             </div>
             {/* Bottom-Left */}
-            <div onMouseDown={startResize("sw")} className="absolute bottom-0 left-0 w-6 h-6 cursor-nesw-resize z-50 group">
-              <div className={cn("absolute top-1 right-1 w-3 h-3 rounded-full transition-all", isResizing && resizeDir === "sw" ? "bg-purple-500 scale-125" : "bg-slate-600/0 group-hover:bg-slate-500/70")} />
+            <div
+              onMouseDown={startResize("sw")}
+              onTouchStart={startResize("sw")}
+              className="absolute bottom-0 left-0 w-8 h-8 cursor-nesw-resize z-50 flex items-end justify-start p-1"
+            >
+              <div className={cn("w-4 h-4 rounded-full transition-all", isResizing && resizeDir === "sw" ? "bg-purple-500 scale-125" : "bg-slate-600/0 hover:bg-slate-400/70")} />
             </div>
             {/* Bottom-Right */}
-            <div onMouseDown={startResize("se")} className="absolute bottom-0 right-0 w-6 h-6 cursor-nwse-resize z-50 group">
-              <div className={cn("absolute top-1 left-1 w-3 h-3 rounded-full transition-all", isResizing && resizeDir === "se" ? "bg-purple-500 scale-125" : "bg-slate-600/0 group-hover:bg-slate-500/70")} />
+            <div
+              onMouseDown={startResize("se")}
+              onTouchStart={startResize("se")}
+              className="absolute bottom-0 right-0 w-8 h-8 cursor-nwse-resize z-50 flex items-end justify-end p-1"
+            >
+              <div className={cn("w-4 h-4 rounded-full transition-all", isResizing && resizeDir === "se" ? "bg-purple-500 scale-125" : "bg-slate-600/0 hover:bg-slate-400/70")} />
             </div>
 
             {/* Header */}
