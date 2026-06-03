@@ -32,7 +32,6 @@ interface AIPanelProps {
   onApplyCode: (code: string) => void;
   isOpen: boolean;
   onToggle: () => void;
-  device: string;
 }
 
 function CodeBlock({ code, language, onApply }: { code: string; language: string; onApply?: (code: string) => void }) {
@@ -177,7 +176,7 @@ export function AIPanel({
   onApplyCode,
   isOpen,
   onToggle,
-  device,
+  ,
 }: AIPanelProps) {
   const [input, setInput] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(true);
@@ -219,7 +218,7 @@ export function AIPanel({
     { text: "/generate — Generate new code", icon: Code2, color: "text-purple-400" },
   ];
 
-  const isMobile = device === "mobile";
+  const isMobile =  === "mobile";
 
   return (
     <>
