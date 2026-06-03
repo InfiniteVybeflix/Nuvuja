@@ -149,7 +149,7 @@ export function AIPanel({
   const [input, setInput] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(true);
   const [attachCode, setAttachCode] = useState(false);
-  const scrollRef = useRef<<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const [zoom, setZoom] = useState(1);
   const lastTouchDist = useRef<number | null>(null);
