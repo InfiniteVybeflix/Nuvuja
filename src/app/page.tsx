@@ -214,7 +214,7 @@ export default function Home() {
     setFiles((prev) => toggleFolder(prev, id));
   }, []);
 
-  const handleSendMessage = useCallback(async (message: string, action: string = "chat") => {
+    const handleAddFile = useCallback((parentId: string | null, type: "file" | "folder") => {
     const userMsg: AIConversation = {
       id: generateId(),
       role: "user",
