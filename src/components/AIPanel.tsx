@@ -188,7 +188,7 @@ export function AIPanel({
   const handleSend = () => {
     if (!input.trim() || isLoading) return;
 
-    let action = "chat";
+    let action: "chat" | "review" | "fix" | "explain" | "generate" = "chat";
     let message = input.trim();
 
     if (message.startsWith("/review")) action = "review";
