@@ -40,12 +40,16 @@ export async function POST(req: NextRequest) {
 
     const groq = new Groq({ apiKey });
 
+    // Build content using string concatenation to avoid backtick escaping issues
+    const userContent = "Review this " + language + " code:\n" +
+      "```" + language + "\n" + code + "\n```";
+
     const completion = await groq.chat.completions.create({
       messages: [
         { role: "system", content: REVIEW_PROMPT },
         {
           role: "user",
-          content: `Review this ${language} code:\\`\`\`${language}\n${code}\n\`\`\``,
+          content: userContent,
         },
       ],
       model: process.env.AI_MODEL_PRIMARY || "llama-3.1-70b-versatile",
