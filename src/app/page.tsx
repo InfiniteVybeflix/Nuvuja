@@ -43,6 +43,10 @@ export default function Home() {
   const [isConnected, setIsConnected] = useState(true);
   const [markers, setMarkers] = useState<any[]>([]);
 
+  // Resizable sidebar width (default 220px)
+  const [sidebarWidth, setSidebarWidth] = useState(220);
+  const [isResizing, setIsResizing] = useState(false);
+
   // Initialize
   useEffect(() => {
     const saved = loadWorkspace();
@@ -60,6 +64,25 @@ export default function Home() {
     }, 30000);
     return () => clearInterval(interval);
   }, [files]);
+
+  // Resizing logic
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing) return;
+      const newWidth = Math.max(160, Math.min(400, e.clientX));
+      setSidebarWidth(newWidth);
+    };
+    const handleMouseUp = () => setIsResizing(false);
+
+    if (isResizing) {
+      window.addEventListener("mousemove", handleMouseMove);
+      window.addEventListener("mouseup", handleMouseUp);
+    }
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isResizing]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -276,7 +299,6 @@ export default function Home() {
       setAIStatus("ready");
       setIsConnected(true);
 
-      // Check for editor markers from review
       if (action === "review" && fullContent.includes("###REVIEW_START###")) {
         try {
           const match = fullContent.match(/###REVIEW_START###([\s\S]*?)###REVIEW_END###/);
@@ -300,7 +322,6 @@ export default function Home() {
         }
       }
 
-      // Check for code to apply
       const editorMatch = fullContent.match(/###EDITOR_START###([\s\S]*?)###EDITOR_END###/);
       if (editorMatch) {
         const codeToApply = editorMatch[1].trim();
@@ -373,7 +394,7 @@ export default function Home() {
         onOpenTutorial={() => setShowTutorial(true)}
         onLoadTemplate={handleLoadTemplate}
         onToggleSidebar={() => setShowSidebar(!showSidebar)}
-        onToggleViewMode={() => setViewMode((m) => m === "code" ? "split" : m === "split" ? "preview" : "code")}
+        onSetViewMode={setViewMode}
         theme={theme}
         viewMode={viewMode}
         sidebarOpen={showSidebar}
@@ -382,17 +403,17 @@ export default function Home() {
       />
 
       <div className="flex-1 flex overflow-hidden min-h-0">
-        {/* Sidebar - Collapsible */}
+        {/* Sidebar - Resizable */}
         <AnimatePresence initial={false}>
           {showSidebar && (
             <motion.div
               initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 224, opacity: 1 }}
+              animate={{ width: sidebarWidth, opacity: 1 }}
               exit={{ width: 0, opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="shrink-0 border-r border-slate-800/50 overflow-hidden"
+              className="shrink-0 flex"
             >
-              <div className="w-56 h-full">
+              <div className="w-full h-full overflow-hidden">
                 <FileExplorer
                   files={files}
                   activeFileId={activeTab?.fileId || null}
@@ -403,16 +424,21 @@ export default function Home() {
                   onRenameNode={handleRenameNode}
                 />
               </div>
+              {/* Resize handle */}
+              <div
+                className="w-1 cursor-col-resize hover:bg-purple-500/50 transition-colors shrink-0"
+                onMouseDown={() => setIsResizing(true)}
+              />
             </motion.div>
           )}
         </AnimatePresence>
 
         {/* Main Content Area */}
-        <div className="flex-1 flex min-w-0 min-h-0">
+        <div className="flex-1 flex min-w-0 min-h-0 overflow-hidden">
           {/* Editor */}
           {(viewMode === "code" || viewMode === "split") && (
             <div className={cn(
-              "flex flex-col min-h-0 transition-all duration-300",
+              "flex flex-col min-h-0 overflow-hidden",
               viewMode === "code" ? "flex-1" : "flex-1"
             )}>
               <EditorPanel
@@ -430,7 +456,7 @@ export default function Home() {
           {/* Preview */}
           {(viewMode === "preview" || viewMode === "split") && (
             <div className={cn(
-              "flex flex-col border-l border-slate-800/50 min-h-0 transition-all duration-300",
+              "flex flex-col border-l border-slate-800/50 min-h-0 overflow-hidden",
               viewMode === "preview" ? "flex-1" : "w-[45%] shrink-0"
             )}>
               <Preview
