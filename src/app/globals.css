@@ -101,3 +101,51 @@ body {
 .resizer:hover {
   background: var(--nuvuja-purple);
 }
+
+
+/* Prevent scroll on body, handle in containers */
+html, body {
+  overflow: hidden;
+  height: 100%;
+}
+
+/* Ensure flex children don't overflow */
+.min-h-0 {
+  min-height: 0;
+}
+
+
+/* Prevent scroll on body, handle in containers */
+html, body {
+  overflow: hidden;
+  height: 100%;
+}
+
+/* Ensure flex children don't overflow */
+.min-h-0 {
+  min-height: 0;
+}
+
+
+/* Prevent scroll on body, handle in containers */
+html, body {
+  overflow: hidden;
+  height: 100%;
+}
+
+/* Ensure flex children don't overflow */
+.min-h-0 {
+  min-height: 0;
+}
+
+
+/* Prevent scroll on body, handle in containers */
+html, body {
+  overflow: hidden;
+  height: 100%;
+}
+
+/* Ensure flex children don't overflow */
+.min-h-0 {
+  min-height: 0;
+}
