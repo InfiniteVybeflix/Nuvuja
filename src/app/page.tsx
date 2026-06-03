@@ -176,7 +176,7 @@ export default function Home() {
     URL.revokeObjectURL(url);
   }, [files]);
 
-  const handleAddFile = useCallback((parentId: string | null, type: "file" | "folder") => {
+  const handleSendMessage = useCallback(async (message: string, action: "chat" | "review" | "fix" | "explain" | "generate" = "chat") => {
     const name = type === "file" ? "untitled.txt" : "new-folder";
     const newNode: FileNode = {
       id: generateId(),
