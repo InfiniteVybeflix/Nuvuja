@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Send,
@@ -16,6 +16,10 @@ import {
   Check,
   Trash2,
   Paperclip,
+  X,
+  ZoomIn,
+  ZoomOut,
+  GripVertical,
 } from "lucide-react";
 import { AIConversation } from "@/types";
 import { cn } from "@/lib/utils";
@@ -34,31 +38,22 @@ interface AIPanelProps {
 
 function CodeBlock({ code, language, onApply }: { code: string; language: string; onApply?: (code: string) => void }) {
   const [copied, setCopied] = useState(false);
-
   const handleCopy = () => {
     navigator.clipboard.writeText(code);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
-
   return (
     <div className="my-2 rounded-lg overflow-hidden border border-slate-700/50 bg-slate-950/80">
       <div className="flex items-center justify-between px-2 py-1 bg-slate-900/80 border-b border-slate-800/50">
         <span className="text-[10px] text-slate-500 font-mono">{language}</span>
         <div className="flex gap-1">
           {onApply && (
-            <button
-              onClick={() => onApply(code)}
-              className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors"
-            >
-              <Wand2 size={8} />
-              Apply
+            <button onClick={() => onApply(code)} className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors">
+              <Wand2 size={8} /> Apply
             </button>
           )}
-          <button
-            onClick={handleCopy}
-            className="p-0.5 rounded hover:bg-slate-800 text-slate-500 hover:text-slate-300 transition-colors"
-          >
+          <button onClick={handleCopy} className="p-0.5 rounded hover:bg-slate-800 text-slate-500 hover:text-slate-300 transition-colors">
             {copied ? <Check size={10} /> : <Copy size={10} />}
           </button>
         </div>
@@ -72,7 +67,6 @@ function CodeBlock({ code, language, onApply }: { code: string; language: string
 
 function MessageContent({ content, language, onApplyCode }: { content: string; language: string; onApplyCode?: (code: string) => void }) {
   const parts = content.split(/(```[\w]*\n?[\s\S]*?```)/g);
-
   return (
     <div className="space-y-0.5">
       {parts.map((part, i) => {
@@ -89,16 +83,11 @@ function MessageContent({ content, language, onApplyCode }: { content: string; l
             let processed = line;
             inlineMatch.forEach((match) => {
               const code = match.slice(1, -1);
-              processed = processed.replace(
-                match,
-                `<code class="px-1 py-0.5 rounded bg-slate-800 text-sky-400 text-[11px] font-mono">${code}</code>`
-              );
+              processed = processed.replace(match, `<code class="px-1 py-0.5 rounded bg-slate-800 text-sky-400 text-[11px] font-mono">${code}</code>`);
             });
             return <p key={`${i}-${j}`} className="text-[13px] text-slate-300 leading-relaxed" dangerouslySetInnerHTML={{ __html: processed }} />;
           }
-          if (line.trim()) {
-            return <p key={`${i}-${j}`} className="text-[13px] text-slate-300 leading-relaxed">{line}</p>;
-          }
+          if (line.trim()) return <p key={`${i}-${j}`} className="text-[13px] text-slate-300 leading-relaxed">{line}</p>;
           return null;
         });
       })}
@@ -108,17 +97,11 @@ function MessageContent({ content, language, onApplyCode }: { content: string; l
 
 function ReviewCard({ review }: { review: any }) {
   if (!review || !review.issues) return null;
-
   return (
     <div className="my-2 rounded-lg border border-slate-700/50 bg-slate-950/80 overflow-hidden">
       <div className="px-2 py-1.5 bg-slate-900/80 border-b border-slate-800/50 flex items-center justify-between">
         <span className="text-[10px] font-semibold text-slate-400">Code Review</span>
-        <span className={cn(
-          "text-[10px] font-bold px-1.5 py-0.5 rounded-full",
-          review.score >= 80 ? "bg-emerald-500/20 text-emerald-400" :
-          review.score >= 50 ? "bg-amber-500/20 text-amber-400" :
-          "bg-red-500/20 text-red-400"
-        )}>
+        <span className={cn("text-[10px] font-bold px-1.5 py-0.5 rounded-full", review.score >= 80 ? "bg-emerald-500/20 text-emerald-400" : review.score >= 50 ? "bg-amber-500/20 text-amber-400" : "bg-red-500/20 text-red-400")}>
           {review.score}/100
         </span>
       </div>
@@ -128,21 +111,11 @@ function ReviewCard({ review }: { review: any }) {
           <div className="space-y-1">
             <p className="text-[10px] font-semibold text-slate-500 uppercase">Issues</p>
             {review.issues.map((issue: any, i: number) => (
-              <div key={i} className={cn(
-                "flex items-start gap-1.5 p-1.5 rounded text-[11px]",
-                issue.severity === "error" ? "bg-red-500/10 border border-red-500/20" :
-                issue.severity === "warning" ? "bg-amber-500/10 border border-amber-500/20" :
-                "bg-sky-500/10 border border-sky-500/20"
-              )}>
-                {issue.severity === "error" ? <AlertTriangle size={10} className="text-red-400 shrink-0 mt-0.5" /> :
-                 issue.severity === "warning" ? <AlertTriangle size={10} className="text-amber-400 shrink-0 mt-0.5" /> :
-                 <CheckCircle size={10} className="text-sky-400 shrink-0 mt-0.5" />}
+              <div key={i} className={cn("flex items-start gap-1.5 p-1.5 rounded text-[11px]", issue.severity === "error" ? "bg-red-500/10 border border-red-500/20" : issue.severity === "warning" ? "bg-amber-500/10 border border-amber-500/20" : "bg-sky-500/10 border border-sky-500/20")}>
+                {issue.severity === "error" ? <AlertTriangle size={10} className="text-red-400 shrink-0 mt-0.5" /> : issue.severity === "warning" ? <AlertTriangle size={10} className="text-amber-400 shrink-0 mt-0.5" /> : <CheckCircle size={10} className="text-sky-400 shrink-0 mt-0.5" />}
                 <div>
-                  <span className="text-slate-400">Line {issue.line}:</span>{" "}
-                  <span className="text-slate-300">{issue.message}</span>
-                  {issue.suggestion && (
-                    <p className="text-slate-500 mt-0.5 italic">{issue.suggestion}</p>
-                  )}
+                  <span className="text-slate-400">Line {issue.line}:</span> <span className="text-slate-300">{issue.message}</span>
+                  {issue.suggestion && <p className="text-slate-500 mt-0.5 italic">{issue.suggestion}</p>}
                 </div>
               </div>
             ))}
@@ -153,8 +126,7 @@ function ReviewCard({ review }: { review: any }) {
             <p className="text-[10px] font-semibold text-slate-500 uppercase">Improvements</p>
             {review.improvements.map((imp: string, i: number) => (
               <p key={i} className="text-[11px] text-slate-400 flex items-start gap-1">
-                <Sparkles size={8} className="text-purple-400 shrink-0 mt-0.5" />
-                {imp}
+                <Sparkles size={8} className="text-purple-400 shrink-0 mt-0.5" /> {imp}
               </p>
             ))}
           </div>
@@ -180,18 +152,90 @@ export function AIPanel({
   const [attachCode, setAttachCode] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Zoom state
+  const [zoom, setZoom] = useState(1);
+  const messagesRef = useRef<HTMLDivElement>(null);
+  const lastTouchDist = useRef<number | null>(null);
+
+  // Resizable panel state
+  const [panelWidth, setPanelWidth] = useState(384);
+  const [isResizing, setIsResizing] = useState(false);
+  const startXRef = useRef(0);
+  const startWidthRef = useRef(384);
+
+  // Auto-scroll
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [conversations, isLoading]);
 
+  // Resize handlers
+  const startResize = useCallback((e: React.MouseEvent) => {
+    setIsResizing(true);
+    startXRef.current = e.clientX;
+    startWidthRef.current = panelWidth;
+    e.preventDefault();
+  }, [panelWidth]);
+
+  useEffect(() => {
+    const handleMove = (e: MouseEvent) => {
+      if (!isResizing) return;
+      const delta = startXRef.current - e.clientX;
+      const newWidth = Math.max(280, Math.min(640, startWidthRef.current + delta));
+      setPanelWidth(newWidth);
+    };
+    const handleUp = () => setIsResizing(false);
+    if (isResizing) {
+      window.addEventListener("mousemove", handleMove);
+      window.addEventListener("mouseup", handleUp);
+    }
+    return () => {
+      window.removeEventListener("mousemove", handleMove);
+      window.removeEventListener("mouseup", handleUp);
+    };
+  }, [isResizing]);
+
+  // Pinch zoom handlers
+  const handleWheel = useCallback((e: React.WheelEvent) => {
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -0.05 : 0.05;
+      setZoom((z) => Math.max(0.6, Math.min(1.8, z + delta)));
+    }
+  }, []);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      lastTouchDist.current = dist;
+    }
+  }, []);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length === 2 && lastTouchDist.current !== null) {
+      e.preventDefault();
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      const delta = (dist - lastTouchDist.current) / 300;
+      setZoom((z) => Math.max(0.6, Math.min(1.8, z + delta)));
+      lastTouchDist.current = dist;
+    }
+  }, []);
+
+  const handleTouchEnd = useCallback(() => {
+    lastTouchDist.current = null;
+  }, []);
+
   const handleSend = () => {
     if (!input.trim() || isLoading) return;
-
     let action: "chat" | "review" | "fix" | "explain" | "generate" = "chat";
     let message = input.trim();
-
     if (message.startsWith("/review")) action = "review";
     else if (message.startsWith("/fix")) action = "fix";
     else if (message.startsWith("/explain")) action = "explain";
@@ -200,7 +244,6 @@ export function AIPanel({
     if (attachCode && currentCode) {
       message += "\n\nCurrent file (" + currentLanguage + "):\n```" + currentLanguage + "\n" + currentCode + "\n```";
     }
-
     onSendMessage(message, action);
     setInput("");
     setShowSuggestions(false);
@@ -216,7 +259,7 @@ export function AIPanel({
 
   return (
     <>
-      {/* Toggle Button - Floating */}
+      {/* Floating Toggle Button */}
       <motion.button
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
@@ -235,18 +278,27 @@ export function AIPanel({
         )}
       </motion.button>
 
-      {/* AI Panel - Slide in from right */}
+      {/* AI Panel */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ x: 400, opacity: 0 }}
+            initial={{ x: panelWidth, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
-            exit={{ x: 400, opacity: 0 }}
+            exit={{ x: panelWidth, opacity: 0 }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed top-11 right-0 bottom-0 w-96 z-50 bg-slate-950/95 backdrop-blur-xl border-l border-slate-800/50 flex flex-col shadow-2xl shadow-black/50"
+            style={{ width: panelWidth }}
+            className="fixed top-11 right-0 bottom-0 z-50 bg-slate-950/95 backdrop-blur-xl border-l border-slate-800/50 flex flex-col shadow-2xl shadow-black/50"
           >
+            {/* Resize Handle */}
+            <div
+              onMouseDown={startResize}
+              className="absolute left-0 top-0 bottom-0 w-3 cursor-col-resize z-10 flex items-center justify-center hover:bg-purple-500/20 transition-colors group"
+            >
+              <GripVertical size={14} className="text-slate-600 group-hover:text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
+
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800/50 shrink-0">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800/50 shrink-0 pl-5">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-sky-500/20 to-purple-500/20 flex items-center justify-center border border-purple-500/20">
                   <Bot size={15} className="text-purple-400" />
@@ -256,129 +308,108 @@ export function AIPanel({
                   <span className="text-[10px] text-slate-600 ml-1.5">Nuvuja</span>
                 </div>
               </div>
-              <button
-                onClick={onClearChat}
-                className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-500 hover:text-red-400 transition-colors"
-                title="Clear chat"
-              >
-                <Trash2 size={13} />
-              </button>
+              <div className="flex items-center gap-1">
+                {/* Zoom controls */}
+                <div className="flex items-center gap-0.5 mr-2 bg-slate-900/80 rounded-lg p-0.5 border border-slate-800/50">
+                  <button onClick={() => setZoom((z) => Math.max(0.6, z - 0.1))} className="p-1 rounded hover:bg-slate-800 text-slate-500 hover:text-slate-300 transition-colors" title="Zoom out">
+                    <ZoomOut size={11} />
+                  </button>
+                  <span className="text-[9px] text-slate-500 w-8 text-center">{Math.round(zoom * 100)}%</span>
+                  <button onClick={() => setZoom((z) => Math.min(1.8, z + 0.1))} className="p-1 rounded hover:bg-slate-800 text-slate-500 hover:text-slate-300 transition-colors" title="Zoom in">
+                    <ZoomIn size={11} />
+                  </button>
+                </div>
+                <button onClick={onClearChat} className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-500 hover:text-red-400 transition-colors" title="Clear chat">
+                  <Trash2 size={13} />
+                </button>
+                <button onClick={onToggle} className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-500 hover:text-slate-300 transition-colors" title="Close panel">
+                  <X size={14} />
+                </button>
+              </div>
             </div>
 
-            {/* Messages - Scrollable */}
-            <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
-              {conversations.length === 0 && (
-                <div className="text-center py-12">
-                  <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-purple-500/20 to-sky-500/20 flex items-center justify-center border border-purple-500/10">
-                    <Sparkles size={24} className="text-purple-400" />
+            {/* Messages - Scrollable + Zoomable */}
+            <div
+              ref={scrollRef}
+              onWheel={handleWheel}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+              className="flex-1 overflow-y-auto overflow-x-auto p-4 space-y-4 min-h-0 touch-pan-y"
+            >
+              <div style={{ transform: `scale(${zoom})`, transformOrigin: "top left", width: `${100 / zoom}%`, minHeight: "100%" }}>
+                {conversations.length === 0 && (
+                  <div className="text-center py-12">
+                    <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-purple-500/20 to-sky-500/20 flex items-center justify-center border border-purple-500/10">
+                      <Sparkles size={24} className="text-purple-400" />
+                    </div>
+                    <p className="text-sm text-slate-400 font-medium">ᓄᕙᔭ is ready</p>
+                    <p className="text-xs text-slate-600 mt-1">Ask anything or use commands</p>
                   </div>
-                  <p className="text-sm text-slate-400 font-medium">ᓄᕙᔭ is ready</p>
-                  <p className="text-xs text-slate-600 mt-1">Ask anything or use commands</p>
-                </div>
-              )}
+                )}
 
-              {showSuggestions && conversations.length === 0 && (
-                <div className="space-y-1.5 mt-4">
-                  {suggestions.map((s) => (
-                    <button
-                      key={s.text}
-                      onClick={() => {
-                        setInput(s.text.split(" — ")[0]);
-                        setShowSuggestions(false);
-                      }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs text-left hover:bg-slate-800/50 transition-colors group border border-transparent hover:border-slate-700/50"
-                    >
-                      <s.icon size={14} className={cn(s.color, "shrink-0")} />
-                      <span className="text-slate-400 group-hover:text-slate-300">{s.text}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {conversations.map((conv, i) => (
-                <motion.div
-                  key={conv.id}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.03 }}
-                  className={cn(
-                    "flex gap-2.5",
-                    conv.role === "user" ? "flex-row-reverse" : "flex-row"
-                  )}
-                >
-                  <div className={cn(
-                    "w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5",
-                    conv.role === "user" ? "bg-sky-500/20" : "bg-purple-500/20"
-                  )}>
-                    {conv.role === "user" ? (
-                      <User size={12} className="text-sky-400" />
-                    ) : (
-                      <Bot size={12} className="text-purple-400" />
-                    )}
+                {showSuggestions && conversations.length === 0 && (
+                  <div className="space-y-1.5 mt-4">
+                    {suggestions.map((s) => (
+                      <button
+                        key={s.text}
+                        onClick={() => { setInput(s.text.split(" — ")[0]); setShowSuggestions(false); }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs text-left hover:bg-slate-800/50 transition-colors group border border-transparent hover:border-slate-700/50"
+                      >
+                        <s.icon size={14} className={cn(s.color, "shrink-0")} />
+                        <span className="text-slate-400 group-hover:text-slate-300">{s.text}</span>
+                      </button>
+                    ))}
                   </div>
+                )}
 
-                  <div className={cn(
-                    "flex-1 max-w-[85%]",
-                    conv.role === "user" && "text-right"
-                  )}>
-                    {conv.role === "assistant" && conv.metadata?.action === "review" && conv.content.includes("###REVIEW_START###") ? (
-                      <ReviewCard review={(() => {
-                        try {
-                          const match = conv.content.match(/###REVIEW_START###([\s\S]*?)###REVIEW_END###/);
-                          return match ? JSON.parse(match[1].trim()) : null;
-                        } catch {
-                          return null;
-                        }
-                      })()} />
-                    ) : (
-                      <div className={cn(
-                        "inline-block px-3 py-2 rounded-xl text-left",
-                        conv.role === "user"
-                          ? "bg-sky-500/10 border border-sky-500/20"
-                          : "bg-slate-900/80 border border-slate-700/30"
-                      )}>
-                        <MessageContent
-                          content={conv.content}
-                          language={currentLanguage}
-                          onApplyCode={conv.role === "assistant" ? onApplyCode : undefined}
-                        />
-                      </div>
-                    )}
-
-                    <p className="text-[9px] text-slate-600 mt-1">
-                      {new Date(conv.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                      {conv.metadata?.model && (
-                        <span className="ml-1">{conv.metadata.model}</span>
+                {conversations.map((conv, i) => (
+                  <motion.div
+                    key={conv.id}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.03 }}
+                    className={cn("flex gap-2.5", conv.role === "user" ? "flex-row-reverse" : "flex-row")}
+                  >
+                    <div className={cn("w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5", conv.role === "user" ? "bg-sky-500/20" : "bg-purple-500/20")}>
+                      {conv.role === "user" ? <User size={12} className="text-sky-400" /> : <Bot size={12} className="text-purple-400" />}
+                    </div>
+                    <div className={cn("flex-1 max-w-[85%]", conv.role === "user" && "text-right")}>
+                      {conv.role === "assistant" && conv.metadata?.action === "review" && conv.content.includes("###REVIEW_START###") ? (
+                        <ReviewCard review={(() => {
+                          try {
+                            const match = conv.content.match(/###REVIEW_START###([\s\S]*?)###REVIEW_END###/);
+                            return match ? JSON.parse(match[1].trim()) : null;
+                          } catch { return null; }
+                        })()} />
+                      ) : (
+                        <div className={cn("inline-block px-3 py-2 rounded-xl text-left", conv.role === "user" ? "bg-sky-500/10 border border-sky-500/20" : "bg-slate-900/80 border border-slate-700/30")}>
+                          <MessageContent content={conv.content} language={currentLanguage} onApplyCode={conv.role === "assistant" ? onApplyCode : undefined} />
+                        </div>
                       )}
-                    </p>
-                  </div>
-                </motion.div>
-              ))}
+                      <p className="text-[9px] text-slate-600 mt-1">
+                        {new Date(conv.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                        {conv.metadata?.model && <span className="ml-1">{conv.metadata.model}</span>}
+                      </p>
+                    </div>
+                  </motion.div>
+                ))}
 
-              {isLoading && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="flex items-center gap-2 text-slate-500"
-                >
-                  <Loader2 size={13} className="animate-spin text-purple-400" />
-                  <span className="text-xs">ᓄᕙᔭ is thinking...</span>
-                </motion.div>
-              )}
+                {isLoading && (
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2 text-slate-500">
+                    <Loader2 size={13} className="animate-spin text-purple-400" />
+                    <span className="text-xs">ᓄᕙᔭ is thinking...</span>
+                  </motion.div>
+                )}
+              </div>
             </div>
 
             {/* Input */}
             <div className="p-3 border-t border-slate-800/50 bg-slate-950/50 shrink-0">
-              {/* Attach code toggle */}
               {currentCode && (
                 <button
                   onClick={() => setAttachCode(!attachCode)}
-                  className={cn(
-                    "flex items-center gap-1.5 mb-2 px-2 py-1 rounded-md text-[10px] transition-colors",
-                    attachCode
-                      ? "bg-purple-500/20 text-purple-400 border border-purple-500/30"
-                      : "text-slate-600 hover:text-slate-400 hover:bg-slate-800/50"
-                  )}
+                  className={cn("flex items-center gap-1.5 mb-2 px-2 py-1 rounded-md text-[10px] transition-colors", attachCode ? "bg-purple-500/20 text-purple-400 border border-purple-500/30" : "text-slate-600 hover:text-slate-400 hover:bg-slate-800/50")}
                 >
                   <Paperclip size={10} />
                   {attachCode ? "Code attached" : "Attach current file"}
@@ -398,15 +429,17 @@ export function AIPanel({
                   whileTap={{ scale: 0.95 }}
                   onClick={handleSend}
                   disabled={!input.trim() || isLoading}
-                  className={cn(
-                    "px-4 py-2 rounded-lg transition-all flex items-center justify-center",
-                    input.trim() && !isLoading
-                      ? "bg-gradient-to-r from-sky-500 to-purple-500 text-white hover:opacity-90 shadow-lg shadow-purple-500/25"
-                      : "bg-slate-800 text-slate-600 cursor-not-allowed"
-                  )}
+                  className={cn("px-4 py-2 rounded-lg transition-all flex items-center justify-center", input.trim() && !isLoading ? "bg-gradient-to-r from-sky-500 to-purple-500 text-white hover:opacity-90 shadow-lg shadow-purple-500/25" : "bg-slate-800 text-slate-600 cursor-not-allowed")}
                 >
                   <Send size={14} />
                 </motion.button>
+                <button
+                  onClick={onToggle}
+                  className="px-3 py-2 rounded-lg bg-slate-800 text-slate-500 hover:text-slate-300 hover:bg-slate-700 transition-all"
+                  title="Close chat"
+                >
+                  <X size={14} />
+                </button>
               </div>
               <p className="text-[9px] text-slate-700 mt-1.5 text-center">
                 /review  /fix  /explain  /generate
