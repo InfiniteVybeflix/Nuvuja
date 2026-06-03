@@ -1,0 +1,103 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --nuvuja-bg: #020617;
+  --nuvuja-panel: #0f172a;
+  --nuvuja-surface: #1e293b;
+  --nuvuja-border: #334155;
+  --nuvuja-text: #e2e8f0;
+  --nuvuja-muted: #94a3b8;
+  --nuvuja-accent: #38bdf8;
+  --nuvuja-purple: #a78bfa;
+  --nuvuja-glow: #c084fc;
+  --nuvuja-success: #4ade80;
+  --nuvuja-warning: #fbbf24;
+  --nuvuja-error: #f87171;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #475569 #0f172a;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: var(--nuvuja-bg);
+  color: var(--nuvuja-text);
+  overflow: hidden;
+}
+
+.monaco-editor {
+  border-radius: 8px !important;
+}
+
+.glass-panel {
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.ai-glow {
+  box-shadow: 0 0 20px rgba(192, 132, 252, 0.15), inset 0 0 20px rgba(192, 132, 252, 0.05);
+}
+
+.code-marker-error {
+  background: rgba(248, 113, 113, 0.2);
+  border-bottom: 2px wavy #f87171;
+}
+
+.code-marker-warning {
+  background: rgba(251, 191, 36, 0.2);
+  border-bottom: 2px wavy #fbbf24;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.animate-slide-in {
+  animation: slideIn 0.3s ease-out;
+}
+
+.resizer {
+  width: 4px;
+  cursor: col-resize;
+  background: transparent;
+  transition: background 0.2s;
+}
+
+.resizer:hover {
+  background: var(--nuvuja-purple);
+}
