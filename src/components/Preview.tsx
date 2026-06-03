@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { FileNode } from "@/types";
-import { X, RefreshCw, Maximize2, Minimize2 } from "lucide-react";
+import { X, RefreshCw } from "lucide-react";
 
 interface PreviewProps {
   files: FileNode[];
@@ -111,7 +111,7 @@ export function Preview({ files, onClose, onRefresh, isFullScreen }: PreviewProp
   const iframeKey = useMemo(() => hashString(srcDoc), [srcDoc]);
 
   return (
-    <div className="h-full flex flex-col bg-slate-950 min-h-0">
+    <div className="h-full flex flex-col bg-slate-950 min-h-0 min-w-0">
       <div className="flex items-center justify-between px-3 py-2 bg-slate-900 border-b border-slate-800/50 shrink-0">
         <div className="flex items-center gap-2">
           <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Preview</span>
@@ -137,11 +137,11 @@ export function Preview({ files, onClose, onRefresh, isFullScreen }: PreviewProp
         </div>
       </div>
 
-      <div className="flex-1 bg-white min-h-0 relative">
+      <div className="flex-1 bg-white min-h-0 min-w-0 relative overflow-hidden">
         <iframe
           key={iframeKey}
           srcDoc={srcDoc}
-          className="w-full h-full border-0"
+          className="w-full h-full border-0 absolute inset-0"
           sandbox="allow-scripts"
           title="Preview"
         />
