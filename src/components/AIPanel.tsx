@@ -176,7 +176,6 @@ export function AIPanel({
   onApplyCode,
   isOpen,
   onToggle,
-  ,
 }: AIPanelProps) {
   const [input, setInput] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(true);
