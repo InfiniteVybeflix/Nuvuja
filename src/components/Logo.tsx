@@ -4,56 +4,19 @@ import { motion } from "framer-motion";
 
 export function Logo({ size = 28 }: { size?: number }) {
   return (
-    <motion.svg
-      width={size}
-      height={size}
-      viewBox="0 0 100 100"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
+    <motion.div
       whileHover={{ scale: 1.1, rotate: 5 }}
-      className="cursor-pointer shrink-0"
+      className="cursor-pointer shrink-0 relative"
+      style={{ width: size, height: size }}
     >
-      <defs>
-        <linearGradient id="nuvujaGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#38bdf8" />
-          <stop offset="50%" stopColor="#a78bfa" />
-          <stop offset="100%" stopColor="#c084fc" />
-        </linearGradient>
-        <filter id="glow">
-          <feGaussianBlur stdDeviation="3" result="coloredBlur" />
-          <feMerge>
-            <feMergeNode in="coloredBlur" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
-      </defs>
-      <path
-        d="M20 60 Q30 30 50 35 Q70 40 80 60 Q85 75 70 80 Q50 85 30 80 Q15 75 20 60Z"
-        fill="url(#nuvujaGradient)"
-        filter="url(#glow)"
-        opacity="0.9"
+      <img
+        src="https://i.ibb.co/HLCTPTWm/icon-192.png"
+        alt="Nuvuja"
+        width={size}
+        height={size}
+        className="object-contain drop-shadow-[0_0_10px_rgba(192,132,252,0.5)]"
       />
-      <path
-        d="M25 55 Q35 25 55 30 Q75 35 85 55"
-        stroke="white"
-        strokeWidth="2"
-        strokeLinecap="round"
-        fill="none"
-        opacity="0.6"
-      />
-      <text
-        x="50"
-        y="68"
-        textAnchor="middle"
-        fill="white"
-        fontSize="28"
-        fontFamily="JetBrains Mono, monospace"
-        fontWeight="bold"
-        opacity="0.95"
-      >
-        {"</>"}
-      </text>
-    </motion.svg>
+    </motion.div>
   );
 }
 
