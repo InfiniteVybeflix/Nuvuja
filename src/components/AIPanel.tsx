@@ -149,13 +149,11 @@ export function AIPanel({
   const [input, setInput] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(true);
   const [attachCode, setAttachCode] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<<HTMLDivElement>(null);
 
-  // Zoom state
   const [zoom, setZoom] = useState(1);
   const lastTouchDist = useRef<number | null>(null);
 
-  // Resizable panel state
   const [panelWidth, setPanelWidth] = useState(384);
   const [panelHeight, setPanelHeight] = useState(0);
   const [panelTop, setPanelTop] = useState(44);
@@ -167,7 +165,6 @@ export function AIPanel({
   const startHeightRef = useRef(0);
   const startTopRef = useRef(44);
 
-  // Init height from viewport
   useEffect(() => {
     const update = () => {
       const h = window.innerHeight - 44;
@@ -179,14 +176,12 @@ export function AIPanel({
     return () => window.removeEventListener("resize", update);
   }, []);
 
-  // Auto-scroll
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [conversations, isLoading]);
 
-  // Resize handlers
   const startResize = useCallback((dir: string) => (e: React.MouseEvent) => {
     setIsResizing(true);
     setResizeDir(dir);
@@ -204,7 +199,6 @@ export function AIPanel({
       if (!isResizing || !resizeDir) return;
       const dx = e.clientX - startXRef.current;
       const dy = e.clientY - startYRef.current;
-
       let newW = startWidthRef.current;
       let newH = startHeightRef.current;
       let newT = startTopRef.current;
@@ -235,7 +229,6 @@ export function AIPanel({
     };
   }, [isResizing, resizeDir, panelTop]);
 
-  // Pinch zoom
   const handleWheel = useCallback((e: React.WheelEvent) => {
     if (e.ctrlKey || e.metaKey) {
       e.preventDefault();
@@ -321,25 +314,65 @@ export function AIPanel({
             exit={{ x: panelWidth, opacity: 0 }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
             style={{ top: panelTop, right: 0, width: panelWidth, height: panelHeight }}
-            className="fixed z-50 bg-slate-950/95 backdrop-blur-xl border-l border-slate-800/50 flex flex-col shadow-2xl shadow-black/50"
+            className={cn(
+              "fixed z-50 bg-slate-950/95 backdrop-blur-xl border-l border-slate-800/50 flex flex-col shadow-2xl shadow-black/50",
+              isResizing && "select-none"
+            )}
           >
-            {/* Resize Handles — 8 directions */}
+            {/* BOUNDARY INDICATOR OVERLAY — shows when hovering/resizing */}
+            <div className={cn(
+              "absolute inset-0 pointer-events-none z-[100] border-2 border-dashed transition-opacity duration-200",
+              isResizing ? "border-purple-500/60 opacity-100" : "border-purple-500/0 opacity-0 hover:opacity-100"
+            )}>
+              {/* Corner dots */}
+              <div className="absolute top-0 left-0 w-3 h-3 bg-purple-500 rounded-full -translate-x-1/2 -translate-y-1/2" />
+              <div className="absolute top-0 right-0 w-3 h-3 bg-purple-500 rounded-full translate-x-1/2 -translate-y-1/2" />
+              <div className="absolute bottom-0 left-0 w-3 h-3 bg-purple-500 rounded-full -translate-x-1/2 translate-y-1/2" />
+              <div className="absolute bottom-0 right-0 w-3 h-3 bg-purple-500 rounded-full translate-x-1/2 translate-y-1/2" />
+              {/* Edge midpoints */}
+              <div className="absolute top-0 left-1/2 w-3 h-3 bg-sky-400 rounded-full -translate-x-1/2 -translate-y-1/2" />
+              <div className="absolute bottom-0 left-1/2 w-3 h-3 bg-sky-400 rounded-full -translate-x-1/2 translate-y-1/2" />
+              <div className="absolute left-0 top-1/2 w-3 h-3 bg-sky-400 rounded-full -translate-x-1/2 -translate-y-1/2" />
+              <div className="absolute right-0 top-1/2 w-3 h-3 bg-sky-400 rounded-full translate-x-1/2 -translate-y-1/2" />
+              {/* Dimensions label */}
+              <div className="absolute top-2 left-2 bg-purple-500/90 text-white text-[10px] px-2 py-0.5 rounded font-mono">
+                {Math.round(panelWidth)}×{Math.round(panelHeight)}
+              </div>
+            </div>
+
+            {/* RESIZE HANDLES — 8 directions with visible hit areas */}
             {/* Top */}
-            <div onMouseDown={startResize("n")} className="absolute top-0 left-4 right-4 h-2 cursor-ns-resize z-20 hover:bg-purple-500/20 transition-colors" />
+            <div onMouseDown={startResize("n")} className="absolute top-0 left-6 right-6 h-3 cursor-ns-resize z-40 group">
+              <div className={cn("absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-1 w-12 rounded-full transition-all", isResizing && resizeDir === "n" ? "bg-purple-500 w-20" : "bg-slate-600/0 group-hover:bg-slate-500/50")} />
+            </div>
             {/* Bottom */}
-            <div onMouseDown={startResize("s")} className="absolute bottom-0 left-4 right-4 h-2 cursor-ns-resize z-20 hover:bg-purple-500/20 transition-colors" />
+            <div onMouseDown={startResize("s")} className="absolute bottom-0 left-6 right-6 h-3 cursor-ns-resize z-40 group">
+              <div className={cn("absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-1 w-12 rounded-full transition-all", isResizing && resizeDir === "s" ? "bg-purple-500 w-20" : "bg-slate-600/0 group-hover:bg-slate-500/50")} />
+            </div>
             {/* Left */}
-            <div onMouseDown={startResize("w")} className="absolute top-4 bottom-4 left-0 w-2 cursor-ew-resize z-20 hover:bg-purple-500/20 transition-colors" />
+            <div onMouseDown={startResize("w")} className="absolute top-6 bottom-6 left-0 w-3 cursor-ew-resize z-40 group">
+              <div className={cn("absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1 h-12 rounded-full transition-all", isResizing && resizeDir === "w" ? "bg-purple-500 h-20" : "bg-slate-600/0 group-hover:bg-slate-500/50")} />
+            </div>
             {/* Right */}
-            <div onMouseDown={startResize("e")} className="absolute top-4 bottom-4 right-0 w-2 cursor-ew-resize z-20 hover:bg-purple-500/20 transition-colors" />
+            <div onMouseDown={startResize("e")} className="absolute top-6 bottom-6 right-0 w-3 cursor-ew-resize z-40 group">
+              <div className={cn("absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1 h-12 rounded-full transition-all", isResizing && resizeDir === "e" ? "bg-purple-500 h-20" : "bg-slate-600/0 group-hover:bg-slate-500/50")} />
+            </div>
             {/* Top-Left */}
-            <div onMouseDown={startResize("nw")} className="absolute top-0 left-0 w-4 h-4 cursor-nwse-resize z-30 hover:bg-purple-500/30 transition-colors rounded-br-lg" />
+            <div onMouseDown={startResize("nw")} className="absolute top-0 left-0 w-6 h-6 cursor-nwse-resize z-50 group">
+              <div className={cn("absolute bottom-1 right-1 w-3 h-3 rounded-full transition-all", isResizing && resizeDir === "nw" ? "bg-purple-500 scale-125" : "bg-slate-600/0 group-hover:bg-slate-500/70")} />
+            </div>
             {/* Top-Right */}
-            <div onMouseDown={startResize("ne")} className="absolute top-0 right-0 w-4 h-4 cursor-nesw-resize z-30 hover:bg-purple-500/30 transition-colors rounded-bl-lg" />
+            <div onMouseDown={startResize("ne")} className="absolute top-0 right-0 w-6 h-6 cursor-nesw-resize z-50 group">
+              <div className={cn("absolute bottom-1 left-1 w-3 h-3 rounded-full transition-all", isResizing && resizeDir === "ne" ? "bg-purple-500 scale-125" : "bg-slate-600/0 group-hover:bg-slate-500/70")} />
+            </div>
             {/* Bottom-Left */}
-            <div onMouseDown={startResize("sw")} className="absolute bottom-0 left-0 w-4 h-4 cursor-nesw-resize z-30 hover:bg-purple-500/30 transition-colors rounded-tr-lg" />
+            <div onMouseDown={startResize("sw")} className="absolute bottom-0 left-0 w-6 h-6 cursor-nesw-resize z-50 group">
+              <div className={cn("absolute top-1 right-1 w-3 h-3 rounded-full transition-all", isResizing && resizeDir === "sw" ? "bg-purple-500 scale-125" : "bg-slate-600/0 group-hover:bg-slate-500/70")} />
+            </div>
             {/* Bottom-Right */}
-            <div onMouseDown={startResize("se")} className="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize z-30 hover:bg-purple-500/30 transition-colors rounded-tl-lg" />
+            <div onMouseDown={startResize("se")} className="absolute bottom-0 right-0 w-6 h-6 cursor-nwse-resize z-50 group">
+              <div className={cn("absolute top-1 left-1 w-3 h-3 rounded-full transition-all", isResizing && resizeDir === "se" ? "bg-purple-500 scale-125" : "bg-slate-600/0 group-hover:bg-slate-500/70")} />
+            </div>
 
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800/50 shrink-0">
@@ -353,7 +386,6 @@ export function AIPanel({
                 </div>
               </div>
               <div className="flex items-center gap-1">
-                {/* Zoom controls */}
                 <div className="flex items-center gap-0.5 mr-2 bg-slate-900/80 rounded-lg p-0.5 border border-slate-800/50">
                   <button onClick={() => setZoom((z) => Math.max(0.6, z - 0.1))} className="p-1 rounded hover:bg-slate-800 text-slate-500 hover:text-slate-300 transition-colors" title="Zoom out">
                     <ZoomOut size={11} />
@@ -372,7 +404,7 @@ export function AIPanel({
               </div>
             </div>
 
-            {/* Messages — Scrollable + Zoomable */}
+            {/* Messages */}
             <div
               ref={scrollRef}
               onWheel={handleWheel}
