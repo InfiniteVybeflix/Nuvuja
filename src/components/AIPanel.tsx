@@ -232,8 +232,7 @@ export function AIPanel({
           "right-4 bottom-10"
         )}
       >
-          {isOpen ? "Close" : "ᓄᕙᔭ"}
-        </span>
+        <span>{isOpen ? "Close" : "ᓄᕙᔭ"}</span>
         {!isOpen && conversations.length > 0 && (
           <span className="w-2 h-2 rounded-full bg-white animate-pulse ml-0.5" />
         )}
