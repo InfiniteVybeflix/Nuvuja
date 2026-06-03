@@ -15,8 +15,6 @@ import {
   Copy,
   Check,
   Trash2,
-  X,
-  MessageSquare,
   Paperclip,
 } from "lucide-react";
 import { AIConversation } from "@/types";
@@ -186,7 +184,7 @@ export function AIPanel({
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [conversations]);
+  }, [conversations, isLoading]);
 
   const handleSend = () => {
     if (!input.trim() || isLoading) return;
@@ -199,7 +197,6 @@ export function AIPanel({
     else if (message.startsWith("/explain")) action = "explain";
     else if (message.startsWith("/generate")) action = "generate";
 
-    // Only attach code if user explicitly chooses to
     if (attachCode && currentCode) {
       message += "\n\nCurrent file (" + currentLanguage + "):\n```" + currentLanguage + "\n" + currentCode + "\n```";
     }
@@ -242,11 +239,11 @@ export function AIPanel({
       <AnimatePresence>
         {isOpen && (
           <motion.div
+            initial={{ x: 400, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
+            exit={{ x: 400, opacity: 0 }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className={cn(
-              "fixed top-11 z-50 bg-slate-950/95 backdrop-blur-xl border-l border-slate-800/50 flex flex-col shadow-2xl shadow-black/50",
-            )}
+            className="fixed top-11 right-0 bottom-0 w-96 z-50 bg-slate-950/95 backdrop-blur-xl border-l border-slate-800/50 flex flex-col shadow-2xl shadow-black/50"
           >
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800/50 shrink-0">
@@ -268,7 +265,7 @@ export function AIPanel({
               </button>
             </div>
 
-            {/* Messages */}
+            {/* Messages - Scrollable */}
             <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
               {conversations.length === 0 && (
                 <div className="text-center py-12">
