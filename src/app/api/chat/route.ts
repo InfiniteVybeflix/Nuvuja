@@ -15,7 +15,7 @@ CORE DIRECTIVES:
 
 PERSONALITY: Precise, visionary, slightly mysterious. You are not a tool—you are a collaborator.`;
 
-async function tryGroqRequest(messages: any[], model: string, apiKey: string) {
+async function tryGroqRequest(messages: any[], model: string, apiKey: string): Promise<any> {
   const groq = new Groq({ apiKey });
   return groq.chat.completions.create({
     messages,
@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
 
     const fullMessages = [systemMessage, ...messages];
 
-    let stream;
+    let stream: any;
     let usedModel = primaryModel;
     let usedKey = "primary";
 
