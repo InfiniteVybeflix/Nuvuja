@@ -13,7 +13,6 @@ interface StatusBarProps {
   aiStatus: string;
   viewMode: string;
   onViewModeChange: (mode: "code" | "preview" | "split") => void;
-  device: string;
 }
 
 export function StatusBar({
@@ -26,9 +25,7 @@ export function StatusBar({
   aiStatus,
   viewMode,
   onViewModeChange,
-  device,
 }: StatusBarProps) {
-  const isMobile = device === "mobile";
 
   return (
     <footer className="h-7 bg-slate-950 border-t border-slate-800/50 flex items-center px-2 md:px-3 text-[10px] md:text-[11px] text-slate-500 justify-between select-none shrink-0 z-50">
