@@ -111,7 +111,7 @@ export function EditorPanel({
 
   if (tabs.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-slate-950">
+      <div className="flex-1 flex items-center justify-center bg-slate-950 min-h-0">
         <div className="text-center">
           <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-sky-500/20 to-purple-500/20 flex items-center justify-center">
             <span className="text-3xl">☁️</span>
@@ -124,7 +124,7 @@ export function EditorPanel({
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-slate-950 min-w-0">
+    <div className="flex-1 flex flex-col bg-slate-950 min-w-0 min-h-0 overflow-hidden">
       {/* Tabs */}
       <div className="flex items-center bg-slate-950 border-b border-slate-800/50 overflow-x-auto scrollbar-hide">
         {tabs.map((tab) => (
