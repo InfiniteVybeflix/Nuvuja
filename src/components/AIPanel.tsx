@@ -32,6 +32,7 @@ interface AIPanelProps {
   onApplyCode: (code: string) => void;
   isOpen: boolean;
   onToggle: () => void;
+  device: string;
 }
 
 function CodeBlock({ code, language, onApply }: { code: string; language: string; onApply?: (code: string) => void }) {
@@ -176,6 +177,7 @@ export function AIPanel({
   onApplyCode,
   isOpen,
   onToggle,
+  device,
 }: AIPanelProps) {
   const [input, setInput] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(true);
@@ -217,6 +219,8 @@ export function AIPanel({
     { text: "/generate — Generate new code", icon: Code2, color: "text-purple-400" },
   ];
 
+  const isMobile = device === "mobile";
+
   return (
     <>
       {/* Toggle Button - Floating */}
@@ -225,14 +229,17 @@ export function AIPanel({
         whileTap={{ scale: 0.95 }}
         onClick={onToggle}
         className={cn(
-          "fixed right-4 bottom-10 z-[60] flex items-center gap-2 px-4 py-3 rounded-xl shadow-2xl transition-all",
+          "fixed z-[60] flex items-center gap-2 px-4 py-3 rounded-xl shadow-2xl transition-all",
           isOpen
             ? "bg-slate-800 text-slate-300 border border-slate-700 shadow-black/40"
-            : "bg-gradient-to-r from-sky-500 via-purple-500 to-purple-600 text-white shadow-purple-500/30"
+            : "bg-gradient-to-r from-sky-500 via-purple-500 to-purple-600 text-white shadow-purple-500/30",
+          isMobile ? "right-3 bottom-8 px-3 py-2.5" : "right-4 bottom-10"
         )}
       >
-        {isOpen ? <X size={16} /> : <MessageSquare size={16} />}
-        <span className="text-sm font-semibold">{isOpen ? "Close" : "ᓄᕙᔭ"}</span>
+        {isOpen ? <X size={isMobile ? 14 : 16} /> : <MessageSquare size={isMobile ? 14 : 16} />}
+        <span className={cn("font-semibold", isMobile ? "text-xs" : "text-sm")}>
+          {isOpen ? "Close" : "ᓄᕙᔭ"}
+        </span>
         {!isOpen && conversations.length > 0 && (
           <span className="w-2 h-2 rounded-full bg-white animate-pulse ml-0.5" />
         )}
@@ -242,11 +249,14 @@ export function AIPanel({
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ x: 400, opacity: 0 }}
+            initial={{ x: isMobile ? 320 : 400, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
-            exit={{ x: 400, opacity: 0 }}
+            exit={{ x: isMobile ? 320 : 400, opacity: 0 }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed right-0 top-12 bottom-7 w-[380px] z-50 bg-slate-950/95 backdrop-blur-xl border-l border-slate-800/50 flex flex-col shadow-2xl shadow-black/50"
+            className={cn(
+              "fixed top-11 z-50 bg-slate-950/95 backdrop-blur-xl border-l border-slate-800/50 flex flex-col shadow-2xl shadow-black/50",
+              isMobile ? "right-0 bottom-0 w-full" : "right-0 bottom-7 w-[380px]"
+            )}
           >
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800/50 shrink-0">
