@@ -22,7 +22,7 @@ import { cn } from "@/lib/utils";
 
 interface AIPanelProps {
   conversations: AIConversation[];
-  onSendMessage: (message: string, action?: string) => void;
+  onSendMessage: (message: string, action?: "chat" | "review" | "fix" | "explain" | "generate") => void;
   onClearChat: () => void;
   isLoading: boolean;
   currentCode: string;
