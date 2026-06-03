@@ -16,13 +16,15 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: Readonly<<{
   children: React.ReactNode;
 }>) {
   return (
     <html lang="en" className="dark">
       <head>
         <link rel="manifest" href="/manifest.json" />
+        <link rel="icon" type="image/png" href="/icon-192.png" />
+        <link rel="apple-touch-icon" href="/icon-192.png" />
         <meta name="theme-color" content="#0f172a" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
