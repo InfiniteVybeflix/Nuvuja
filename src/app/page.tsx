@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState, useCallback, useEffect } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import JSZip from "jszip";
 import { FileNode, EditorTab, AIConversation } from "@/types";
-import { generateId, getLanguageFromFilename, debounce } from "@/lib/utils";
+import { generateId, getLanguageFromFilename } from "@/lib/utils";
 import {
   createDefaultWorkspace,
   saveWorkspace,
@@ -34,20 +34,16 @@ export default function Home() {
   const [isAILoading, setIsAILoading] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
+  const [showAI, setShowAI] = useState(false);
   const [theme, setTheme] = useState("nuvuja-dark");
   const [aiStatus, setAIStatus] = useState("ready");
   const [isConnected, setIsConnected] = useState(true);
-  const [cursorPos, setCursorPos] = useState({ line: 1, column: 1 });
   const [markers, setMarkers] = useState<any[]>([]);
-
-  const abortRef = useRef<AbortController | null>(null);
 
   // Initialize
   useEffect(() => {
     const saved = loadWorkspace();
     setFiles(saved);
-
-    // Open index.html by default
     const htmlFile = findFileRecursive(saved, "index.html");
     if (htmlFile) {
       openFile(htmlFile);
@@ -85,7 +81,7 @@ export default function Home() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [showWelcome]);
+  }, [showWelcome, files]);
 
   const findFileRecursive = (fileList: FileNode[], name: string): FileNode | null => {
     for (const f of fileList) {
@@ -100,13 +96,11 @@ export default function Home() {
 
   const openFile = useCallback((file: FileNode) => {
     if (file.type === "folder") return;
-
     const existingTab = tabs.find((t) => t.fileId === file.id);
     if (existingTab) {
       setActiveTabId(existingTab.id);
       return;
     }
-
     const newTab: EditorTab = {
       id: generateId(),
       fileId: file.id,
@@ -115,7 +109,6 @@ export default function Home() {
       content: file.content || "",
       isDirty: false,
     };
-
     setTabs((prev) => [...prev, newTab]);
     setActiveTabId(newTab.id);
   }, [tabs]);
@@ -140,7 +133,6 @@ export default function Home() {
     setTabs((prev) =>
       prev.map((t) => (t.id === tabId ? { ...t, content, isDirty: true } : t))
     );
-
     const tab = tabs.find((t) => t.id === tabId);
     if (tab) {
       setFiles((prev) => updateFileContent(prev, tab.fileId, content));
@@ -154,7 +146,6 @@ export default function Home() {
 
   const handleExport = useCallback(async () => {
     const zip = new JSZip();
-
     const addToZip = (fileList: FileNode[], path: string = "") => {
       for (const file of fileList) {
         if (file.type === "file" && file.content) {
@@ -165,7 +156,6 @@ export default function Home() {
         }
       }
     };
-
     addToZip(files);
     const blob = await zip.generateAsync({ type: "blob" });
     const url = URL.createObjectURL(blob);
@@ -187,9 +177,7 @@ export default function Home() {
       children: type === "folder" ? [] : undefined,
       parentId,
     };
-
     setFiles((prev) => addFileNode(prev, parentId, newNode));
-
     if (type === "file") {
       openFile(newNode);
     }
@@ -198,7 +186,6 @@ export default function Home() {
   const handleDeleteNode = useCallback((id: string) => {
     setFiles((prevFiles) => {
       const newFiles = deleteFileNode(prevFiles, id);
-      // Close tabs for deleted files using the NEW file tree
       setTabs((prevTabs) =>
         prevTabs.filter((t) => findFileById(newFiles, t.fileId) !== null)
       );
@@ -227,14 +214,16 @@ export default function Home() {
     setAIStatus("thinking");
 
     try {
+      const currentMessages = [...conversations, userMsg].map((c) => ({
+        role: c.role,
+        content: c.content,
+      }));
+
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: [...conversations, userMsg].map((c) => ({
-            role: c.role,
-            content: c.content,
-          })),
+          messages: currentMessages,
           action,
         }),
       });
@@ -252,10 +241,8 @@ export default function Home() {
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
-
           const chunk = decoder.decode(value);
           const lines = chunk.split("\n");
-
           for (const line of lines) {
             if (line.startsWith("data: ")) {
               const data = line.slice(6);
@@ -314,7 +301,6 @@ export default function Home() {
       const editorMatch = fullContent.match(/###EDITOR_START###([\s\S]*?)###EDITOR_END###/);
       if (editorMatch) {
         const codeToApply = editorMatch[1].trim();
-        // Use functional update to get current active tab at apply time
         setActiveTabId((currentTabId) => {
           if (currentTabId) {
             handleContentChange(currentTabId, codeToApply);
@@ -337,7 +323,7 @@ export default function Home() {
     } finally {
       setIsAILoading(false);
     }
-  }, [conversations, activeTabId, handleContentChange]);
+  }, [conversations, handleContentChange]);
 
   const handleApplyCode = useCallback((code: string) => {
     if (activeTabId) {
@@ -351,7 +337,6 @@ export default function Home() {
       id: generateId(),
       parentId: undefined,
     }));
-
     setFiles((prev) => [
       ...prev,
       {
@@ -362,16 +347,12 @@ export default function Home() {
         children: newFiles,
       },
     ]);
-
-    // Open first file
     if (newFiles[0]) {
       openFile(newFiles[0]);
     }
   }, [openFile]);
 
   const activeTab = tabs.find((t) => t.id === activeTabId);
-  const activeFile = activeTab ? findFileById(files, activeTab.fileId) : null;
-
   const lineCount = activeTab?.content?.split("\n").length || 0;
   const charCount = activeTab?.content?.length || 0;
 
@@ -394,8 +375,8 @@ export default function Home() {
       />
 
       <div className="flex-1 flex overflow-hidden">
-        {/* File Explorer */}
-        <div className="w-64 shrink-0">
+        {/* File Explorer - Collapsible */}
+        <div className="w-56 shrink-0 bg-slate-950 border-r border-slate-800/50">
           <FileExplorer
             files={files}
             activeFileId={activeTab?.fileId || null}
@@ -407,60 +388,63 @@ export default function Home() {
           />
         </div>
 
-        {/* Editor */}
-        <div className="flex-1 flex min-w-0">
-          <div className="flex-1 flex flex-col min-w-0">
-            <EditorPanel
-              tabs={tabs}
-              activeTabId={activeTabId}
-              onTabChange={handleTabChange}
-              onTabClose={handleTabClose}
-              onContentChange={handleContentChange}
-              theme={theme}
-              markers={markers}
-            />
+        {/* Main Content - Editor + Preview */}
+        <div className="flex-1 flex flex-col min-w-0">
+          {/* Editor */}
+          <div className="flex-1 flex min-h-0">
+            <div className={cn("flex-1 flex flex-col min-w-0 transition-all duration-300", showPreview && "w-1/2")}>
+              <EditorPanel
+                tabs={tabs}
+                activeTabId={activeTabId}
+                onTabChange={handleTabChange}
+                onTabClose={handleTabClose}
+                onContentChange={handleContentChange}
+                theme={theme}
+                markers={markers}
+              />
+            </div>
+
+            {/* Preview - Side by side */}
+            <AnimatePresence>
+              {showPreview && (
+                <motion.div
+                  initial={{ width: 0, opacity: 0 }}
+                  animate={{ width: "50%", opacity: 1 }}
+                  exit={{ width: 0, opacity: 0 }}
+                  transition={{ duration: 0.25 }}
+                  className="border-l border-slate-800/50 overflow-hidden shrink-0"
+                >
+                  <Preview
+                    files={files}
+                    onClose={() => setShowPreview(false)}
+                    onRefresh={() => {}}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
-
-          {/* Preview Panel */}
-          <AnimatePresence>
-            {showPreview && (
-              <motion.div
-                initial={{ width: 0, opacity: 0 }}
-                animate={{ width: "50%", opacity: 1 }}
-                exit={{ width: 0, opacity: 0 }}
-                transition={{ duration: 0.3 }}
-                className="border-l border-slate-800/50 overflow-hidden"
-              >
-                <Preview
-                  files={files}
-                  onClose={() => setShowPreview(false)}
-                  onRefresh={() => {}}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
-        {/* AI Panel */}
-        <div className="w-96 shrink-0">
-          <AIPanel
-            conversations={conversations}
-            onSendMessage={handleSendMessage}
-            onClearChat={() => setConversations([])}
-            isLoading={isAILoading}
-            currentCode={activeTab?.content || ""}
-            currentLanguage={activeTab?.language || "plaintext"}
-            onApplyCode={handleApplyCode}
-          />
         </div>
       </div>
+
+      {/* AI Panel - Floating Overlay */}
+      <AIPanel
+        conversations={conversations}
+        onSendMessage={handleSendMessage}
+        onClearChat={() => setConversations([])}
+        isLoading={isAILoading}
+        currentCode={activeTab?.content || ""}
+        currentLanguage={activeTab?.language || "plaintext"}
+        onApplyCode={handleApplyCode}
+        isOpen={showAI}
+        onToggle={() => setShowAI(!showAI)}
+      />
 
       <StatusBar
         language={activeTab?.language || "plaintext"}
         lineCount={lineCount}
         charCount={charCount}
-        cursorLine={cursorPos.line}
-        cursorColumn={cursorPos.column}
+        cursorLine={1}
+        cursorColumn={1}
         isConnected={isConnected}
         aiStatus={aiStatus}
       />
@@ -468,4 +452,8 @@ export default function Home() {
       <Tutorial isOpen={showTutorial} onClose={() => setShowTutorial(false)} />
     </div>
   );
+}
+
+function cn(...classes: (string | boolean | undefined)[]) {
+  return classes.filter(Boolean).join(" ");
 }
