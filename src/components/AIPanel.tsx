@@ -229,11 +229,9 @@ export function AIPanel({
           isOpen
             ? "bg-slate-800 text-slate-300 border border-slate-700 shadow-black/40"
             : "bg-gradient-to-r from-sky-500 via-purple-500 to-purple-600 text-white shadow-purple-500/30",
-          isMobile ? "right-3 bottom-8 px-3 py-2.5" : "right-4 bottom-10"
+          "right-4 bottom-10"
         )}
       >
-        {isOpen ? <X size={isMobile ? 14 : 16} /> : <MessageSquare size={isMobile ? 14 : 16} />}
-        <span className={cn("font-semibold", isMobile ? "text-xs" : "text-sm")}>
           {isOpen ? "Close" : "ᓄᕙᔭ"}
         </span>
         {!isOpen && conversations.length > 0 && (
@@ -245,13 +243,10 @@ export function AIPanel({
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ x: isMobile ? 320 : 400, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
-            exit={{ x: isMobile ? 320 : 400, opacity: 0 }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
             className={cn(
               "fixed top-11 z-50 bg-slate-950/95 backdrop-blur-xl border-l border-slate-800/50 flex flex-col shadow-2xl shadow-black/50",
-              isMobile ? "right-0 bottom-0 w-full" : "right-0 bottom-7 w-[380px]"
             )}
           >
             {/* Header */}
