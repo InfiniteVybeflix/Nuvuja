@@ -217,8 +217,6 @@ export function AIPanel({
     { text: "/generate — Generate new code", icon: Code2, color: "text-purple-400" },
   ];
 
-  const isMobile =  === "mobile";
-
   return (
     <>
       {/* Toggle Button - Floating */}
