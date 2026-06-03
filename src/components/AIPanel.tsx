@@ -19,7 +19,6 @@ import {
   X,
   ZoomIn,
   ZoomOut,
-  GripVertical,
 } from "lucide-react";
 import { AIConversation } from "@/types";
 import { cn } from "@/lib/utils";
@@ -154,14 +153,31 @@ export function AIPanel({
 
   // Zoom state
   const [zoom, setZoom] = useState(1);
-  const messagesRef = useRef<HTMLDivElement>(null);
   const lastTouchDist = useRef<number | null>(null);
 
   // Resizable panel state
   const [panelWidth, setPanelWidth] = useState(384);
+  const [panelHeight, setPanelHeight] = useState(0);
+  const [panelTop, setPanelTop] = useState(44);
   const [isResizing, setIsResizing] = useState(false);
+  const [resizeDir, setResizeDir] = useState<string | null>(null);
   const startXRef = useRef(0);
+  const startYRef = useRef(0);
   const startWidthRef = useRef(384);
+  const startHeightRef = useRef(0);
+  const startTopRef = useRef(44);
+
+  // Init height from viewport
+  useEffect(() => {
+    const update = () => {
+      const h = window.innerHeight - 44;
+      setPanelHeight(h);
+      setPanelTop(44);
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
 
   // Auto-scroll
   useEffect(() => {
@@ -171,21 +187,44 @@ export function AIPanel({
   }, [conversations, isLoading]);
 
   // Resize handlers
-  const startResize = useCallback((e: React.MouseEvent) => {
+  const startResize = useCallback((dir: string) => (e: React.MouseEvent) => {
     setIsResizing(true);
+    setResizeDir(dir);
     startXRef.current = e.clientX;
+    startYRef.current = e.clientY;
     startWidthRef.current = panelWidth;
+    startHeightRef.current = panelHeight;
+    startTopRef.current = panelTop;
     e.preventDefault();
-  }, [panelWidth]);
+    e.stopPropagation();
+  }, [panelWidth, panelHeight, panelTop]);
 
   useEffect(() => {
     const handleMove = (e: MouseEvent) => {
-      if (!isResizing) return;
-      const delta = startXRef.current - e.clientX;
-      const newWidth = Math.max(280, Math.min(640, startWidthRef.current + delta));
-      setPanelWidth(newWidth);
+      if (!isResizing || !resizeDir) return;
+      const dx = e.clientX - startXRef.current;
+      const dy = e.clientY - startYRef.current;
+
+      let newW = startWidthRef.current;
+      let newH = startHeightRef.current;
+      let newT = startTopRef.current;
+
+      if (resizeDir.includes("w")) newW = Math.max(280, Math.min(800, startWidthRef.current - dx));
+      if (resizeDir.includes("e")) newW = Math.max(280, Math.min(800, startWidthRef.current + dx));
+      if (resizeDir.includes("n")) {
+        newT = Math.max(0, Math.min(window.innerHeight - 200, startTopRef.current + dy));
+        newH = Math.max(200, startHeightRef.current - dy);
+      }
+      if (resizeDir.includes("s")) newH = Math.max(200, Math.min(window.innerHeight - panelTop, startHeightRef.current + dy));
+
+      setPanelWidth(newW);
+      setPanelHeight(newH);
+      setPanelTop(newT);
     };
-    const handleUp = () => setIsResizing(false);
+    const handleUp = () => {
+      setIsResizing(false);
+      setResizeDir(null);
+    };
     if (isResizing) {
       window.addEventListener("mousemove", handleMove);
       window.addEventListener("mouseup", handleUp);
@@ -194,9 +233,9 @@ export function AIPanel({
       window.removeEventListener("mousemove", handleMove);
       window.removeEventListener("mouseup", handleUp);
     };
-  }, [isResizing]);
+  }, [isResizing, resizeDir, panelTop]);
 
-  // Pinch zoom handlers
+  // Pinch zoom
   const handleWheel = useCallback((e: React.WheelEvent) => {
     if (e.ctrlKey || e.metaKey) {
       e.preventDefault();
@@ -207,10 +246,7 @@ export function AIPanel({
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     if (e.touches.length === 2) {
-      const dist = Math.hypot(
-        e.touches[0].clientX - e.touches[1].clientX,
-        e.touches[0].clientY - e.touches[1].clientY
-      );
+      const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
       lastTouchDist.current = dist;
     }
   }, []);
@@ -218,10 +254,7 @@ export function AIPanel({
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
     if (e.touches.length === 2 && lastTouchDist.current !== null) {
       e.preventDefault();
-      const dist = Math.hypot(
-        e.touches[0].clientX - e.touches[1].clientX,
-        e.touches[0].clientY - e.touches[1].clientY
-      );
+      const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
       const delta = (dist - lastTouchDist.current) / 300;
       setZoom((z) => Math.max(0.6, Math.min(1.8, z + delta)));
       lastTouchDist.current = dist;
@@ -259,24 +292,25 @@ export function AIPanel({
 
   return (
     <>
-      {/* Floating Toggle Button */}
-      <motion.button
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        onClick={onToggle}
-        className={cn(
-          "fixed z-[60] flex items-center gap-2 px-4 py-3 rounded-xl shadow-2xl transition-all",
-          isOpen
-            ? "bg-slate-800 text-slate-300 border border-slate-700 shadow-black/40"
-            : "bg-gradient-to-r from-sky-500 via-purple-500 to-purple-600 text-white shadow-purple-500/30",
-          "right-4 bottom-10"
+      {/* Floating Toggle — ONLY when closed */}
+      <AnimatePresence>
+        {!isOpen && (
+          <motion.button
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.8, opacity: 0 }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={onToggle}
+            className="fixed z-[60] flex items-center gap-2 px-4 py-3 rounded-xl shadow-2xl transition-all bg-gradient-to-r from-sky-500 via-purple-500 to-purple-600 text-white shadow-purple-500/30 right-4 bottom-10"
+          >
+            <span>ᓄᕙᔭ</span>
+            {conversations.length > 0 && (
+              <span className="w-2 h-2 rounded-full bg-white animate-pulse ml-0.5" />
+            )}
+          </motion.button>
         )}
-      >
-        <span>{isOpen ? "Close" : "ᓄᕙᔭ"}</span>
-        {!isOpen && conversations.length > 0 && (
-          <span className="w-2 h-2 rounded-full bg-white animate-pulse ml-0.5" />
-        )}
-      </motion.button>
+      </AnimatePresence>
 
       {/* AI Panel */}
       <AnimatePresence>
@@ -286,19 +320,29 @@ export function AIPanel({
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: panelWidth, opacity: 0 }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            style={{ width: panelWidth }}
-            className="fixed top-11 right-0 bottom-0 z-50 bg-slate-950/95 backdrop-blur-xl border-l border-slate-800/50 flex flex-col shadow-2xl shadow-black/50"
+            style={{ top: panelTop, right: 0, width: panelWidth, height: panelHeight }}
+            className="fixed z-50 bg-slate-950/95 backdrop-blur-xl border-l border-slate-800/50 flex flex-col shadow-2xl shadow-black/50"
           >
-            {/* Resize Handle */}
-            <div
-              onMouseDown={startResize}
-              className="absolute left-0 top-0 bottom-0 w-3 cursor-col-resize z-10 flex items-center justify-center hover:bg-purple-500/20 transition-colors group"
-            >
-              <GripVertical size={14} className="text-slate-600 group-hover:text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-            </div>
+            {/* Resize Handles — 8 directions */}
+            {/* Top */}
+            <div onMouseDown={startResize("n")} className="absolute top-0 left-4 right-4 h-2 cursor-ns-resize z-20 hover:bg-purple-500/20 transition-colors" />
+            {/* Bottom */}
+            <div onMouseDown={startResize("s")} className="absolute bottom-0 left-4 right-4 h-2 cursor-ns-resize z-20 hover:bg-purple-500/20 transition-colors" />
+            {/* Left */}
+            <div onMouseDown={startResize("w")} className="absolute top-4 bottom-4 left-0 w-2 cursor-ew-resize z-20 hover:bg-purple-500/20 transition-colors" />
+            {/* Right */}
+            <div onMouseDown={startResize("e")} className="absolute top-4 bottom-4 right-0 w-2 cursor-ew-resize z-20 hover:bg-purple-500/20 transition-colors" />
+            {/* Top-Left */}
+            <div onMouseDown={startResize("nw")} className="absolute top-0 left-0 w-4 h-4 cursor-nwse-resize z-30 hover:bg-purple-500/30 transition-colors rounded-br-lg" />
+            {/* Top-Right */}
+            <div onMouseDown={startResize("ne")} className="absolute top-0 right-0 w-4 h-4 cursor-nesw-resize z-30 hover:bg-purple-500/30 transition-colors rounded-bl-lg" />
+            {/* Bottom-Left */}
+            <div onMouseDown={startResize("sw")} className="absolute bottom-0 left-0 w-4 h-4 cursor-nesw-resize z-30 hover:bg-purple-500/30 transition-colors rounded-tr-lg" />
+            {/* Bottom-Right */}
+            <div onMouseDown={startResize("se")} className="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize z-30 hover:bg-purple-500/30 transition-colors rounded-tl-lg" />
 
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800/50 shrink-0 pl-5">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800/50 shrink-0">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-sky-500/20 to-purple-500/20 flex items-center justify-center border border-purple-500/20">
                   <Bot size={15} className="text-purple-400" />
@@ -328,7 +372,7 @@ export function AIPanel({
               </div>
             </div>
 
-            {/* Messages - Scrollable + Zoomable */}
+            {/* Messages — Scrollable + Zoomable */}
             <div
               ref={scrollRef}
               onWheel={handleWheel}
