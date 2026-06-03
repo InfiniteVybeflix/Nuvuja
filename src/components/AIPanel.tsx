@@ -17,6 +17,7 @@ import {
   Trash2,
   X,
   MessageSquare,
+  Paperclip,
 } from "lucide-react";
 import { AIConversation } from "@/types";
 import { cn } from "@/lib/utils";
@@ -178,6 +179,7 @@ export function AIPanel({
 }: AIPanelProps) {
   const [input, setInput] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(true);
+  const [attachCode, setAttachCode] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -197,9 +199,15 @@ export function AIPanel({
     else if (message.startsWith("/explain")) action = "explain";
     else if (message.startsWith("/generate")) action = "generate";
 
+    // Only attach code if user explicitly chooses to
+    if (attachCode && currentCode) {
+      message += "\n\nCurrent file (" + currentLanguage + "):\n```" + currentLanguage + "\n" + currentCode + "\n```";
+    }
+
     onSendMessage(message, action);
     setInput("");
     setShowSuggestions(false);
+    setAttachCode(false);
   };
 
   const suggestions = [
@@ -212,21 +220,23 @@ export function AIPanel({
   return (
     <>
       {/* Toggle Button - Floating */}
-      <button
+      <motion.button
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
         onClick={onToggle}
         className={cn(
-          "fixed right-4 bottom-16 z-50 flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg shadow-purple-500/20 transition-all hover:scale-105",
+          "fixed right-4 bottom-10 z-[60] flex items-center gap-2 px-4 py-3 rounded-xl shadow-2xl transition-all",
           isOpen
-            ? "bg-slate-800 text-slate-300 border border-slate-700"
-            : "bg-gradient-to-r from-sky-500 to-purple-500 text-white"
+            ? "bg-slate-800 text-slate-300 border border-slate-700 shadow-black/40"
+            : "bg-gradient-to-r from-sky-500 via-purple-500 to-purple-600 text-white shadow-purple-500/30"
         )}
       >
         {isOpen ? <X size={16} /> : <MessageSquare size={16} />}
-        <span className="text-sm font-medium">{isOpen ? "Close" : "ᓄᕙᔭ AI"}</span>
+        <span className="text-sm font-semibold">{isOpen ? "Close" : "ᓄᕙᔭ"}</span>
         {!isOpen && conversations.length > 0 && (
-          <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+          <span className="w-2 h-2 rounded-full bg-white animate-pulse ml-0.5" />
         )}
-      </button>
+      </motion.button>
 
       {/* AI Panel - Slide in from right */}
       <AnimatePresence>
@@ -236,13 +246,13 @@ export function AIPanel({
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: 400, opacity: 0 }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed right-0 top-14 bottom-7 w-[380px] z-40 bg-slate-950/95 backdrop-blur-xl border-l border-slate-800/50 flex flex-col shadow-2xl shadow-black/50"
+            className="fixed right-0 top-12 bottom-7 w-[380px] z-50 bg-slate-950/95 backdrop-blur-xl border-l border-slate-800/50 flex flex-col shadow-2xl shadow-black/50"
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800/50">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-sky-500/20 to-purple-500/20 flex items-center justify-center">
-                  <Bot size={14} className="text-purple-400" />
+            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800/50 shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-sky-500/20 to-purple-500/20 flex items-center justify-center border border-purple-500/20">
+                  <Bot size={15} className="text-purple-400" />
                 </div>
                 <div>
                   <span className="text-sm font-semibold text-slate-200">ᓄᕙᔭ AI</span>
@@ -259,11 +269,11 @@ export function AIPanel({
             </div>
 
             {/* Messages */}
-            <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
               {conversations.length === 0 && (
                 <div className="text-center py-12">
-                  <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-purple-500/20 to-sky-500/20 flex items-center justify-center">
-                    <Sparkles size={22} className="text-purple-400" />
+                  <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-purple-500/20 to-sky-500/20 flex items-center justify-center border border-purple-500/10">
+                    <Sparkles size={24} className="text-purple-400" />
                   </div>
                   <p className="text-sm text-slate-400 font-medium">ᓄᕙᔭ is ready</p>
                   <p className="text-xs text-slate-600 mt-1">Ask anything or use commands</p>
@@ -361,7 +371,23 @@ export function AIPanel({
             </div>
 
             {/* Input */}
-            <div className="p-3 border-t border-slate-800/50 bg-slate-950/50">
+            <div className="p-3 border-t border-slate-800/50 bg-slate-950/50 shrink-0">
+              {/* Attach code toggle */}
+              {currentCode && (
+                <button
+                  onClick={() => setAttachCode(!attachCode)}
+                  className={cn(
+                    "flex items-center gap-1.5 mb-2 px-2 py-1 rounded-md text-[10px] transition-colors",
+                    attachCode
+                      ? "bg-purple-500/20 text-purple-400 border border-purple-500/30"
+                      : "text-slate-600 hover:text-slate-400 hover:bg-slate-800/50"
+                  )}
+                >
+                  <Paperclip size={10} />
+                  {attachCode ? "Code attached" : "Attach current file"}
+                </button>
+              )}
+
               <div className="flex gap-2">
                 <input
                   value={input}
@@ -370,18 +396,20 @@ export function AIPanel({
                   placeholder="Ask ᓄᕙᔭ anything..."
                   className="flex-1 bg-slate-900 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-600 outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/20 transition-all"
                 />
-                <button
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                   onClick={handleSend}
                   disabled={!input.trim() || isLoading}
                   className={cn(
-                    "px-3 py-2 rounded-lg transition-all flex items-center justify-center",
+                    "px-4 py-2 rounded-lg transition-all flex items-center justify-center",
                     input.trim() && !isLoading
                       ? "bg-gradient-to-r from-sky-500 to-purple-500 text-white hover:opacity-90 shadow-lg shadow-purple-500/25"
                       : "bg-slate-800 text-slate-600 cursor-not-allowed"
                   )}
                 >
                   <Send size={14} />
-                </button>
+                </motion.button>
               </div>
               <p className="text-[9px] text-slate-700 mt-1.5 text-center">
                 /review  /fix  /explain  /generate
