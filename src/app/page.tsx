@@ -25,6 +25,8 @@ import { StatusBar } from "@/components/StatusBar";
 import { Tutorial } from "@/components/Tutorial";
 import { WelcomeScreen } from "@/components/WelcomeScreen";
 
+type ViewMode = "code" | "preview" | "split";
+
 export default function Home() {
   const [showWelcome, setShowWelcome] = useState(true);
   const [files, setFiles] = useState<FileNode[]>([]);
@@ -32,10 +34,11 @@ export default function Home() {
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
   const [conversations, setConversations] = useState<AIConversation[]>([]);
   const [isAILoading, setIsAILoading] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
-  const [showTutorial, setShowTutorial] = useState(false);
   const [showAI, setShowAI] = useState(false);
-  const [theme, setTheme] = useState("nuvuja-dark");
+  const [showTutorial, setShowTutorial] = useState(false);
+  const [showSidebar, setShowSidebar] = useState(true);
+  const [viewMode, setViewMode] = useState<ViewMode>("code");
+  const [theme, setTheme] = useState<"nuvuja-dark" | "light">("nuvuja-dark");
   const [aiStatus, setAIStatus] = useState("ready");
   const [isConnected, setIsConnected] = useState(true);
   const [markers, setMarkers] = useState<any[]>([]);
@@ -71,11 +74,11 @@ export default function Home() {
         }
         if (e.key === "p") {
           e.preventDefault();
-          setShowPreview((p) => !p);
+          setViewMode((m) => m === "code" ? "split" : m === "split" ? "preview" : "code");
         }
         if (e.key === "b") {
           e.preventDefault();
-          setShowPreview((p) => !p);
+          setShowSidebar((s) => !s);
         }
       }
     };
@@ -361,38 +364,57 @@ export default function Home() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-slate-950 overflow-hidden">
+    <div className="h-screen flex flex-col bg-slate-950 overflow-hidden" data-theme={theme}>
       <Toolbar
-        onRun={() => setShowPreview(!showPreview)}
+        onRun={() => setViewMode((m) => m === "code" ? "split" : m === "split" ? "preview" : "code")}
         onSave={handleSave}
         onExport={handleExport}
         onToggleTheme={() => setTheme(theme === "light" ? "nuvuja-dark" : "light")}
         onOpenTutorial={() => setShowTutorial(true)}
         onLoadTemplate={handleLoadTemplate}
+        onToggleSidebar={() => setShowSidebar(!showSidebar)}
+        onToggleViewMode={() => setViewMode((m) => m === "code" ? "split" : m === "split" ? "preview" : "code")}
         theme={theme}
-        isRunning={showPreview}
+        viewMode={viewMode}
+        sidebarOpen={showSidebar}
+        isRunning={viewMode !== "code"}
         hasChanges={tabs.some((t) => t.isDirty)}
       />
 
-      <div className="flex-1 flex overflow-hidden">
-        {/* File Explorer - Collapsible */}
-        <div className="w-56 shrink-0 bg-slate-950 border-r border-slate-800/50">
-          <FileExplorer
-            files={files}
-            activeFileId={activeTab?.fileId || null}
-            onFileClick={openFile}
-            onToggleFolder={handleToggleFolder}
-            onAddFile={handleAddFile}
-            onDeleteNode={handleDeleteNode}
-            onRenameNode={handleRenameNode}
-          />
-        </div>
+      <div className="flex-1 flex overflow-hidden min-h-0">
+        {/* Sidebar - Collapsible */}
+        <AnimatePresence initial={false}>
+          {showSidebar && (
+            <motion.div
+              initial={{ width: 0, opacity: 0 }}
+              animate={{ width: 224, opacity: 1 }}
+              exit={{ width: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="shrink-0 border-r border-slate-800/50 overflow-hidden"
+            >
+              <div className="w-56 h-full">
+                <FileExplorer
+                  files={files}
+                  activeFileId={activeTab?.fileId || null}
+                  onFileClick={openFile}
+                  onToggleFolder={handleToggleFolder}
+                  onAddFile={handleAddFile}
+                  onDeleteNode={handleDeleteNode}
+                  onRenameNode={handleRenameNode}
+                />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-        {/* Main Content - Editor + Preview */}
-        <div className="flex-1 flex flex-col min-w-0">
+        {/* Main Content Area */}
+        <div className="flex-1 flex min-w-0 min-h-0">
           {/* Editor */}
-          <div className="flex-1 flex min-h-0">
-            <div className={cn("flex-1 flex flex-col min-w-0 transition-all duration-300", showPreview && "w-1/2")}>
+          {(viewMode === "code" || viewMode === "split") && (
+            <div className={cn(
+              "flex flex-col min-h-0 transition-all duration-300",
+              viewMode === "code" ? "flex-1" : "flex-1"
+            )}>
               <EditorPanel
                 tabs={tabs}
                 activeTabId={activeTabId}
@@ -403,26 +425,22 @@ export default function Home() {
                 markers={markers}
               />
             </div>
+          )}
 
-            {/* Preview - Side by side */}
-            <AnimatePresence>
-              {showPreview && (
-                <motion.div
-                  initial={{ width: 0, opacity: 0 }}
-                  animate={{ width: "50%", opacity: 1 }}
-                  exit={{ width: 0, opacity: 0 }}
-                  transition={{ duration: 0.25 }}
-                  className="border-l border-slate-800/50 overflow-hidden shrink-0"
-                >
-                  <Preview
-                    files={files}
-                    onClose={() => setShowPreview(false)}
-                    onRefresh={() => {}}
-                  />
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+          {/* Preview */}
+          {(viewMode === "preview" || viewMode === "split") && (
+            <div className={cn(
+              "flex flex-col border-l border-slate-800/50 min-h-0 transition-all duration-300",
+              viewMode === "preview" ? "flex-1" : "w-[45%] shrink-0"
+            )}>
+              <Preview
+                files={files}
+                onClose={() => setViewMode("code")}
+                onRefresh={() => {}}
+                isFullScreen={viewMode === "preview"}
+              />
+            </div>
+          )}
         </div>
       </div>
 
@@ -447,6 +465,8 @@ export default function Home() {
         cursorColumn={1}
         isConnected={isConnected}
         aiStatus={aiStatus}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
       />
 
       <Tutorial isOpen={showTutorial} onClose={() => setShowTutorial(false)} />
