@@ -124,7 +124,7 @@ function ReviewCard({ review }: { review: any }) {
       </div>
       <div className="p-3 space-y-2">
         <p className="text-xs text-slate-400">{review.summary}</p>
-        
+
         {review.issues?.length > 0 && (
           <div className="space-y-1">
             <p className="text-xs font-semibold text-slate-500 uppercase">Issues</p>
@@ -149,7 +149,7 @@ function ReviewCard({ review }: { review: any }) {
             ))}
           </div>
         )}
-        
+
         {review.improvements?.length > 0 && (
           <div className="space-y-1">
             <p className="text-xs font-semibold text-slate-500 uppercase">Improvements</p>
@@ -177,7 +177,7 @@ export function AIPanel({
 }: AIPanelProps) {
   const [input, setInput] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(true);
-  const scrollRef = useRef<<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -187,20 +187,20 @@ export function AIPanel({
 
   const handleSend = () => {
     if (!input.trim() || isLoading) return;
-    
+
     let action = "chat";
     let message = input.trim();
-    
+
     if (message.startsWith("/review")) action = "review";
     else if (message.startsWith("/fix")) action = "fix";
     else if (message.startsWith("/explain")) action = "explain";
     else if (message.startsWith("/generate")) action = "generate";
-    
+
     // Include current code context
     if (currentCode && !message.includes("```")) {
       message += "\n\nCurrent file (" + currentLanguage + "):\n```" + currentLanguage + "\n" + currentCode + "\n```";
     }
-    
+
     onSendMessage(message, action);
     setInput("");
     setShowSuggestions(false);
@@ -279,7 +279,7 @@ export function AIPanel({
                 <Bot size={12} className="text-purple-400" />
               )}
             </div>
-            
+
             <div className={cn(
               "flex-1 max-w-[90%]",
               conv.role === "user" && "text-right"
@@ -307,7 +307,7 @@ export function AIPanel({
                   />
                 </div>
               )}
-              
+
               <p className="text-[10px] text-slate-600 mt-1">
                 {new Date(conv.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                 {conv.metadata?.model && (
