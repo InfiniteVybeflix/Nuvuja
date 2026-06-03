@@ -186,3 +186,20 @@ html, body {
   .sm\:inline { display: inline !important; }
   .sm\:flex { display: flex !important; }
 }
+
+@keyframes float-particle {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+    opacity: 0.2;
+  }
+  50% {
+    transform: translateY(-50px) scale(1.8);
+    opacity: 0.6;
+  }
+}
+
+.animate-float-particle {
+  animation-name: float-particle;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
