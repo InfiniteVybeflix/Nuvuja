@@ -32,9 +32,34 @@ export default function Home() {
   const [files, setFiles] = useState<FileNode[]>([]);
   const [tabs, setTabs] = useState<EditorTab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
-  const [conversations, setConversations] = useState<AIConversation[]>([]);
+  // Chat system
+  const [chats, setChats] = useState<<ChatSession[]>(() => {
+    try {
+      const saved = localStorage.getItem("nuvuja-chats");
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return [];
+  });
+  const [activeChatId, setActiveChatId] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem("nuvuja-active-chat");
+    } catch { return null; }
+  });
+  const [showChatList, setShowChatList] = useState(false);
+
+  // Derived conversations for current chat
+  const conversations = useMemo(() => {
+    const chat = chats.find((c) => c.id === activeChatId);
+    return chat?.messages || [];
+  }, [chats, activeChatId]);
+
   const [isAILoading, setIsAILoading] = useState(false);
   const [showAI, setShowAI] = useState(false);
+
+  // Console
+  const [consoleEntries, setConsoleEntries] = useState<<ConsoleEntry[]>([]);
+  const [showConsole, setShowConsole] = useState(false);
+
   const [showTutorial, setShowTutorial] = useState(false);
   const [showSidebar, setShowSidebar] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>("code");
@@ -109,6 +134,53 @@ export default function Home() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [showWelcome, files]);
 
+  // Auto-create first chat if none exists
+  useEffect(() => {
+    if (chats.length === 0) {
+      const newChat: ChatSession = {
+        id: generateId(),
+        title: "New Chat",
+        pinned: false,
+        messages: [],
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+      setChats([newChat]);
+      setActiveChatId(newChat.id);
+    } else if (!activeChatId || !chats.find((c) => c.id === activeChatId)) {
+      setActiveChatId(chats[0].id);
+    }
+  }, []);
+
+  // Persist chats
+  useEffect(() => {
+    localStorage.setItem("nuvuja-chats", JSON.stringify(chats));
+    if (activeChatId) localStorage.setItem("nuvuja-active-chat", activeChatId);
+  }, [chats, activeChatId]);
+
+  // Listen for console messages from preview iframe
+  useEffect(() => {
+    const handleMessage = (e: MessageEvent) => {
+      if (e.data?.source === "nuvuja-console") {
+        setConsoleEntries((prev) => [
+          ...prev,
+          {
+            id: generateId(),
+            type: e.data.type,
+            args: e.data.args || [],
+            message: (e.data.args || [])
+              .map((a: any) => (typeof a === "object" ? JSON.stringify(a) : String(a)))
+              .join(" "),
+            timestamp: e.data.timestamp || Date.now(),
+            stack: e.data.type === "error" ? e.data.args?.[1] : undefined,
+          },
+        ]);
+      }
+    };
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, []);
+  
   const findFileRecursive = (fileList: FileNode[], name: string): FileNode | null => {
     for (const f of fileList) {
       if (f.name === name) return f;
@@ -311,20 +383,202 @@ export default function Home() {
                 endLineNumber: issue.line || 1,
                 endColumn: 100,
                 message: issue.message,
-                severity: issue.severity,
-                suggestion: issue.suggestion,
-              }));
-              setMarkers(newMarkers);
+
+    const handleSendMessage = useCallback(async (message: string, action: "chat" | "review" | "fix" | "explain" | "generate" = "chat") => {
+    if (!activeChatId) return;
+
+    const userMsg: AIConversation = {
+      id: generateId(),
+      role: "user",
+      content: message,
+      timestamp: Date.now(),
+    };
+
+    // Update chat with user message + auto-name on first message
+    setChats((prev) =>
+      prev.map((chat) => {
+        if (chat.id !== activeChatId) return chat;
+        const msgs = [...chat.messages, userMsg];
+        const title =
+          chat.messages.length === 0
+            ? message.slice(0, 30).replace(/[^\w\s-]/g, "").trim() || "New Chat"
+            : chat.title;
+        return { ...chat, messages: msgs, title, updatedAt: Date.now() };
+      })
+    );
+
+    setIsAILoading(true);
+    setAIStatus("thinking");
+
+    try {
+      const activeChat = chats.find((c) => c.id === activeChatId);
+      const chatMessages = activeChat?.messages || [];
+
+      // Build project context
+      const buildProjectContext = (includeContent: boolean): string => {
+        const lines: string[] = ["=== PROJECT FILES ==="];
+        const walk = (nodes: FileNode[], prefix = "") => {
+          for (const node of nodes) {
+            if (node.type === "folder") {
+              lines.push(`${prefix}📁 ${node.name}/`);
+              if (node.children) walk(node.children, prefix + "  ");
+            } else {
+              lines.push(`${prefix}📄 ${node.name} (${node.language || "txt"})`);
+              if (includeContent && node.content) {
+                const truncated =
+                  node.content.length > 2000
+                    ? node.content.slice(0, 2000) + `\n... [${node.content.length - 2000} more chars]`
+                    : node.content;
+                lines.push(`${prefix}---`);
+                lines.push(truncated);
+                lines.push(`${prefix}---`);
+              }
             }
           }
-        } catch {
-          // Ignore parse errors
+        };
+        walk(files);
+        return lines.join("\n");
+      };
+
+      const needsFullContext =
+        action !== "chat" ||
+        message.toLowerCase().includes("error") ||
+        message.toLowerCase().includes("bug") ||
+        message.toLowerCase().includes("fix") ||
+        message.toLowerCase().includes("debug") ||
+        message.toLowerCase().includes("project") ||
+        message.toLowerCase().includes("all files");
+
+      let apiContent = message;
+      if (needsFullContext) {
+        apiContent += "\n\n" + buildProjectContext(true);
+      } else {
+        apiContent += "\n\n" + buildProjectContext(false);
+      }
+
+      // Include console errors if debugging
+      const recentErrors = consoleEntries
+        .filter((e) => e.type === "error" || e.type === "warn")
+        .slice(-5);
+      if (recentErrors.length > 0 && (action === "fix" || message.toLowerCase().includes("error") || message.toLowerCase().includes("console"))) {
+        apiContent += "\n\n=== CONSOLE OUTPUT ===\n";
+        recentErrors.forEach((e) => {
+          apiContent += `[${e.type.toUpperCase()}] ${e.message}\n`;
+          if (e.stack) apiContent += `Stack: ${e.stack}\n`;
+        });
+        apiContent += "=== END CONSOLE ===";
+      }
+
+      if (attachCode && currentCode) {
+        apiContent += `\n\n=== CURRENT FILE (${currentLanguage}) ===\n\`\`\`${currentLanguage}\n${currentCode}\n\`\`\``;
+      }
+
+      // Trim to last 8 messages to prevent context overflow
+      const trimmedHistory = chatMessages.slice(-8);
+      const apiMessages = [
+        ...trimmedHistory.map((c) => ({ role: c.role, content: c.content })),
+        { role: "user" as const, content: apiContent },
+      ];
+
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: apiMessages, action }),
+      });
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
+        throw new Error(errData.error || `Server error ${response.status}`);
+      }
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let fullContent = "";
+      let model = "";
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = decoder.decode(value);
+          const lines = chunk.split("\n");
+          for (const line of lines) {
+            if (line.startsWith("data: ")) {
+              const data = line.slice(6);
+              if (data === "[DONE]") continue;
+              try {
+                const parsed = JSON.parse(data);
+                if (parsed.content) {
+                  fullContent += parsed.content;
+                  model = parsed.model || model;
+                }
+              } catch {
+                // Ignore parse errors
+              }
+            }
+          }
         }
       }
 
-      // === UNIFIED MARKER PARSER ===
+      const assistantMsg: AIConversation = {
+        id: generateId(),
+        role: "assistant",
+        content: fullContent,
+        timestamp: Date.now(),
+        metadata: { model, action },
+      };
 
-      // 1. Single file editor code
+      // === MARKER PARSER ===
+
+      // 1. FIX_LINE — single line replacement (preferred)
+      const fixLineRegex = /###FIX_LINE:([^:]+):(\d+)###\n([\s\S]*?)###FIX_END###/g;
+      let fixMatch;
+      while ((fixMatch = fixLineRegex.exec(fullContent)) !== null) {
+        const filePath = fixMatch[1].trim();
+        const lineNum = parseInt(fixMatch[2], 10);
+        const newLine = fixMatch[3].trim();
+
+        const targetFile = findFileByPath(files, filePath);
+        if (targetFile?.content) {
+          const lines = targetFile.content.split("\n");
+          if (lineNum > 0 && lineNum <= lines.length) {
+            lines[lineNum - 1] = newLine;
+            const newContent = lines.join("\n");
+            setFiles((prev) => updateFileContent(prev, targetFile.id, newContent));
+            setTabs((prev) =>
+              prev.map((t) =>
+                t.fileId === targetFile.id ? { ...t, content: newContent, isDirty: true } : t
+              )
+            );
+          }
+        }
+      }
+
+      // 2. PATCH — line range replacement
+      const patchRegex = /###PATCH_START:([^:]+):(\d+):(\d+)###\n([\s\S]*?)###PATCH_END###/g;
+      let patchMatch;
+      while ((patchMatch = patchRegex.exec(fullContent)) !== null) {
+        const filePath = patchMatch[1].trim();
+        const startLine = parseInt(patchMatch[2], 10);
+        const endLine = parseInt(patchMatch[3], 10);
+        const newLinesRaw = patchMatch[4].trim();
+
+        const targetFile = findFileByPath(files, filePath);
+        if (targetFile?.content) {
+          const lines = targetFile.content.split("\n");
+          const before = lines.slice(0, startLine - 1);
+          const after = lines.slice(endLine);
+          const newContent = [...before, newLinesRaw, ...after].join("\n");
+          setFiles((prev) => updateFileContent(prev, targetFile.id, newContent));
+          setTabs((prev) =>
+            prev.map((t) =>
+              t.fileId === targetFile.id ? { ...t, content: newContent, isDirty: true } : t
+            )
+          );
+        }
+      }
+
+      // 3. EDITOR_START — full active file replace
       const editorMatch = fullContent.match(/###EDITOR_START###([\s\S]*?)###EDITOR_END###/);
       if (editorMatch) {
         const codeToApply = editorMatch[1].trim();
@@ -336,11 +590,11 @@ export default function Home() {
         });
       }
 
-      // 2. Multiple files (project generation) — parse nested paths and build tree
+      // 4. FILE_START — multi-file project creation
       const fileRegex = /###FILE_START:([^\n]+?)(?:###)?\n([\s\S]*?)###FILE_END###/g;
       const fileEntries: Array<{ path: string; content: string }> = [];
       let fileMatch;
-      
+
       while ((fileMatch = fileRegex.exec(fullContent)) !== null) {
         const path = fileMatch[1].trim();
         const content = fileMatch[2].trim();
@@ -348,14 +602,15 @@ export default function Home() {
           fileEntries.push({ path, content });
         }
       }
-      
+
       if (fileEntries.length > 0) {
-        const projectNameMatch = fullContent.match(/Project Name:\s*(.+)/i) 
-          || fullContent.match(/Folder name:\s*(.+)/i);
-        const folderName = projectNameMatch 
+        const projectNameMatch =
+          fullContent.match(/Project Name:\s*(.+)/i) ||
+          fullContent.match(/Folder name:\s*(.+)/i);
+        const folderName = projectNameMatch
           ? projectNameMatch[1].trim().toLowerCase().replace(/\s+/g, "-")
           : `project-${Date.now()}`;
-        
+
         const folderMap = new Map<string, FileNode>();
         const treeNodes: FileNode[] = [];
 
@@ -370,12 +625,12 @@ export default function Home() {
           for (let i = 0; i < parts.length; i++) {
             const part = parts[i];
             currentPath = currentPath ? `${currentPath}/${part}` : part;
-            
+
             let folder = folderMap.get(currentPath);
             if (!folder) {
               const parentPath = parts.slice(0, i).join("/");
               const parentId = parentPath ? folderMap.get(parentPath)?.id : undefined;
-              
+
               folder = {
                 id: generateId(),
                 name: part,
@@ -428,7 +683,7 @@ export default function Home() {
         }
 
         setFiles((prev) => [...prev, rootFolder]);
-        
+
         const findFirstFile = (nodes: FileNode[]): FileNode | null => {
           for (const node of nodes) {
             if (node.type === "file") return node;
@@ -445,22 +700,123 @@ export default function Home() {
         }
       }
 
-    } catch (error) {
+      // 5. REVIEW markers
+      if (action === "review" && fullContent.includes("###REVIEW_START###")) {
+        try {
+          const match = fullContent.match(/###REVIEW_START###([\s\S]*?)###REVIEW_END###/);
+          if (match) {
+            const review = JSON.parse(match[1].trim());
+            if (review.issues) {
+              const newMarkers = review.issues.map((issue: any) => ({
+                startLineNumber: issue.line || 1,
+                startColumn: 1,
+                endLineNumber: issue.line || 1,
+                endColumn: 100,
+                message: issue.message,
+                severity: issue.severity,
+                suggestion: issue.suggestion,
+              }));
+              setMarkers(newMarkers);
+            }
+          }
+        } catch {
+          // Ignore parse errors
+        }
+      }
+
+      // Save assistant message to chat
+      setChats((prev) =>
+        prev.map((chat) => {
+          if (chat.id !== activeChatId) return chat;
+          return {
+            ...chat,
+            messages: [...chat.messages, assistantMsg],
+            updatedAt: Date.now(),
+          };
+        })
+      );
+
+      setAIStatus("ready");
+      setIsConnected(true);
+    } catch (error: any) {
       setAIStatus("error");
       setIsConnected(false);
-      setConversations((prev) => [
-        ...prev,
-        {
-          id: generateId(),
-          role: "assistant",
-          content: "I apologize, but I encountered an error. Please check your API configuration and try again.",
-          timestamp: Date.now(),
-        },
-      ]);
+      const errMsg = error?.message || "Unknown error";
+      setChats((prev) =>
+        prev.map((chat) => {
+          if (chat.id !== activeChatId) return chat;
+          return {
+            ...chat,
+            messages: [
+              ...chat.messages,
+              {
+                id: generateId(),
+                role: "assistant",
+                content: `Error: ${errMsg}. If this persists, check your API keys or refresh the page.`,
+                timestamp: Date.now(),
+              },
+            ],
+            updatedAt: Date.now(),
+          };
+        })
+      );
     } finally {
       setIsAILoading(false);
     }
-  }, [conversations, handleContentChange]);
+  }, [activeChatId, chats, files, consoleEntries, attachCode, currentCode, currentLanguage, handleContentChange, openFile]);
+              
+  
+    const handleNewChat = useCallback(() => {
+    const newChat: ChatSession = {
+      id: generateId(),
+      title: "New Chat",
+      pinned: false,
+      messages: [],
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+    setChats((prev) => [newChat, ...prev]);
+    setActiveChatId(newChat.id);
+    setShowChatList(false);
+  }, []);
+
+  const handleSwitchChat = useCallback((id: string) => {
+    setActiveChatId(id);
+    setShowChatList(false);
+  }, []);
+
+  const handleRenameChat = useCallback((id: string, title: string) => {
+    setChats((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, title, updatedAt: Date.now() } : c))
+    );
+  }, []);
+
+  const handlePinChat = useCallback((id: string) => {
+    setChats((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, pinned: !c.pinned, updatedAt: Date.now() } : c))
+    );
+  }, []);
+
+  const handleDeleteChat = useCallback((id: string) => {
+    setChats((prev) => {
+      const next = prev.filter((c) => c.id !== id);
+      if (activeChatId === id && next.length > 0) {
+        setActiveChatId(next[0].id);
+      } else if (next.length === 0) {
+        const newChat: ChatSession = {
+          id: generateId(),
+          title: "New Chat",
+          pinned: false,
+          messages: [],
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        };
+        setActiveChatId(newChat.id);
+        return [newChat];
+      }
+      return next;
+    });
+  }, [activeChatId]);
 
   const handleApplyCode = useCallback((code: string) => {
     if (activeTabId) {
@@ -587,13 +943,34 @@ export default function Home() {
       <AIPanel
         conversations={conversations}
         onSendMessage={handleSendMessage}
-        onClearChat={() => setConversations([])}
+        onClearChat={() => {
+          setChats((prev) =>
+            prev.map((c) => (c.id === activeChatId ? { ...c, messages: [] } : c))
+          );
+        }}
         isLoading={isAILoading}
         currentCode={activeTab?.content || ""}
         currentLanguage={activeTab?.language || "plaintext"}
         onApplyCode={handleApplyCode}
         isOpen={showAI}
         onToggle={() => setShowAI(!showAI)}
+        chats={chats}
+        activeChatId={activeChatId}
+        showChatList={showChatList}
+        onToggleChatList={() => setShowChatList(!showChatList)}
+        onNewChat={handleNewChat}
+        onSwitchChat={handleSwitchChat}
+        onRenameChat={handleRenameChat}
+        onPinChat={handlePinChat}
+        onDeleteChat={handleDeleteChat}
+        hasConsoleErrors={consoleEntries.some((e) => e.type === "error")}
+      />
+
+      <ConsolePanel
+        entries={consoleEntries}
+        isOpen={showConsole}
+        onToggle={() => setShowConsole(!showConsole)}
+        onClear={() => setConsoleEntries([])}
       />
 
       <StatusBar
