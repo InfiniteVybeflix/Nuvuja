@@ -37,18 +37,28 @@ interface AIPanelProps {
 
 function CodeBlock({ code, language, onApply }: { code: string; language: string; onApply?: (code: string) => void }) {
   const [copied, setCopied] = useState(false);
+
+  // Strip markdown fences that AI sometimes includes inside markers
+  const cleanCode = code
+    .replace(/^```\w*\n/, '')   // Remove opening ```html, ```js, etc.
+    .replace(/^```\n/, '')       // Remove opening ``` without language
+    .replace(/\n```$/, '')       // Remove closing ```
+    .replace(/^\s*```\w*\s*$/, '') // Remove standalone fence lines
+    .trim();
+
   const handleCopy = () => {
-    navigator.clipboard.writeText(code);
+    navigator.clipboard.writeText(cleanCode);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
   return (
     <div className="my-2 rounded-lg overflow-hidden border border-slate-700/50 bg-slate-950/80">
       <div className="flex items-center justify-between px-2 py-1 bg-slate-900/80 border-b border-slate-800/50">
         <span className="text-[10px] text-slate-500 font-mono">{language}</span>
         <div className="flex gap-1">
           {onApply && (
-            <button onClick={() => onApply(code)} className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors">
+            <button onClick={() => onApply(cleanCode)} className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors">
               <Wand2 size={8} /> Apply
             </button>
           )}
@@ -58,7 +68,7 @@ function CodeBlock({ code, language, onApply }: { code: string; language: string
         </div>
       </div>
       <pre className="p-2 text-[11px] overflow-x-auto text-slate-300 font-mono leading-relaxed max-h-64 overflow-y-auto">
-        <code>{code}</code>
+        <code>{cleanCode}</code>
       </pre>
     </div>
   );
