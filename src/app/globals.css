@@ -73,128 +73,17 @@ body {
   border-bottom: 2px wavy #fbbf24;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
+/* ========== WELCOME SCREEN ANIMATIONS ========== */
 
-@keyframes slideIn {
-  from { opacity: 0; transform: translateX(-20px); }
-  to { opacity: 1; transform: translateX(0); }
-}
-
-.animate-fade-in {
-  animation: fadeIn 0.3s ease-out;
-}
-
-.animate-slide-in {
-  animation: slideIn 0.3s ease-out;
-}
-
-.resizer {
-  width: 4px;
-  cursor: col-resize;
-  background: transparent;
-  transition: background 0.2s;
-}
-
-.resizer:hover {
-  background: var(--nuvuja-purple);
-}
-
-
-/* Prevent scroll on body, handle in containers */
-html, body {
-  overflow: hidden;
-  height: 100%;
-}
-
-/* Ensure flex children don't overflow */
-.min-h-0 {
-  min-height: 0;
-}
-
-
-/* Prevent scroll on body, handle in containers */
-html, body {
-  overflow: hidden;
-  height: 100%;
-}
-
-/* Ensure flex children don't overflow */
-.min-h-0 {
-  min-height: 0;
-}
-
-
-/* Prevent scroll on body, handle in containers */
-html, body {
-  overflow: hidden;
-  height: 100%;
-}
-
-/* Ensure flex children don't overflow */
-.min-h-0 {
-  min-height: 0;
-}
-
-
-/* Prevent scroll on body, handle in containers */
-html, body {
-  overflow: hidden;
-  height: 100%;
-}
-
-/* Ensure flex children don't overflow */
-.min-h-0 {
-  min-height: 0;
-}
-
-
-/* Responsive overflow handling */
-html, body {
-  overflow: hidden;
-  height: 100%;
-  width: 100%;
-}
-
-/* Prevent flex overflow */
-.min-h-0 { min-height: 0; }
-.min-w-0 { min-width: 0; }
-
-/* Mobile responsive */
-@media (max-width: 767px) {
-  .mobile-full {
-    width: 100% !important;
-    position: fixed !important;
-    inset: 0 !important;
-    z-index: 100;
-  }
-}
-
-
-/* Prevent body scroll, handle in containers */
-html, body {
-  overflow: hidden;
-  height: 100%;
-  width: 100%;
-}
-
-/* Mobile responsive */
-@media (max-width: 640px) {
-  .sm\:hidden { display: none !important; }
-  .sm\:inline { display: inline !important; }
-  .sm\:flex { display: flex !important; }
-}
-
+/* Float particle for stars */
 @keyframes float-particle {
   0%, 100% {
     transform: translateY(0) scale(1);
     opacity: 0.2;
   }
   50% {
-    transform: translateY(-50px) scale(1.8);
-    opacity: 0.6;
+    transform: translateY(-60px) scale(1.5);
+    opacity: 0.5;
   }
 }
 
@@ -204,13 +93,7 @@ html, body {
   animation-iteration-count: infinite;
 }
 
-/* Aurora Borealis — Northern Lights background */
-@keyframes aurora-sky {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
+/* Aurora Borealis blobs */
 @keyframes aurora-blob-1 {
   0%, 100% { transform: translate(0, 0) scale(1); }
   33% { transform: translate(30%, -20%) scale(1.2); }
@@ -229,25 +112,16 @@ html, body {
   66% { transform: translate(-30%, -20%) scale(1.15); }
 }
 
-@keyframes float-particle {
-  0%, 100% { transform: translateY(0) scale(1); opacity: 0.2; }
-  50% { transform: translateY(-60px) scale(1.5); opacity: 0.5; }
-}
-
+/* Text shimmer gradient */
 @keyframes text-shimmer {
   0% { background-position: -200% center; }
   100% { background-position: 200% center; }
 }
 
+/* Breathing glow animation */
 @keyframes breathe {
   0%, 100% { opacity: 0.4; transform: scale(1); }
   50% { opacity: 0.8; transform: scale(1.05); }
-}
-
-.animate-float-particle {
-  animation-name: float-particle;
-  animation-timing-function: ease-in-out;
-  animation-iteration-count: infinite;
 }
 
 .animate-breathe {
@@ -260,8 +134,146 @@ html, body {
   100% { transform: translateX(-300px) translateY(300px) rotate(-45deg); opacity: 0; }
 }
 
-.animate-shooting-star {
-  animation: shooting-star 2s ease-out forwards;
+/* Scanline overlay effect */
+@keyframes scanline-move {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
 }
 
+.scanlines::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.15) 2px,
+    rgba(0, 0, 0, 0.15) 4px
+  );
+  pointer-events: none;
+  z-index: 1;
+}
 
+.scanlines::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 8px;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(56, 189, 248, 0.08),
+    transparent
+  );
+  animation: scanline-move 4s linear infinite;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* 3D tilt card styles */
+.tilt-card {
+  transform-style: preserve-3d;
+  transition: transform 0.15s ease-out;
+}
+
+.tilt-card-inner {
+  transform: translateZ(20px);
+}
+
+/* Card glow pulse */
+@keyframes card-glow {
+  0%, 100% { 
+    box-shadow: 0 0 20px rgba(56, 189, 248, 0.1), 
+                inset 0 0 20px rgba(56, 189, 248, 0.02); 
+  }
+  50% { 
+    box-shadow: 0 0 40px rgba(56, 189, 248, 0.2), 
+                inset 0 0 30px rgba(56, 189, 248, 0.05); 
+  }
+}
+
+.card-glow-sky { animation: card-glow 3s ease-in-out infinite; }
+.card-glow-purple { animation: card-glow 3s ease-in-out infinite 0.5s; }
+.card-glow-amber { animation: card-glow 3s ease-in-out infinite 1s; }
+.card-glow-emerald { animation: card-glow 3s ease-in-out infinite 1.5s; }
+
+/* Border shimmer */
+@keyframes border-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.border-shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: border-shimmer 3s linear infinite;
+}
+
+/* ========== UTILITY ANIMATIONS ========== */
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.animate-slide-in {
+  animation: slideIn 0.3s ease-out;
+}
+
+/* ========== LAYOUT ========== */
+
+html, body {
+  overflow: hidden;
+  height: 100%;
+  width: 100%;
+}
+
+.min-h-0 { min-height: 0; }
+.min-w-0 { min-width: 0; }
+
+/* ========== RESIZER ========== */
+
+.resizer {
+  width: 4px;
+  cursor: col-resize;
+  background: transparent;
+  transition: background 0.2s;
+}
+
+.resizer:hover {
+  background: var(--nuvuja-purple);
+}
+
+/* ========== MOBILE ========== */
+
+@media (max-width: 767px) {
+  .mobile-full {
+    width: 100% !important;
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 100;
+  }
+}
+
+@media (max-width: 640px) {
+  .sm\:hidden { display: none !important; }
+  .sm\:inline { display: inline !important; }
+  .sm\:flex { display: flex !important; }
+}
