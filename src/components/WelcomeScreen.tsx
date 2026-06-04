@@ -82,8 +82,8 @@ const stars = [
 ];
 
 // 3D Tilt hook — direct DOM manipulation, zero re-renders
-function useTilt(ref: React.RefObject<<HTMLDivElement | null>) {
-  const onMove = useCallback((e: React.MouseEvent<<HTMLDivElement>) => {
+function useTilt(ref: React.RefObject<HTMLDivElement | null>) {
+  const onMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const el = ref.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
@@ -113,7 +113,7 @@ function useTilt(ref: React.RefObject<<HTMLDivElement | null>) {
 }
 
 function TiltCard({ feature, index }: { feature: typeof features[0]; index: number }) {
-  const cardRef = useRef<<HTMLDivElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
   const tilt = useTilt(cardRef);
 
   return (
