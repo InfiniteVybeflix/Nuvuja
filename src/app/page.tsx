@@ -336,7 +336,7 @@ export default function Home() {
         });
       }
 
-      // 2. Multiple files (project generation)
+      // 2. Multiple files (project generation) — ALWAYS creates new folder
       const fileRegex = /###FILE_START:(.+?)###([\s\S]*?)###FILE_END###/g;
       let fileMatch;
       const newFiles: any[] = [];
@@ -356,11 +356,18 @@ export default function Home() {
       }
       
       if (newFiles.length > 0) {
+        // Extract project name from AI response or generate one
+        const projectNameMatch = fullContent.match(/Project Name:\s*(.+)/i) 
+          || fullContent.match(/Folder name:\s*(.+)/i);
+        const folderName = projectNameMatch 
+          ? projectNameMatch[1].trim().toLowerCase().replace(/\s+/g, "-")
+          : `project-${Date.now()}`;
+        
         setFiles((prev) => [
           ...prev,
           {
             id: generateId(),
-            name: "ai-generated",
+            name: folderName,
             type: "folder" as const,
             isOpen: true,
             children: newFiles,
@@ -368,6 +375,7 @@ export default function Home() {
         ]);
         openFile(newFiles[0]);
       }
+
 
     } catch (error) {
       setAIStatus("error");
