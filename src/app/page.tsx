@@ -60,12 +60,12 @@ export default function Home() {
 
   const [isAILoading, setIsAILoading] = useState(false);
   const [showAI, setShowAI] = useState(false);
-  const [consoleEntries, setConsoleEntries] = useState<<ConsoleEntry[]>([]);
+  const [consoleEntries, setConsoleEntries] = useState<ConsoleEntry[]>([]);
   const [showConsole, setShowConsole] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
   const [showSidebar, setShowSidebar] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>("code");
-  const [theme, setTheme] = useState<<"nuvuja-dark" | "light">("nuvuja-dark");
+  const [theme, setTheme] = useState<"nuvuja-dark" | "light">("nuvuja-dark");
   const [aiStatus, setAIStatus] = useState("ready");
   const [isConnected, setIsConnected] = useState(true);
   const [markers, setMarkers] = useState<any[]>([]);
