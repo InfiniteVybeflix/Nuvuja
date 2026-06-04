@@ -322,6 +322,9 @@ export default function Home() {
         }
       }
 
+      // === UNIFIED MARKER PARSER ===
+
+      // 1. Single file editor code
       const editorMatch = fullContent.match(/###EDITOR_START###([\s\S]*?)###EDITOR_END###/);
       if (editorMatch) {
         const codeToApply = editorMatch[1].trim();
@@ -332,6 +335,40 @@ export default function Home() {
           return currentTabId;
         });
       }
+
+      // 2. Multiple files (project generation)
+      const fileRegex = /###FILE_START:(.+?)###([\s\S]*?)###FILE_END###/g;
+      let fileMatch;
+      const newFiles: any[] = [];
+      
+      while ((fileMatch = fileRegex.exec(fullContent)) !== null) {
+        const fileName = fileMatch[1].trim();
+        const fileContent = fileMatch[2].trim();
+        
+        newFiles.push({
+          id: generateId(),
+          name: fileName,
+          type: "file" as const,
+          language: getLanguageFromFilename(fileName),
+          content: fileContent,
+          parentId: undefined,
+        });
+      }
+      
+      if (newFiles.length > 0) {
+        setFiles((prev) => [
+          ...prev,
+          {
+            id: generateId(),
+            name: "ai-generated",
+            type: "folder" as const,
+            isOpen: true,
+            children: newFiles,
+          },
+        ]);
+        openFile(newFiles[0]);
+      }
+
     } catch (error) {
       setAIStatus("error");
       setIsConnected(false);
