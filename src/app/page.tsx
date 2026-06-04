@@ -57,7 +57,7 @@ export default function Home() {
   const [showAI, setShowAI] = useState(false);
 
   // Console
-  const [consoleEntries, setConsoleEntries] = useState<<ConsoleEntry[]>([]);
+  const [consoleEntries, setConsoleEntries] = useState<ConsoleEntry[]>([]);
   const [showConsole, setShowConsole] = useState(false);
 
   const [showTutorial, setShowTutorial] = useState(false);
