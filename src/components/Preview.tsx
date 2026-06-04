@@ -96,7 +96,7 @@ export function Preview({ files, onClose, onRefresh, isFullScreen }: PreviewProp
     const jsFiles = findFilesByExtension(files, ".js");
     const jsContent = jsFiles.map((f) => f.content || "").join("\n");
     if (jsContent) {
-      const safeJs = jsContent.replace(/<\/script>/gi, "<\/script>");
+      const safeJs = jsContent.replace(/<<\/script>/gi, "<\/script>");
       const scriptTag = `<script>\n${safeJs}\n</script>`;
       if (content.includes("</body>")) {
         content = content.replace("</body>", `${scriptTag}\n</body>`);
@@ -105,7 +105,51 @@ export function Preview({ files, onClose, onRefresh, isFullScreen }: PreviewProp
       }
     }
 
+    // Inject console interception
+    const consoleScript = `<script>
+(function(){
+  if(window.__nuvujaConsoleHooked)return;
+  window.__nuvujaConsoleHooked=true;
+  const methods=['log','error','warn','info','debug','table','clear','assert','trace'];
+  const originals={};
+  methods.forEach(function(method){
+    originals[method]=console[method];
+    console[method]=function(){
+      const args=Array.from(arguments);
+      try{
+        var serialized=args.map(function(arg){
+          if(arg instanceof Error)return{__type:'Error',message:arg.message,stack:arg.stack,name:arg.name};
+          if(arg===null)return null;
+          if(arg===undefined)return undefined;
+          if(typeof arg==='function')return arg.toString();
+          if(typeof arg==='object'){try{return JSON.parse(JSON.stringify(arg));}catch(e){return Object.prototype.toString.call(arg);}}
+          return arg;
+        });
+        window.parent.postMessage({source:'nuvuja-console',type:method,args:serialized,timestamp:Date.now()},'*');
+      }catch(e){}
+      originals[method].apply(console,args);
+    };
+  });
+  window.onerror=function(msg,url,line,col,err){
+    window.parent.postMessage({source:'nuvuja-console',type:'error',args:[String(msg),err?err.stack:''],timestamp:Date.now()},'*');
+    return false;
+  };
+  window.onunhandledrejection=function(e){
+    window.parent.postMessage({source:'nuvuja-console',type:'error',args:['Unhandled Promise Rejection:',e.reason?String(e.reason):''],timestamp:Date.now()},'*');
+  };
+})();
+</script>`;
+
+    if (content.includes("</head>")) {
+      content = content.replace("</head>", consoleScript + "\n</head>");
+    } else if (content.includes("<head>")) {
+      content = content.replace("<head>", "<head>\n" + consoleScript);
+    } else {
+      content = consoleScript + "\n" + content;
+    }
+
     return content;
+
   }, [files]);
 
   const iframeKey = useMemo(() => hashString(srcDoc), [srcDoc]);
