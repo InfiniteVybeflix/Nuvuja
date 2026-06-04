@@ -30,6 +30,24 @@ export interface AIConversation {
   };
 }
 
+export interface ChatSession {
+  id: string;
+  title: string;
+  pinned: boolean;
+  messages: AIConversation[];
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface ConsoleEntry {
+  id: string;
+  type: "log" | "error" | "warn" | "info" | "debug" | "table" | "assert" | "trace" | "clear";
+  message: string;
+  args: any[];
+  timestamp: number;
+  stack?: string;
+}
+
 export interface EditorMarker {
   startLineNumber: number;
   startColumn: number;
