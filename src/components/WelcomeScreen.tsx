@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Cloud,
@@ -24,8 +24,9 @@ const features = [
     subtitle: "Works everywhere",
     color: "text-sky-400",
     bg: "bg-sky-500/10",
-    border: "border-sky-500/20",
-    glow: "shadow-sky-500/20",
+    border: "border-sky-500/30",
+    glow: "card-glow-sky",
+    glowColor: "rgba(56,189,248,0.3)",
   },
   {
     icon: Code2,
@@ -33,17 +34,19 @@ const features = [
     subtitle: "Full support",
     color: "text-purple-400",
     bg: "bg-purple-500/10",
-    border: "border-purple-500/20",
-    glow: "shadow-purple-500/20",
+    border: "border-purple-500/30",
+    glow: "card-glow-purple",
+    glowColor: "rgba(167,139,250,0.3)",
   },
   {
     icon: Zap,
     title: "AI Powered",
-    subtitle: "Groq Intelligence",
+    subtitle: "Nuvuja Intelligence",
     color: "text-amber-400",
     bg: "bg-amber-500/10",
-    border: "border-amber-500/20",
-    glow: "shadow-amber-500/20",
+    border: "border-amber-500/30",
+    glow: "card-glow-amber",
+    glowColor: "rgba(251,191,36,0.3)",
   },
   {
     icon: Shield,
@@ -51,12 +54,12 @@ const features = [
     subtitle: "Your code stays yours",
     color: "text-emerald-400",
     bg: "bg-emerald-500/10",
-    border: "border-emerald-500/20",
-    glow: "shadow-emerald-500/20",
+    border: "border-emerald-500/30",
+    glow: "card-glow-emerald",
+    glowColor: "rgba(74,222,128,0.3)",
   },
 ];
 
-// Pre-defined star positions for the night sky
 const stars = [
   { size: 2, left: "5%", top: "8%", delay: "0s", duration: "4s" },
   { size: 1, left: "12%", top: "15%", delay: "1s", duration: "5s" },
@@ -82,6 +85,85 @@ const stars = [
   { size: 1, left: "92%", top: "50%", delay: "0s", duration: "4s" },
 ];
 
+// 3D Tilt hook — GPU accelerated, no state updates during move
+function useTilt(ref: React.RefObject<HTMLDivElement | null>) {
+  const onMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const el = ref.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    const rotateX = ((y - centerY) / centerY) * -12;
+    const rotateY = ((x - centerX) / centerX) * 12;
+    el.style.transform = `perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`;
+  }, [ref]);
+
+  const onLeave = useCallback(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.transform = "perspective(800px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)";
+  }, [ref]);
+
+  return { onMouseMove: onMove, onMouseLeave: onLeave };
+}
+
+function TiltCard({ feature, index }: { feature: typeof features[0]; index: number }) {
+  const cardRef = useRef<HTMLDivElement>(null);
+  const tilt = useTilt(cardRef);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 30 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ delay: index * 0.12, duration: 0.5 }}
+      className="relative group"
+    >
+      <div
+        ref={cardRef}
+        {...tilt}
+        className={`relative flex flex-col items-center gap-3 p-6 rounded-2xl border ${feature.border} ${feature.bg} backdrop-blur-sm ${feature.glow} transition-shadow duration-300 overflow-hidden scanlines`}
+        style={{
+          transformStyle: "preserve-3d",
+          willChange: "transform",
+        }}
+      >
+        {/* Animated border shimmer */}
+        <div className="absolute inset-0 rounded-2xl border-shimmer opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" 
+          style={{ 
+            border: `1px solid transparent`,
+            background: `linear-gradient(90deg, transparent, ${feature.glowColor}, transparent)`,
+            backgroundSize: "200% 100%",
+            mask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
+            maskComposite: "exclude",
+            WebkitMaskComposite: "xor",
+            padding: "1px",
+          }} 
+        />
+
+        {/* Inner content with 3D lift */}
+        <div className="relative z-10 flex flex-col items-center gap-3 tilt-card-inner">
+          <div className={`p-3 rounded-xl ${feature.bg} ring-1 ring-white/5`}>
+            <feature.icon size={24} className={feature.color} />
+          </div>
+          <div className="text-center">
+            <p className="text-sm font-semibold text-slate-200">{feature.title}</p>
+            <p className="text-[11px] text-slate-500 mt-1">{feature.subtitle}</p>
+          </div>
+        </div>
+
+        {/* Corner accent */}
+        <div className="absolute top-0 right-0 w-16 h-16 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
+          <div className="absolute top-2 right-2 w-1 h-8 rounded-full" style={{ background: feature.glowColor }} />
+          <div className="absolute top-2 right-2 w-8 h-1 rounded-full" style={{ background: feature.glowColor }} />
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 export function WelcomeScreen({ onStart }: WelcomeScreenProps) {
   const [showHint, setShowHint] = useState(false);
   const [shootingStar, setShootingStar] = useState(false);
@@ -92,10 +174,8 @@ export function WelcomeScreen({ onStart }: WelcomeScreenProps) {
     };
     window.addEventListener("keydown", handler);
     
-    // Show scroll hint after 3 seconds
     const hintTimer = setTimeout(() => setShowHint(true), 3000);
     
-    // Trigger shooting star periodically
     const starTimer = setInterval(() => {
       setShootingStar(true);
       setTimeout(() => setShootingStar(false), 2500);
@@ -116,10 +196,8 @@ export function WelcomeScreen({ onStart }: WelcomeScreenProps) {
     <div className="fixed inset-0 z-[200] overflow-y-auto overflow-x-hidden bg-[#020617]">
       {/* AURORA BOREALIS BACKGROUND */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        {/* Deep space gradient */}
         <div className="absolute inset-0 bg-gradient-to-b from-[#020617] via-[#0a0e27] to-[#020617]" />
         
-        {/* Aurora blob 1 — Cyan */}
         <div 
           className="absolute w-[800px] h-[800px] rounded-full opacity-30"
           style={{
@@ -130,8 +208,6 @@ export function WelcomeScreen({ onStart }: WelcomeScreenProps) {
             animation: "aurora-blob-1 20s ease-in-out infinite",
           }}
         />
-        
-        {/* Aurora blob 2 — Purple */}
         <div 
           className="absolute w-[900px] h-[900px] rounded-full opacity-25"
           style={{
@@ -142,8 +218,6 @@ export function WelcomeScreen({ onStart }: WelcomeScreenProps) {
             animation: "aurora-blob-2 25s ease-in-out infinite",
           }}
         />
-        
-        {/* Aurora blob 3 — Pink/Sky blend */}
         <div 
           className="absolute w-[700px] h-[700px] rounded-full opacity-20"
           style={{
@@ -155,7 +229,6 @@ export function WelcomeScreen({ onStart }: WelcomeScreenProps) {
           }}
         />
         
-        {/* Stars */}
         {stars.map((star, i) => (
           <div
             key={i}
@@ -171,7 +244,6 @@ export function WelcomeScreen({ onStart }: WelcomeScreenProps) {
           />
         ))}
         
-        {/* Shooting star */}
         <AnimatePresence>
           {shootingStar && (
             <motion.div
@@ -194,28 +266,27 @@ export function WelcomeScreen({ onStart }: WelcomeScreenProps) {
           transition={{ duration: 1 }}
           className="text-center max-w-2xl mx-auto"
         >
-          {/* Logo — MUCH LARGER */}
+          {/* Logo — LARGER with enhanced glow */}
           <motion.div
             initial={{ scale: 0.3, opacity: 0, rotate: -10 }}
             animate={{ scale: 1, opacity: 1, rotate: 0 }}
             transition={{ type: "spring", stiffness: 150, damping: 12, delay: 0.2 }}
             className="mb-10"
           >
-            <div className="relative w-40 h-40 sm:w-48 sm:h-48 mx-auto">
-              {/* Outer glow rings */}
-              <div className="absolute inset-0 rounded-full bg-gradient-to-br from-sky-500/20 to-purple-500/20 blur-3xl animate-breathe" />
-              <div className="absolute inset-4 rounded-full bg-gradient-to-br from-purple-500/15 to-sky-500/15 blur-2xl animate-breathe" style={{ animationDelay: "1s" }} />
+            <div className="relative w-44 h-44 sm:w-52 sm:h-52 mx-auto">
+              <div className="absolute inset-0 rounded-full bg-gradient-to-br from-sky-500/25 to-purple-500/25 blur-3xl animate-breathe" />
+              <div className="absolute inset-4 rounded-full bg-gradient-to-br from-purple-500/20 to-sky-500/20 blur-2xl animate-breathe" style={{ animationDelay: "1s" }} />
+              <div className="absolute inset-8 rounded-full bg-gradient-to-br from-sky-400/10 to-purple-400/10 blur-xl animate-breathe" style={{ animationDelay: "2s" }} />
               
-              {/* Logo image */}
               <img
                 src="https://i.ibb.co/HLCTPTWm/icon-192.png"
                 alt="Nuvuja"
-                className="relative w-full h-full object-contain drop-shadow-[0_0_40px_rgba(192,132,252,0.6)]"
+                className="relative w-full h-full object-contain drop-shadow-[0_0_50px_rgba(192,132,252,0.7)]"
               />
             </div>
           </motion.div>
 
-          {/* Title with shimmer effect */}
+          {/* Title with shimmer */}
           <motion.h1
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -251,7 +322,7 @@ export function WelcomeScreen({ onStart }: WelcomeScreenProps) {
             AI-powered. Lightning-fast. Where code meets the northern sky.
           </motion.p>
 
-          {/* CTA Button */}
+          {/* CTA */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -280,7 +351,7 @@ export function WelcomeScreen({ onStart }: WelcomeScreenProps) {
             </motion.div>
           </motion.div>
 
-          {/* Scroll indicator */}
+          {/* Scroll hint */}
           <AnimatePresence>
             {showHint && (
               <motion.button
@@ -302,7 +373,7 @@ export function WelcomeScreen({ onStart }: WelcomeScreenProps) {
         </motion.div>
       </div>
 
-      {/* FEATURES SECTION */}
+      {/* FEATURES SECTION with 3D Tilt Cards */}
       <div id="features" className="relative z-10 min-h-screen flex items-center justify-center px-6 py-20">
         <div className="max-w-4xl mx-auto w-full">
           <motion.div
@@ -310,31 +381,15 @@ export function WelcomeScreen({ onStart }: WelcomeScreenProps) {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-100px" }}
             transition={{ duration: 0.8 }}
-            className="text-center mb-12"
+            className="text-center mb-16"
           >
             <h2 className="text-3xl sm:text-4xl font-bold text-slate-200 mb-3">Built for the Future</h2>
             <p className="text-slate-500 text-sm">Everything you need, nothing you don't</p>
           </motion.div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5" style={{ perspective: "1000px" }}>
             {features.map((feature, i) => (
-              <motion.div
-                key={feature.title}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.12, duration: 0.5 }}
-                whileHover={{ y: -4, transition: { duration: 0.2 } }}
-                className={`flex flex-col items-center gap-3 p-6 rounded-2xl border ${feature.border} ${feature.bg} backdrop-blur-sm hover:shadow-lg ${feature.glow} transition-shadow duration-300`}
-              >
-                <div className={`p-3 rounded-xl ${feature.bg}`}>
-                  <feature.icon size={24} className={feature.color} />
-                </div>
-                <div className="text-center">
-                  <p className="text-sm font-semibold text-slate-200">{feature.title}</p>
-                  <p className="text-[11px] text-slate-500 mt-1">{feature.subtitle}</p>
-                </div>
-              </motion.div>
+              <TiltCard key={feature.title} feature={feature} index={i} />
             ))}
           </div>
 
