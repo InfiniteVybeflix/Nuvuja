@@ -398,6 +398,82 @@ export default function Home() {
             name: fileName,
             type: "file",
             language: getLanguageFromFilename(fileName),
+      // === UNIFIED MARKER PARSER ===
+
+      // 1. Single file editor code
+      const editorMatch = fullContent.match(/###EDITOR_START###([\s\S]*?)###EDITOR_END###/);
+      if (editorMatch) {
+        const codeToApply = editorMatch[1].trim();
+        setActiveTabId((currentTabId) => {
+          if (currentTabId) {
+            handleContentChange(currentTabId, codeToApply);
+          }
+          return currentTabId;
+        });
+      }
+
+      // 2. Multiple files (project generation) — parse nested paths and build tree
+      const fileRegex = /###FILE_START:([^\n]+?)(?:###)?\n([\s\S]*?)###FILE_END###/g;
+      const fileEntries: Array<{ path: string; content: string }> = [];
+      let fileMatch;
+      
+      while ((fileMatch = fileRegex.exec(fullContent)) !== null) {
+        const path = fileMatch[1].trim();
+        const content = fileMatch[2].trim();
+        if (path && content) {
+          fileEntries.push({ path, content });
+        }
+      }
+      
+      if (fileEntries.length > 0) {
+        const projectNameMatch = fullContent.match(/Project Name:\s*(.+)/i) 
+          || fullContent.match(/Folder name:\s*(.+)/i);
+        const folderName = projectNameMatch 
+          ? projectNameMatch[1].trim().toLowerCase().replace(/\s+/g, "-")
+          : `project-${Date.now()}`;
+        
+        const folderMap = new Map<string, FileNode>();
+        const treeNodes: FileNode[] = [];
+
+        for (const { path, content } of fileEntries) {
+          const parts = path.split("/").filter(Boolean);
+          if (parts.length === 0) continue;
+
+          const fileName = parts.pop()!;
+          let currentNodes = treeNodes;
+          let currentPath = "";
+
+          for (let i = 0; i < parts.length; i++) {
+            const part = parts[i];
+            currentPath = currentPath ? `${currentPath}/${part}` : part;
+            
+            let folder = folderMap.get(currentPath);
+            if (!folder) {
+              const parentPath = parts.slice(0, i).join("/");
+              const parentId = parentPath ? folderMap.get(parentPath)?.id : undefined;
+              
+              folder = {
+                id: generateId(),
+                name: part,
+                type: "folder",
+                isOpen: true,
+                children: [],
+                parentId,
+              };
+              folderMap.set(currentPath, folder);
+              currentNodes.push(folder);
+            }
+            currentNodes = folder.children!;
+          }
+
+          const parentPath = parts.join("/");
+          const parentId = parentPath ? folderMap.get(parentPath)?.id : undefined;
+
+          const fileNode: FileNode = {
+            id: generateId(),
+            name: fileName,
+            type: "file",
+            language: getLanguageFromFilename(fileName),
             content,
             parentId,
           };
@@ -405,14 +481,14 @@ export default function Home() {
           currentNodes.push(fileNode);
         }
 
-        function setParentIds(nodes: FileNode[], parentId?: string) {
+        const setParentIds = (nodes: FileNode[], parentId?: string) => {
           for (const node of nodes) {
             node.parentId = parentId;
             if (node.children) {
               setParentIds(node.children, node.id);
             }
           }
-        }
+        };
         setParentIds(treeNodes);
 
         const rootFolder: FileNode = {
@@ -429,7 +505,7 @@ export default function Home() {
 
         setFiles((prev) => [...prev, rootFolder]);
         
-        function findFirstFile(nodes: FileNode[]): FileNode | null {
+        const findFirstFile = (nodes: FileNode[]): FileNode | null => {
           for (const node of nodes) {
             if (node.type === "file") return node;
             if (node.children) {
@@ -438,7 +514,7 @@ export default function Home() {
             }
           }
           return null;
-        }
+        };
         const firstFile = findFirstFile(treeNodes);
         if (firstFile) {
           setTimeout(() => openFile(firstFile), 0);
