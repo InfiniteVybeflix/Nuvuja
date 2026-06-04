@@ -336,46 +336,114 @@ export default function Home() {
         });
       }
 
-      // 2. Multiple files (project generation) — ALWAYS creates new folder
-      const fileRegex = /###FILE_START:(.+?)###([\s\S]*?)###FILE_END###/g;
+      // 2. Multiple files (project generation) — parse nested paths and build tree
+      const fileRegex = /###FILE_START:([^\n]+?)(?:###)?\n([\s\S]*?)###FILE_END###/g;
+      const fileEntries: Array<{ path: string; content: string }> = [];
       let fileMatch;
-      const newFiles: any[] = [];
       
       while ((fileMatch = fileRegex.exec(fullContent)) !== null) {
-        const fileName = fileMatch[1].trim();
-        const fileContent = fileMatch[2].trim();
-        
-        newFiles.push({
-          id: generateId(),
-          name: fileName,
-          type: "file" as const,
-          language: getLanguageFromFilename(fileName),
-          content: fileContent,
-          parentId: undefined,
-        });
+        const path = fileMatch[1].trim();
+        const content = fileMatch[2].trim();
+        if (path && content) {
+          fileEntries.push({ path, content });
+        }
       }
       
-      if (newFiles.length > 0) {
-        // Extract project name from AI response or generate one
+      if (fileEntries.length > 0) {
         const projectNameMatch = fullContent.match(/Project Name:\s*(.+)/i) 
           || fullContent.match(/Folder name:\s*(.+)/i);
         const folderName = projectNameMatch 
           ? projectNameMatch[1].trim().toLowerCase().replace(/\s+/g, "-")
           : `project-${Date.now()}`;
         
-        setFiles((prev) => [
-          ...prev,
-          {
-            id: generateId(),
-            name: folderName,
-            type: "folder" as const,
-            isOpen: true,
-            children: newFiles,
-          },
-        ]);
-        openFile(newFiles[0]);
-      }
+        const folderMap = new Map<string, FileNode>();
+        const treeNodes: FileNode[] = [];
 
+        for (const { path, content } of fileEntries) {
+          const parts = path.split("/").filter(Boolean);
+          if (parts.length === 0) continue;
+
+          const fileName = parts.pop()!;
+          let currentNodes = treeNodes;
+          let currentPath = "";
+
+          for (let i = 0; i < parts.length; i++) {
+            const part = parts[i];
+            currentPath = currentPath ? `${currentPath}/${part}` : part;
+            
+            let folder = folderMap.get(currentPath);
+            if (!folder) {
+              const parentPath = parts.slice(0, i).join("/");
+              const parentId = parentPath ? folderMap.get(parentPath)?.id : undefined;
+              
+              folder = {
+                id: generateId(),
+                name: part,
+                type: "folder",
+                isOpen: true,
+                children: [],
+                parentId,
+              };
+              folderMap.set(currentPath, folder);
+              currentNodes.push(folder);
+            }
+            currentNodes = folder.children!;
+          }
+
+          const parentPath = parts.join("/");
+          const parentId = parentPath ? folderMap.get(parentPath)?.id : undefined;
+
+          const fileNode: FileNode = {
+            id: generateId(),
+            name: fileName,
+            type: "file",
+            language: getLanguageFromFilename(fileName),
+            content,
+            parentId,
+          };
+
+          currentNodes.push(fileNode);
+        }
+
+        function setParentIds(nodes: FileNode[], parentId?: string) {
+          for (const node of nodes) {
+            node.parentId = parentId;
+            if (node.children) {
+              setParentIds(node.children, node.id);
+            }
+          }
+        }
+        setParentIds(treeNodes);
+
+        const rootFolder: FileNode = {
+          id: generateId(),
+          name: folderName,
+          type: "folder",
+          isOpen: true,
+          children: treeNodes,
+        };
+
+        if (treeNodes.length > 0) {
+          setParentIds(treeNodes, rootFolder.id);
+        }
+
+        setFiles((prev) => [...prev, rootFolder]);
+        
+        function findFirstFile(nodes: FileNode[]): FileNode | null {
+          for (const node of nodes) {
+            if (node.type === "file") return node;
+            if (node.children) {
+              const found = findFirstFile(node.children);
+              if (found) return found;
+            }
+          }
+          return null;
+        }
+        const firstFile = findFirstFile(treeNodes);
+        if (firstFile) {
+          setTimeout(() => openFile(firstFile), 0);
+        }
+      }
 
     } catch (error) {
       setAIStatus("error");
@@ -398,7 +466,7 @@ export default function Home() {
     if (activeTabId) {
       handleContentChange(activeTabId, code);
     }
-  }, [activeTabId, handleContentChange]);
+  }, [conversations, handleContentChange, openFile]);
 
   const handleLoadTemplate = useCallback((template: any) => {
     const newFiles = template.files.map((f: any) => ({
