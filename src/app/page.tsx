@@ -383,6 +383,33 @@ export default function Home() {
                 endLineNumber: issue.line || 1,
                 endColumn: 100,
                 message: issue.message,
+                severity: issue.severity,
+                suggestion: issue.suggestion,
+              }));
+              setMarkers(newMarkers);
+            }
+          }
+        } catch {
+          // Ignore parse errors
+        }
+      }
+
+      // Save assistant message to chat
+      setChats((prev) =>
+        prev.map((chat) => {
+          if (chat.id !== activeChatId) return chat;
+          return {
+            ...chat,
+            messages: [...chat.messages, assistantMsg],
+            updatedAt: Date.now(),
+          };
+        })
+      );
+
+      setAIStatus("ready");
+      setIsConnected(true);
+    } catch (error: any) {
+      setAIStatus("error");
 
     const handleSendMessage = useCallback(async (message: string, action: "chat" | "review" | "fix" | "explain" | "generate" = "chat") => {
     if (!activeChatId) return;
