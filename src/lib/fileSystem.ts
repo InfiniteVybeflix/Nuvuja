@@ -278,8 +278,10 @@ export function toggleFolder(files: FileNode[], id: string): FileNode[] {
 }
 
 export function findFileByPath(files: FileNode[], path: string): FileNode | null {
-  const parts = path.split("/").filter(Boolean);
+  // Normalize path: handle both "folder/file.js" and "folder\\file.js"
+  const parts = path.replace(/\\/g, "/").split("/").filter(Boolean);
   if (parts.length === 0) return null;
+  
   let current = files;
   for (let i = 0; i < parts.length; i++) {
     const name = parts[i];
