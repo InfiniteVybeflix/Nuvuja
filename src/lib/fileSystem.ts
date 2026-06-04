@@ -277,6 +277,22 @@ export function toggleFolder(files: FileNode[], id: string): FileNode[] {
   });
 }
 
+export function findFileByPath(files: FileNode[], path: string): FileNode | null {
+  const parts = path.split("/").filter(Boolean);
+  if (parts.length === 0) return null;
+  let current = files;
+  for (let i = 0; i < parts.length; i++) {
+    const name = parts[i];
+    const found = current.find((n) => n.name === name);
+    if (!found) return null;
+    if (i === parts.length - 1) return found;
+    if (found.type !== "folder" || !found.children) return null;
+    current = found.children;
+  }
+  return null;
+}
+
+
 export function flattenFiles(files: FileNode[]): FileNode[] {
   const result: FileNode[] = [];
   for (const file of files) {
