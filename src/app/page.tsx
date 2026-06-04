@@ -33,7 +33,7 @@ export default function Home() {
   const [tabs, setTabs] = useState<EditorTab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
   // Chat system
-  const [chats, setChats] = useState<<ChatSession[]>(() => {
+  const [chats, setChats] = useState<ChatSession[]>(() => {
     try {
       const saved = localStorage.getItem("nuvuja-chats");
       if (saved) return JSON.parse(saved);
