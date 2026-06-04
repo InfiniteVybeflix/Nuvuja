@@ -24,9 +24,8 @@ const features = [
     subtitle: "Works everywhere",
     color: "text-sky-400",
     bg: "bg-sky-500/10",
-    border: "border-sky-500/30",
-    glow: "card-glow-sky",
-    glowColor: "rgba(56,189,248,0.3)",
+    border: "border-sky-500/20",
+    glowClass: "perimeter-glow-sky",
   },
   {
     icon: Code2,
@@ -34,9 +33,8 @@ const features = [
     subtitle: "Full support",
     color: "text-purple-400",
     bg: "bg-purple-500/10",
-    border: "border-purple-500/30",
-    glow: "card-glow-purple",
-    glowColor: "rgba(167,139,250,0.3)",
+    border: "border-purple-500/20",
+    glowClass: "perimeter-glow-purple",
   },
   {
     icon: Zap,
@@ -44,9 +42,8 @@ const features = [
     subtitle: "Nuvuja Intelligence",
     color: "text-amber-400",
     bg: "bg-amber-500/10",
-    border: "border-amber-500/30",
-    glow: "card-glow-amber",
-    glowColor: "rgba(251,191,36,0.3)",
+    border: "border-amber-500/20",
+    glowClass: "perimeter-glow-amber",
   },
   {
     icon: Shield,
@@ -54,9 +51,8 @@ const features = [
     subtitle: "Your code stays yours",
     color: "text-emerald-400",
     bg: "bg-emerald-500/10",
-    border: "border-emerald-500/30",
-    glow: "card-glow-emerald",
-    glowColor: "rgba(74,222,128,0.3)",
+    border: "border-emerald-500/20",
+    glowClass: "perimeter-glow-emerald",
   },
 ];
 
@@ -85,9 +81,9 @@ const stars = [
   { size: 1, left: "92%", top: "50%", delay: "0s", duration: "4s" },
 ];
 
-// 3D Tilt hook — GPU accelerated, no state updates during move
-function useTilt(ref: React.RefObject<HTMLDivElement | null>) {
-  const onMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+// 3D Tilt hook — direct DOM manipulation, zero re-renders
+function useTilt(ref: React.RefObject<<HTMLDivElement | null>) {
+  const onMove = useCallback((e: React.MouseEvent<<HTMLDivElement>) => {
     const el = ref.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
@@ -95,15 +91,22 @@ function useTilt(ref: React.RefObject<HTMLDivElement | null>) {
     const y = e.clientY - rect.top;
     const centerX = rect.width / 2;
     const centerY = rect.height / 2;
-    const rotateX = ((y - centerY) / centerY) * -12;
-    const rotateY = ((x - centerX) / centerX) * 12;
+    const rotateX = ((y - centerY) / centerY) * -10;
+    const rotateY = ((x - centerX) / centerX) * 10;
+    
     el.style.transform = `perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`;
+    
+    // Update CSS variables for glow position
+    const percentX = (x / rect.width) * 100;
+    const percentY = (y / rect.height) * 100;
+    el.style.setProperty('--mouse-x', `${percentX}%`);
+    el.style.setProperty('--mouse-y', `${percentY}%`);
   }, [ref]);
 
   const onLeave = useCallback(() => {
     const el = ref.current;
     if (!el) return;
-    el.style.transform = "perspective(800px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)";
+    el.style.transform = 'perspective(800px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)';
   }, [ref]);
 
   return { onMouseMove: onMove, onMouseLeave: onLeave };
@@ -124,27 +127,41 @@ function TiltCard({ feature, index }: { feature: typeof features[0]; index: numb
       <div
         ref={cardRef}
         {...tilt}
-        className={`relative flex flex-col items-center gap-3 p-6 rounded-2xl border ${feature.border} ${feature.bg} backdrop-blur-sm ${feature.glow} transition-shadow duration-300 overflow-hidden scanlines`}
+        className={`relative flex flex-col items-center gap-3 p-6 rounded-2xl border ${feature.border} ${feature.bg} backdrop-blur-sm transition-shadow duration-300 overflow-hidden ${feature.glowClass}`}
         style={{
           transformStyle: "preserve-3d",
           willChange: "transform",
-        }}
+          "--mouse-x": "50%",
+          "--mouse-y": "50%",
+        } as React.CSSProperties}
       >
-        {/* Animated border shimmer */}
-        <div className="absolute inset-0 rounded-2xl border-shimmer opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" 
-          style={{ 
-            border: `1px solid transparent`,
-            background: `linear-gradient(90deg, transparent, ${feature.glowColor}, transparent)`,
-            backgroundSize: "200% 100%",
-            mask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
-            maskComposite: "exclude",
-            WebkitMaskComposite: "xor",
-            padding: "1px",
-          }} 
+        {/* Holographic sheen overlay */}
+        <div 
+          className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+          style={{
+            background: `linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.03) 45%, rgba(56,189,248,0.06) 50%, rgba(192,132,252,0.06) 52%, rgba(255,255,255,0.03) 57%, transparent 60%)`,
+            transform: "translateX(-100%)",
+            transition: "transform 0.6s ease, opacity 0.3s",
+          }}
+        />
+        
+        {/* Mouse-following glow */}
+        <div 
+          className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+          style={{
+            background: `radial-gradient(600px circle at var(--mouse-x) var(--mouse-y), rgba(56,189,248,0.06), transparent 40%)`,
+          }}
+        />
+
+        {/* Edge glow on hover */}
+        <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+          style={{
+            boxShadow: "inset 0 1px 1px rgba(255,255,255,0.05), 0 0 20px rgba(56,189,248,0.08), 0 0 40px rgba(192,132,252,0.04)",
+          }}
         />
 
         {/* Inner content with 3D lift */}
-        <div className="relative z-10 flex flex-col items-center gap-3 tilt-card-inner">
+        <div className="relative z-10 flex flex-col items-center gap-3" style={{ transform: "translateZ(35px)" }}>
           <div className={`p-3 rounded-xl ${feature.bg} ring-1 ring-white/5`}>
             <feature.icon size={24} className={feature.color} />
           </div>
@@ -152,12 +169,6 @@ function TiltCard({ feature, index }: { feature: typeof features[0]; index: numb
             <p className="text-sm font-semibold text-slate-200">{feature.title}</p>
             <p className="text-[11px] text-slate-500 mt-1">{feature.subtitle}</p>
           </div>
-        </div>
-
-        {/* Corner accent */}
-        <div className="absolute top-0 right-0 w-16 h-16 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
-          <div className="absolute top-2 right-2 w-1 h-8 rounded-full" style={{ background: feature.glowColor }} />
-          <div className="absolute top-2 right-2 w-8 h-1 rounded-full" style={{ background: feature.glowColor }} />
         </div>
       </div>
     </motion.div>
@@ -266,9 +277,9 @@ export function WelcomeScreen({ onStart }: WelcomeScreenProps) {
           transition={{ duration: 1 }}
           className="text-center max-w-2xl mx-auto"
         >
-          {/* Logo — LARGER with enhanced glow */}
+          {/* Logo — LARGER */}
           <motion.div
-            initial={{ scale: 0.3, opacity: 0, rotate: -10 }}
+            initial={{ scale: 0.5, opacity: 0, rotate: -10 }}
             animate={{ scale: 1, opacity: 1, rotate: 0 }}
             transition={{ type: "spring", stiffness: 150, damping: 12, delay: 0.2 }}
             className="mb-10"
@@ -373,7 +384,7 @@ export function WelcomeScreen({ onStart }: WelcomeScreenProps) {
         </motion.div>
       </div>
 
-      {/* FEATURES SECTION with 3D Tilt Cards */}
+      {/* FEATURES SECTION with Perimeter Glow + 3D Tilt */}
       <div id="features" className="relative z-10 min-h-screen flex items-center justify-center px-6 py-20">
         <div className="max-w-4xl mx-auto w-full">
           <motion.div
