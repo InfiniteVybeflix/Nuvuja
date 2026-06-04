@@ -113,7 +113,7 @@ function useTilt(ref: React.RefObject<<HTMLDivElement | null>) {
 }
 
 function TiltCard({ feature, index }: { feature: typeof features[0]; index: number }) {
-  const cardRef = useRef<HTMLDivElement>(null);
+  const cardRef = useRef<<HTMLDivElement>(null);
   const tilt = useTilt(cardRef);
 
   return (
