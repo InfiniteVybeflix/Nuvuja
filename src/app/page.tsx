@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import JSZip from "jszip";
-import { FileNode, EditorTab, AIConversation } from "@/types";
+import { FileNode, EditorTab, AIConversation, ChatSession, ConsoleEntry } from "@/types";
 import { generateId, getLanguageFromFilename } from "@/lib/utils";
 import {
   createDefaultWorkspace,
@@ -24,16 +24,22 @@ import { Preview } from "@/components/Preview";
 import { StatusBar } from "@/components/StatusBar";
 import { Tutorial } from "@/components/Tutorial";
 import { WelcomeScreen } from "@/components/WelcomeScreen";
+import { ConsolePanel } from "@/components/ConsolePanel";
 
 type ViewMode = "code" | "preview" | "split";
+
+function cn(...classes: (string | boolean | undefined)[]) {
+  return classes.filter(Boolean).join(" ");
+}
 
 export default function Home() {
   const [showWelcome, setShowWelcome] = useState(true);
   const [files, setFiles] = useState<FileNode[]>([]);
-  const [tabs, setTabs] = useState<EditorTab[]>([]);
+  const [tabs, setTabs] = useState<<EditorTab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
+
   // Chat system
-  const [chats, setChats] = useState<ChatSession[]>(() => {
+  const [chats, setChats] = useState<<ChatSession[]>(() => {
     try {
       const saved = localStorage.getItem("nuvuja-chats");
       if (saved) return JSON.parse(saved);
@@ -47,7 +53,6 @@ export default function Home() {
   });
   const [showChatList, setShowChatList] = useState(false);
 
-  // Derived conversations for current chat
   const conversations = useMemo(() => {
     const chat = chats.find((c) => c.id === activeChatId);
     return chat?.messages || [];
@@ -55,20 +60,15 @@ export default function Home() {
 
   const [isAILoading, setIsAILoading] = useState(false);
   const [showAI, setShowAI] = useState(false);
-
-  // Console
-  const [consoleEntries, setConsoleEntries] = useState<ConsoleEntry[]>([]);
+  const [consoleEntries, setConsoleEntries] = useState<<ConsoleEntry[]>([]);
   const [showConsole, setShowConsole] = useState(false);
-
   const [showTutorial, setShowTutorial] = useState(false);
   const [showSidebar, setShowSidebar] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>("code");
-  const [theme, setTheme] = useState<"nuvuja-dark" | "light">("nuvuja-dark");
+  const [theme, setTheme] = useState<<"nuvuja-dark" | "light">("nuvuja-dark");
   const [aiStatus, setAIStatus] = useState("ready");
   const [isConnected, setIsConnected] = useState(true);
   const [markers, setMarkers] = useState<any[]>([]);
-
-  // Resizable sidebar width (default 220px)
   const [sidebarWidth, setSidebarWidth] = useState(220);
   const [isResizing, setIsResizing] = useState(false);
 
@@ -90,7 +90,7 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [files]);
 
-  // Resizing logic
+  // Resizing
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isResizing) return;
@@ -98,7 +98,6 @@ export default function Home() {
       setSidebarWidth(newWidth);
     };
     const handleMouseUp = () => setIsResizing(false);
-
     if (isResizing) {
       window.addEventListener("mousemove", handleMouseMove);
       window.addEventListener("mouseup", handleMouseUp);
@@ -134,7 +133,7 @@ export default function Home() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [showWelcome, files]);
 
-  // Auto-create first chat if none exists
+  // Auto-create first chat
   useEffect(() => {
     if (chats.length === 0) {
       const newChat: ChatSession = {
@@ -158,7 +157,7 @@ export default function Home() {
     if (activeChatId) localStorage.setItem("nuvuja-active-chat", activeChatId);
   }, [chats, activeChatId]);
 
-  // Listen for console messages from preview iframe
+  // Console listener
   useEffect(() => {
     const handleMessage = (e: MessageEvent) => {
       if (e.data?.source === "nuvuja-console") {
@@ -180,7 +179,7 @@ export default function Home() {
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
   }, []);
-  
+
   const findFileRecursive = (fileList: FileNode[], name: string): FileNode | null => {
     for (const f of fileList) {
       if (f.name === name) return f;
@@ -299,119 +298,86 @@ export default function Home() {
     setFiles((prev) => toggleFolder(prev, id));
   }, []);
 
-  const handleSendMessage = useCallback(async (message: string, action: "chat" | "review" | "fix" | "explain" | "generate" = "chat") => {
-    const userMsg: AIConversation = {
+  const handleNewChat = useCallback(() => {
+    const newChat: ChatSession = {
       id: generateId(),
-      role: "user",
-      content: message,
-      timestamp: Date.now(),
+      title: "New Chat",
+      pinned: false,
+      messages: [],
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
     };
+    setChats((prev) => [newChat, ...prev]);
+    setActiveChatId(newChat.id);
+    setShowChatList(false);
+  }, []);
 
-    setConversations((prev) => [...prev, userMsg]);
-    setIsAILoading(true);
-    setAIStatus("thinking");
+  const handleSwitchChat = useCallback((id: string) => {
+    setActiveChatId(id);
+    setShowChatList(false);
+  }, []);
 
-    try {
-      const currentMessages = [...conversations, userMsg].map((c) => ({
-        role: c.role,
-        content: c.content,
-      }));
+  const handleRenameChat = useCallback((id: string, title: string) => {
+    setChats((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, title, updatedAt: Date.now() } : c))
+    );
+  }, []);
 
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: currentMessages,
-          action,
-        }),
-      });
+  const handlePinChat = useCallback((id: string) => {
+    setChats((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, pinned: !c.pinned, updatedAt: Date.now() } : c))
+    );
+  }, []);
 
-      if (!response.ok) {
-        throw new Error("Failed to get response");
+  const handleDeleteChat = useCallback((id: string) => {
+    setChats((prev) => {
+      const next = prev.filter((c) => c.id !== id);
+      if (activeChatId === id && next.length > 0) {
+        setActiveChatId(next[0].id);
+      } else if (next.length === 0) {
+        const newChat: ChatSession = {
+          id: generateId(),
+          title: "New Chat",
+          pinned: false,
+          messages: [],
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        };
+        setActiveChatId(newChat.id);
+        return [newChat];
       }
+      return next;
+    });
+  }, [activeChatId]);
 
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-      let fullContent = "";
-      let model = "";
+  const handleApplyCode = useCallback((code: string) => {
+    if (activeTabId) {
+      handleContentChange(activeTabId, code);
+    }
+  }, [activeTabId, handleContentChange]);
 
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          const chunk = decoder.decode(value);
-          const lines = chunk.split("\n");
-          for (const line of lines) {
-            if (line.startsWith("data: ")) {
-              const data = line.slice(6);
-              if (data === "[DONE]") continue;
-              try {
-                const parsed = JSON.parse(data);
-                if (parsed.content) {
-                  fullContent += parsed.content;
-                  model = parsed.model || model;
-                }
-              } catch {
-                // Ignore parse errors
-              }
-            }
-          }
-        }
-      }
-
-      const assistantMsg: AIConversation = {
+  const handleLoadTemplate = useCallback((template: any) => {
+    const newFiles = template.files.map((f: any) => ({
+      ...f,
+      id: generateId(),
+      parentId: undefined,
+    }));
+    setFiles((prev) => [
+      ...prev,
+      {
         id: generateId(),
-        role: "assistant",
-        content: fullContent,
-        timestamp: Date.now(),
-        metadata: { model, action },
-      };
+        name: template.name.toLowerCase().replace(/\s+/g, "-"),
+        type: "folder" as const,
+        isOpen: true,
+        children: newFiles,
+      },
+    ]);
+    if (newFiles[0]) {
+      openFile(newFiles[0]);
+    }
+  }, [openFile]);
 
-      setConversations((prev) => [...prev, assistantMsg]);
-      setAIStatus("ready");
-      setIsConnected(true);
-
-      if (action === "review" && fullContent.includes("###REVIEW_START###")) {
-        try {
-          const match = fullContent.match(/###REVIEW_START###([\s\S]*?)###REVIEW_END###/);
-          if (match) {
-            const review = JSON.parse(match[1].trim());
-            if (review.issues) {
-              const newMarkers = review.issues.map((issue: any) => ({
-                startLineNumber: issue.line || 1,
-                startColumn: 1,
-                endLineNumber: issue.line || 1,
-                endColumn: 100,
-                message: issue.message,
-                severity: issue.severity,
-                suggestion: issue.suggestion,
-              }));
-              setMarkers(newMarkers);
-            }
-          }
-        } catch {
-          // Ignore parse errors
-        }
-      }
-
-      // Save assistant message to chat
-      setChats((prev) =>
-        prev.map((chat) => {
-          if (chat.id !== activeChatId) return chat;
-          return {
-            ...chat,
-            messages: [...chat.messages, assistantMsg],
-            updatedAt: Date.now(),
-          };
-        })
-      );
-
-      setAIStatus("ready");
-      setIsConnected(true);
-    } catch (error: any) {
-      setAIStatus("error");
-
-    const handleSendMessage = useCallback(async (message: string, action: "chat" | "review" | "fix" | "explain" | "generate" = "chat") => {
+  const handleSendMessage = useCallback(async (message: string, action: "chat" | "review" | "fix" | "explain" | "generate" = "chat") => {
     if (!activeChatId) return;
 
     const userMsg: AIConversation = {
@@ -421,7 +387,6 @@ export default function Home() {
       timestamp: Date.now(),
     };
 
-    // Update chat with user message + auto-name on first message
     setChats((prev) =>
       prev.map((chat) => {
         if (chat.id !== activeChatId) return chat;
@@ -441,7 +406,6 @@ export default function Home() {
       const activeChat = chats.find((c) => c.id === activeChatId);
       const chatMessages = activeChat?.messages || [];
 
-      // Build project context
       const buildProjectContext = (includeContent: boolean): string => {
         const lines: string[] = ["=== PROJECT FILES ==="];
         const walk = (nodes: FileNode[], prefix = "") => {
@@ -483,7 +447,6 @@ export default function Home() {
         apiContent += "\n\n" + buildProjectContext(false);
       }
 
-      // Include console errors if debugging
       const recentErrors = consoleEntries
         .filter((e) => e.type === "error" || e.type === "warn")
         .slice(-5);
@@ -496,11 +459,6 @@ export default function Home() {
         apiContent += "=== END CONSOLE ===";
       }
 
-      if (attachCode && currentCode) {
-        apiContent += `\n\n=== CURRENT FILE (${currentLanguage}) ===\n\`\`\`${currentLanguage}\n${currentCode}\n\`\`\``;
-      }
-
-      // Trim to last 8 messages to prevent context overflow
       const trimmedHistory = chatMessages.slice(-8);
       const apiMessages = [
         ...trimmedHistory.map((c) => ({ role: c.role, content: c.content })),
@@ -540,7 +498,7 @@ export default function Home() {
                   model = parsed.model || model;
                 }
               } catch {
-                // Ignore parse errors
+                // Ignore
               }
             }
           }
@@ -555,9 +513,7 @@ export default function Home() {
         metadata: { model, action },
       };
 
-      // === MARKER PARSER ===
-
-      // 1. FIX_LINE — single line replacement (preferred)
+      // FIX_LINE parser
       const fixLineRegex = /###FIX_LINE:([^:]+):(\d+)###\n([\s\S]*?)###FIX_END###/g;
       let fixMatch;
       while ((fixMatch = fixLineRegex.exec(fullContent)) !== null) {
@@ -581,7 +537,7 @@ export default function Home() {
         }
       }
 
-      // 2. PATCH — line range replacement
+      // PATCH parser
       const patchRegex = /###PATCH_START:([^:]+):(\d+):(\d+)###\n([\s\S]*?)###PATCH_END###/g;
       let patchMatch;
       while ((patchMatch = patchRegex.exec(fullContent)) !== null) {
@@ -605,7 +561,7 @@ export default function Home() {
         }
       }
 
-      // 3. EDITOR_START — full active file replace
+      // EDITOR_START parser
       const editorMatch = fullContent.match(/###EDITOR_START###([\s\S]*?)###EDITOR_END###/);
       if (editorMatch) {
         const codeToApply = editorMatch[1].trim();
@@ -617,7 +573,7 @@ export default function Home() {
         });
       }
 
-      // 4. FILE_START — multi-file project creation
+      // FILE_START parser
       const fileRegex = /###FILE_START:([^\n]+?)(?:###)?\n([\s\S]*?)###FILE_END###/g;
       const fileEntries: Array<{ path: string; content: string }> = [];
       let fileMatch;
@@ -727,7 +683,7 @@ export default function Home() {
         }
       }
 
-      // 5. REVIEW markers
+      // REVIEW markers
       if (action === "review" && fullContent.includes("###REVIEW_START###")) {
         try {
           const match = fullContent.match(/###REVIEW_START###([\s\S]*?)###REVIEW_END###/);
@@ -747,11 +703,11 @@ export default function Home() {
             }
           }
         } catch {
-          // Ignore parse errors
+          // Ignore
         }
       }
 
-      // Save assistant message to chat
+      // Save assistant message
       setChats((prev) =>
         prev.map((chat) => {
           if (chat.id !== activeChatId) return chat;
@@ -790,87 +746,7 @@ export default function Home() {
     } finally {
       setIsAILoading(false);
     }
-  }, [activeChatId, chats, files, consoleEntries, attachCode, currentCode, currentLanguage, handleContentChange, openFile]);
-              
-  
-    const handleNewChat = useCallback(() => {
-    const newChat: ChatSession = {
-      id: generateId(),
-      title: "New Chat",
-      pinned: false,
-      messages: [],
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    };
-    setChats((prev) => [newChat, ...prev]);
-    setActiveChatId(newChat.id);
-    setShowChatList(false);
-  }, []);
-
-  const handleSwitchChat = useCallback((id: string) => {
-    setActiveChatId(id);
-    setShowChatList(false);
-  }, []);
-
-  const handleRenameChat = useCallback((id: string, title: string) => {
-    setChats((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, title, updatedAt: Date.now() } : c))
-    );
-  }, []);
-
-  const handlePinChat = useCallback((id: string) => {
-    setChats((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, pinned: !c.pinned, updatedAt: Date.now() } : c))
-    );
-  }, []);
-
-  const handleDeleteChat = useCallback((id: string) => {
-    setChats((prev) => {
-      const next = prev.filter((c) => c.id !== id);
-      if (activeChatId === id && next.length > 0) {
-        setActiveChatId(next[0].id);
-      } else if (next.length === 0) {
-        const newChat: ChatSession = {
-          id: generateId(),
-          title: "New Chat",
-          pinned: false,
-          messages: [],
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        };
-        setActiveChatId(newChat.id);
-        return [newChat];
-      }
-      return next;
-    });
-  }, [activeChatId]);
-
-  const handleApplyCode = useCallback((code: string) => {
-    if (activeTabId) {
-      handleContentChange(activeTabId, code);
-    }
-  }, [conversations, handleContentChange, openFile]);
-
-  const handleLoadTemplate = useCallback((template: any) => {
-    const newFiles = template.files.map((f: any) => ({
-      ...f,
-      id: generateId(),
-      parentId: undefined,
-    }));
-    setFiles((prev) => [
-      ...prev,
-      {
-        id: generateId(),
-        name: template.name.toLowerCase().replace(/\s+/g, "-"),
-        type: "folder" as const,
-        isOpen: true,
-        children: newFiles,
-      },
-    ]);
-    if (newFiles[0]) {
-      openFile(newFiles[0]);
-    }
-  }, [openFile]);
+  }, [activeChatId, chats, files, consoleEntries, handleContentChange, openFile]);
 
   const activeTab = tabs.find((t) => t.id === activeTabId);
   const lineCount = activeTab?.content?.split("\n").length || 0;
@@ -899,7 +775,6 @@ export default function Home() {
       />
 
       <div className="flex-1 flex overflow-hidden min-h-0">
-        {/* Sidebar - Resizable */}
         <AnimatePresence initial={false}>
           {showSidebar && (
             <motion.div
@@ -920,7 +795,6 @@ export default function Home() {
                   onRenameNode={handleRenameNode}
                 />
               </div>
-              {/* Resize handle */}
               <div
                 className="w-1 cursor-col-resize hover:bg-purple-500/50 transition-colors shrink-0"
                 onMouseDown={() => setIsResizing(true)}
@@ -929,14 +803,9 @@ export default function Home() {
           )}
         </AnimatePresence>
 
-        {/* Main Content Area */}
         <div className="flex-1 flex min-w-0 min-h-0 overflow-hidden">
-          {/* Editor */}
           {(viewMode === "code" || viewMode === "split") && (
-            <div className={cn(
-              "flex flex-col min-h-0 overflow-hidden",
-              viewMode === "code" ? "flex-1" : "flex-1"
-            )}>
+            <div className={cn("flex flex-col min-h-0 overflow-hidden", viewMode === "code" ? "flex-1" : "flex-1")}>
               <EditorPanel
                 tabs={tabs}
                 activeTabId={activeTabId}
@@ -949,12 +818,8 @@ export default function Home() {
             </div>
           )}
 
-          {/* Preview */}
           {(viewMode === "preview" || viewMode === "split") && (
-            <div className={cn(
-              "flex flex-col border-l border-slate-800/50 min-h-0 overflow-hidden",
-              viewMode === "preview" ? "flex-1" : "w-[45%] shrink-0"
-            )}>
+            <div className={cn("flex flex-col border-l border-slate-800/50 min-h-0 overflow-hidden", viewMode === "preview" ? "flex-1" : "w-[45%] shrink-0")}>
               <Preview
                 files={files}
                 onClose={() => setViewMode("code")}
@@ -966,7 +831,6 @@ export default function Home() {
         </div>
       </div>
 
-      {/* AI Panel - Floating Overlay */}
       <AIPanel
         conversations={conversations}
         onSendMessage={handleSendMessage}
@@ -1015,8 +879,4 @@ export default function Home() {
       <Tutorial isOpen={showTutorial} onClose={() => setShowTutorial(false)} />
     </div>
   );
-}
-
-function cn(...classes: (string | boolean | undefined)[]) {
-  return classes.filter(Boolean).join(" ");
 }
