@@ -26,7 +26,7 @@ interface ConsolePanelProps {
 }
 
 export function ConsolePanel({ entries, isOpen, onToggle, onClear }: ConsolePanelProps) {
-  const [filter, setFilter] = useState<<"all" | "log" | "error" | "warn" | "info" | "debug">("all");
+  const [filter, setFilter] = useState<"all" | "log" | "error" | "warn" | "info" | "debug">("all");
   const [search, setSearch] = useState("");
   const [expandedIds, setExpandedIds] = useState<<Set<string>>(new Set());
   const bottomRef = useRef<<HTMLDivElement>(null);
