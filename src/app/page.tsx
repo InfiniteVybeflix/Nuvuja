@@ -10,6 +10,7 @@ import {
   saveWorkspace,
   loadWorkspace,
   findFileById,
+  findFileByPath,
   updateFileContent,
   addFileNode,
   deleteFileNode,
