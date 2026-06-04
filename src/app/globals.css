@@ -277,3 +277,158 @@ html, body {
   .sm\:inline { display: inline !important; }
   .sm\:flex { display: flex !important; }
 }
+
+/* ============================================ */
+/* PERIMETER GLOW — Color variations for cards */
+/* ============================================ */
+
+[class*="perimeter-glow-"] {
+  position: relative;
+}
+
+[class*="perimeter-glow-"]::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: 18px;
+  padding: 2px;
+  -webkit-mask: 
+    linear-gradient(#fff 0 0) content-box, 
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: perimeter-rotate 4s linear infinite;
+  z-index: -1;
+}
+
+@property --angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes perimeter-rotate {
+  0% { --angle: 0deg; }
+  100% { --angle: 360deg; }
+}
+
+/* Fallback */
+@supports not (background: conic-gradient(from var(--angle), red, blue)) {
+  [class*="perimeter-glow-"]::before {
+    animation: perimeter-spin-fallback 4s linear infinite;
+  }
+  @keyframes perimeter-spin-fallback {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+}
+
+/* Inner mask */
+[class*="perimeter-glow-"]::after {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  border-radius: 15px;
+  background: rgba(15, 23, 42, 0.98);
+  z-index: -1;
+}
+
+/* Sky variant */
+.perimeter-glow-sky::before {
+  background: conic-gradient(
+    from var(--angle, 0deg),
+    transparent 0%,
+    rgba(56, 189, 248, 0.05) 12%,
+    rgba(56, 189, 248, 0.3) 18%,
+    rgba(56, 189, 248, 0.6) 22%,
+    #38bdf8 25%,
+    rgba(56, 189, 248, 0.6) 28%,
+    rgba(56, 189, 248, 0.3) 32%,
+    rgba(56, 189, 248, 0.05) 38%,
+    transparent 50%,
+    transparent 62%,
+    rgba(56, 189, 248, 0.05) 68%,
+    rgba(56, 189, 248, 0.3) 74%,
+    rgba(192, 132, 252, 0.6) 78%,
+    #c084fc 82%,
+    rgba(192, 132, 252, 0.6) 85%,
+    rgba(56, 189, 248, 0.3) 90%,
+    rgba(56, 189, 248, 0.05) 95%,
+    transparent 100%
+  );
+}
+
+/* Purple variant */
+.perimeter-glow-purple::before {
+  background: conic-gradient(
+    from var(--angle, 0deg),
+    transparent 0%,
+    rgba(167, 139, 250, 0.05) 12%,
+    rgba(167, 139, 250, 0.3) 18%,
+    rgba(192, 132, 252, 0.6) 22%,
+    #c084fc 25%,
+    rgba(192, 132, 252, 0.6) 28%,
+    rgba(167, 139, 250, 0.3) 32%,
+    rgba(167, 139, 250, 0.05) 38%,
+    transparent 50%,
+    transparent 62%,
+    rgba(192, 132, 252, 0.05) 68%,
+    rgba(192, 132, 252, 0.3) 74%,
+    rgba(56, 189, 248, 0.6) 78%,
+    #38bdf8 82%,
+    rgba(56, 189, 248, 0.6) 85%,
+    rgba(192, 132, 252, 0.3) 90%,
+    rgba(192, 132, 252, 0.05) 95%,
+    transparent 100%
+  );
+}
+
+/* Amber variant */
+.perimeter-glow-amber::before {
+  background: conic-gradient(
+    from var(--angle, 0deg),
+    transparent 0%,
+    rgba(251, 191, 36, 0.05) 12%,
+    rgba(251, 191, 36, 0.3) 18%,
+    rgba(251, 191, 36, 0.6) 22%,
+    #fbbf24 25%,
+    rgba(251, 191, 36, 0.6) 28%,
+    rgba(251, 191, 36, 0.3) 32%,
+    rgba(251, 191, 36, 0.05) 38%,
+    transparent 50%,
+    transparent 62%,
+    rgba(251, 191, 36, 0.05) 68%,
+    rgba(251, 191, 36, 0.3) 74%,
+    rgba(192, 132, 252, 0.6) 78%,
+    #c084fc 82%,
+    rgba(192, 132, 252, 0.6) 85%,
+    rgba(251, 191, 36, 0.3) 90%,
+    rgba(251, 191, 36, 0.05) 95%,
+    transparent 100%
+  );
+}
+
+/* Emerald variant */
+.perimeter-glow-emerald::before {
+  background: conic-gradient(
+    from var(--angle, 0deg),
+    transparent 0%,
+    rgba(74, 222, 128, 0.05) 12%,
+    rgba(74, 222, 128, 0.3) 18%,
+    rgba(74, 222, 128, 0.6) 22%,
+    #4ade80 25%,
+    rgba(74, 222, 128, 0.6) 28%,
+    rgba(74, 222, 128, 0.3) 32%,
+    rgba(74, 222, 128, 0.05) 38%,
+    transparent 50%,
+    transparent 62%,
+    rgba(74, 222, 128, 0.05) 68%,
+    rgba(74, 222, 128, 0.3) 74%,
+    rgba(56, 189, 248, 0.6) 78%,
+    #38bdf8 82%,
+    rgba(56, 189, 248, 0.6) 85%,
+    rgba(74, 222, 128, 0.3) 90%,
+    rgba(74, 222, 128, 0.05) 95%,
+    transparent 100%
+  );
+}
