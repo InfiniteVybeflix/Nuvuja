@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useCallback, useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import Editor from "@monaco-editor/react";
 import type { editor } from "monaco-editor";
 import { EditorTab } from "@/types";
