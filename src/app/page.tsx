@@ -838,6 +838,17 @@ export default function Home() {
                 onContentChange={handleContentChange}
                 theme={theme}
                 markers={markers}
+                onAskAI={(code, action) => {
+                  setShowAI(true);
+                  setTimeout(() => {
+                    const input = document.querySelector('input[placeholder*="Ask ᓄᕙᔭ"]') as HTMLInputElement;
+                    if (input) {
+                      const prefix = action.includes("fix") ? "/fix" : action.includes("explain") ? "/explain" : "";
+                      input.value = `${prefix} ${action}:\n\n\`\`\`\n${code.slice(0, 800)}\n\`\`\``;
+                      input.focus();
+                    }
+                  }, 100);
+                }}
               />
             </div>
           )}
