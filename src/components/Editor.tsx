@@ -195,6 +195,8 @@ export function EditorPanel({
               insertSpaces: true,
               formatOnPaste: true,
               formatOnType: true,
+              domReadOnly: false,
+              readOnly: false,
             }}
             loading={
               <div className="flex items-center justify-center h-full text-slate-500">
