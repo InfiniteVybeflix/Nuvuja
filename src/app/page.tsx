@@ -433,13 +433,12 @@ export default function Home() {
       };
 
       const needsFullContext =
-        action !== "chat" ||
+        action === "fix" ||
+        action === "review" ||
         message.toLowerCase().includes("error") ||
         message.toLowerCase().includes("bug") ||
         message.toLowerCase().includes("fix") ||
-        message.toLowerCase().includes("debug") ||
-        message.toLowerCase().includes("project") ||
-        message.toLowerCase().includes("all files");
+        message.toLowerCase().includes("debug");
 
       let apiContent = message;
       if (needsFullContext) {
@@ -450,8 +449,8 @@ export default function Home() {
 
       const recentErrors = consoleEntries
         .filter((e) => e.type === "error" || e.type === "warn")
-        .slice(-5);
-      if (recentErrors.length > 0 && (action === "fix" || message.toLowerCase().includes("error") || message.toLowerCase().includes("console"))) {
+        .slice(-10);
+      if (recentErrors.length > 0) {
         apiContent += "\n\n=== CONSOLE OUTPUT ===\n";
         recentErrors.forEach((e) => {
           apiContent += `[${e.type.toUpperCase()}] ${e.message}\n`;
@@ -562,16 +561,40 @@ export default function Home() {
         }
       }
 
-      // EDITOR_START parser
-      const editorMatch = fullContent.match(/###EDITOR_START###([\s\S]*?)###EDITOR_END###/);
-      if (editorMatch) {
-        const codeToApply = editorMatch[1].trim();
-        setActiveTabId((currentTabId) => {
-          if (currentTabId) {
-            handleContentChange(currentTabId, codeToApply);
+      // EDITOR_START parser — supports optional filename: ###EDITOR_START:path/to/file.js
+      const editorRegex = /###EDITOR_START(?::([^\n#]+))?###\n([\s\S]*?)###EDITOR_END###/g;
+      let editorMatch;
+      while ((editorMatch = editorRegex.exec(fullContent)) !== null) {
+        const filePath = editorMatch[1]?.trim();
+        const codeToApply = editorMatch[2].trim();
+
+        if (filePath) {
+          // Target specific file by path
+          const targetFile = findFileByPath(files, filePath);
+          if (targetFile) {
+            setFiles((prev) => updateFileContent(prev, targetFile.id, codeToApply));
+            setTabs((prev) =>
+              prev.map((t) =>
+                t.fileId === targetFile.id ? { ...t, content: codeToApply, isDirty: true } : t
+              )
+            );
+            // Open the file if not already open
+            const isOpen = tabs.some((t) => t.fileId === targetFile.id);
+            if (!isOpen) {
+              setTimeout(() => openFile(targetFile), 0);
+            }
+          } else {
+            console.warn(`[Nuvuja] EDITOR_START: File not found: "${filePath}"`);
           }
-          return currentTabId;
-        });
+        } else {
+          // No path specified — apply to active tab (old behavior)
+          setActiveTabId((currentTabId) => {
+            if (currentTabId) {
+              handleContentChange(currentTabId, codeToApply);
+            }
+            return currentTabId;
+          });
+        }
       }
 
       // FILE_START parser
