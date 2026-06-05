@@ -335,7 +335,7 @@ export function EditorPanel({
   markers,
   onAskAI,
 }: EditorPanelProps) {
-  const editorRef = useRef<<editor.IStandaloneCodeEditor | null>(null);
+  const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<any>(null);
   const [showShortcuts, setShowShortcuts] = useState(true);
   const [activeGroup, setActiveGroup] = useState<string | null>(null);
