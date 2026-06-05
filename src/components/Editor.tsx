@@ -12,7 +12,8 @@ import {
   ArrowLeft, ArrowRight, ArrowUp, ArrowDown,
   WrapText, Search, Replace, Undo2, Redo2,
   Bug, Sparkles, Zap, AlignLeft,
-  Terminal, Brackets, Quote, Parentheses
+  Terminal, Brackets, Quote, Parentheses,
+  GripVertical
 } from "lucide-react";
 
 interface EditorPanelProps {
@@ -130,11 +131,11 @@ const SNIPPETS: Record<string, Array<{ label: string; insertText: string; detail
     { label: "union", insertText: "type ${1:Name} = ${2:A} | ${3:B};", detail: "Union type", kind: "Snippet" },
     { label: "intersection", insertText: "type ${1:Name} = ${2:A} & ${3:B};", detail: "Intersection type", kind: "Snippet" },
     { label: "mapped", insertText: "type ${1:Mapped} = {\n  [K in keyof ${2:T}]: ${3:T[K]};\n};", detail: "Mapped type", kind: "Snippet" },
-    { label: "utility-partial", insertText: "Partial<${1:T}>", detail: "Partial utility", kind: "Type" },
-    { label: "utility-required", insertText: "Required<${1:T}>", detail: "Required utility", kind: "Type" },
-    { label: "utility-pick", insertText: "Pick<${1:T}, '${2:key}'>", detail: "Pick utility", kind: "Type" },
-    { label: "utility-omit", insertText: "Omit<${1:T}, '${2:key}'>", detail: "Omit utility", kind: "Type" },
-    { label: "utility-record", insertText: "Record<${1:string}, ${2:any}>", detail: "Record utility", kind: "Type" },
+    { label: "utility-partial", insertText: "Partial<<${1:T}>", detail: "Partial utility", kind: "Type" },
+    { label: "utility-required", insertText: "Required<<${1:T}>", detail: "Required utility", kind: "Type" },
+    { label: "utility-pick", insertText: "Pick<<${1:T}, '${2:key}'>", detail: "Pick utility", kind: "Type" },
+    { label: "utility-omit", insertText: "Omit<<${1:T}, '${2:key}'>", detail: "Omit utility", kind: "Type" },
+    { label: "utility-record", insertText: "Record<<${1:string}, ${2:any}>", detail: "Record utility", kind: "Type" },
     { label: "decorator", insertText: "@${1:decorator}(${2})", detail: "Decorator", kind: "Snippet" },
     { label: "namespace", insertText: "namespace ${1:Name} {\n  export ${2}\n}", detail: "Namespace", kind: "Snippet" },
     { label: "declare", insertText: "declare module '${1}' {\n  ${2}\n}", detail: "Module declaration", kind: "Snippet" },
@@ -222,8 +223,8 @@ const SNIPPETS: Record<string, Array<{ label: string; insertText: string; detail
     { label: "trait", insertText: "trait ${1:Name} {\n    fn ${2:method}(&self);\n}", detail: "Trait", kind: "Snippet" },
     { label: "match", insertText: "match ${1:expr} {\n    ${2:pattern} => ${3},\n    _ => ${4},\n}", detail: "Match", kind: "Snippet" },
     { label: "if-let", insertText: "if let ${1:Some(x)} = ${2:expr} {\n    ${3}\n}", detail: "If let", kind: "Snippet" },
-    { label: "result", insertText: "Result<${1:T}, ${2:E}>", detail: "Result type", kind: "Type" },
-    { label: "option", insertText: "Option<${1:T}>", detail: "Option type", kind: "Type" },
+    { label: "result", insertText: "Result<<${1:T}, ${2:E}>", detail: "Result type", kind: "Type" },
+    { label: "option", insertText: "Option<<${1:T}>", detail: "Option type", kind: "Type" },
     { label: "vec", insertText: "vec![${1}]", detail: "Vector macro", kind: "Macro" },
     { label: "println", insertText: "println!(\"${1}\", ${2});", detail: "Println macro", kind: "Macro" },
   ],
@@ -244,8 +245,8 @@ const SNIPPETS: Record<string, Array<{ label: string; insertText: string; detail
     { label: "for", insertText: "for (int ${1:i} = 0; ${1:i} < ${2:n}; ${1:i}++) {\n    ${3}\n}", detail: "For loop", kind: "Snippet" },
     { label: "if", insertText: "if (${1:condition}) {\n    ${2}\n}", detail: "If statement", kind: "Snippet" },
     { label: "cout", insertText: "std::cout << ${1} << std::endl;", detail: "Cout", kind: "Snippet" },
-    { label: "vector", insertText: "std::vector<${1:int}> ${2:name};", detail: "Vector", kind: "Snippet" },
-    { label: "map", insertText: "std::map<${1:string}, ${2:int}> ${3:name};", detail: "Map", kind: "Snippet" },
+    { label: "vector", insertText: "std::vector<<${1:int}> ${2:name};", detail: "Vector", kind: "Snippet" },
+    { label: "map", insertText: "std::map<<${1:string}, ${2:int}> ${3:name};", detail: "Map", kind: "Snippet" },
   ],
   php: [
     { label: "php", insertText: "<?php\n${1}\n?>", detail: "PHP tags", kind: "Snippet" },
@@ -334,11 +335,16 @@ export function EditorPanel({
   markers,
   onAskAI,
 }: EditorPanelProps) {
-  const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
+  const editorRef = useRef<<editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<any>(null);
   const [showShortcuts, setShowShortcuts] = useState(true);
   const [activeGroup, setActiveGroup] = useState<string | null>(null);
   const [cursorPos, setCursorPos] = useState({ line: 1, col: 1 });
+
+  // Floating toggle button position
+  const [togglePos, setTogglePos] = useState({ x: 16, y: -60 }); // default bottom-left
+  const [isDraggingToggle, setIsDraggingToggle] = useState(false);
+  const dragStartRef = useRef({ x: 0, y: 0, startX: 0, startY: 0 });
 
   const activeTab = tabs.find((t) => t.id === activeTabId);
 
@@ -372,7 +378,7 @@ export function EditorPanel({
     if (!snippets) return;
 
     return monaco.languages.registerCompletionItemProvider(languageId, {
-      triggerCharacters: ["<", ".", "#", "@", ":", " ", "(", "{", "["],
+      triggerCharacters: ["<<", ".", "#", "@", ":", " ", "(", "{", "["],
       provideCompletionItems: (model: any, position: any) => {
         const word = model.getWordUntilPosition(position);
         const range = {
@@ -384,7 +390,7 @@ export function EditorPanel({
 
         const lineContent = model.getLineContent(position.lineNumber);
         const beforeCursor = lineContent.slice(0, position.column - 1);
-        const lastWord = beforeCursor.match(/[\w<.#@]*$/)?.[0] || "";
+        const lastWord = beforeCursor.match(/[\w<<.#@]*$/)?.[0] || "";
 
         const suggestions = snippets
           .filter((s) => {
@@ -458,12 +464,10 @@ export function EditorPanel({
 
     monaco.editor.setTheme("nuvuja-dark");
 
-    // Register completion providers for all languages
     Object.keys(SNIPPETS).forEach((lang) => {
       registerCompletionProvider(monaco, lang);
     });
 
-    // Track cursor
     editor.onDidChangeCursorPosition((e) => {
       setCursorPos({ line: e.position.lineNumber, col: e.position.column });
     });
@@ -597,6 +601,66 @@ export function EditorPanel({
     return acc;
   }, {} as Record<string, ShortcutDef[]>);
 
+  // Drag handlers for floating toggle
+  const handleToggleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDraggingToggle(true);
+    dragStartRef.current = {
+      x: e.clientX,
+      y: e.clientY,
+      startX: togglePos.x,
+      startY: togglePos.y,
+    };
+  };
+
+  const handleToggleTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    setIsDraggingToggle(true);
+    dragStartRef.current = {
+      x: touch.clientX,
+      y: touch.clientY,
+      startX: togglePos.x,
+      startY: togglePos.y,
+    };
+  };
+
+  useEffect(() => {
+    const handleMove = (e: MouseEvent) => {
+      if (!isDraggingToggle) return;
+      const dx = e.clientX - dragStartRef.current.x;
+      const dy = e.clientY - dragStartRef.current.y;
+      setTogglePos({
+        x: Math.max(0, Math.min(window.innerWidth - 48, dragStartRef.current.startX + dx)),
+        y: Math.max(-window.innerHeight + 48, Math.min(0, dragStartRef.current.startY + dy)),
+      });
+    };
+    const handleUp = () => setIsDraggingToggle(false);
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!isDraggingToggle) return;
+      const touch = e.touches[0];
+      const dx = touch.clientX - dragStartRef.current.x;
+      const dy = touch.clientY - dragStartRef.current.y;
+      setTogglePos({
+        x: Math.max(0, Math.min(window.innerWidth - 48, dragStartRef.current.startX + dx)),
+        y: Math.max(-window.innerHeight + 48, Math.min(0, dragStartRef.current.startY + dy)),
+      });
+    };
+    const handleTouchEnd = () => setIsDraggingToggle(false);
+
+    if (isDraggingToggle) {
+      window.addEventListener("mousemove", handleMove);
+      window.addEventListener("mouseup", handleUp);
+      window.addEventListener("touchmove", handleTouchMove, { passive: false });
+      window.addEventListener("touchend", handleTouchEnd);
+    }
+    return () => {
+      window.removeEventListener("mousemove", handleMove);
+      window.removeEventListener("mouseup", handleUp);
+      window.removeEventListener("touchmove", handleTouchMove);
+      window.removeEventListener("touchend", handleTouchEnd);
+    };
+  }, [isDraggingToggle]);
+
   if (tabs.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center bg-slate-950 min-h-0">
@@ -644,17 +708,9 @@ export function EditorPanel({
       <div className="flex-1 flex min-h-0 relative">
         {/* Shortcut Toolbar */}
         <div className={cn(
-          "flex flex-col bg-slate-900/90 border-r border-slate-800/50 transition-all duration-200 overflow-hidden shrink-0",
+          "flex flex-col bg-slate-900/90 border-r border-slate-800/50 transition-all duration-200 overflow-hidden shrink-0 z-10",
           showShortcuts ? "w-[72px]" : "w-0"
         )}>
-          <button
-            onClick={() => setShowShortcuts(!showShortcuts)}
-            className="p-2 hover:bg-slate-800 text-slate-500 hover:text-slate-300 transition-colors border-b border-slate-800/50 flex justify-center"
-            title="Toggle toolbar"
-          >
-            {showShortcuts ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
-          </button>
-
           <div className="flex-1 overflow-y-auto py-1 space-y-0.5">
             {Object.entries(groupedShortcuts).map(([group, items]) => (
               <div key={group} className="px-1">
@@ -751,6 +807,35 @@ export function EditorPanel({
           <span>UTF-8</span>
           <span>{activeTab?.content?.split("\n").length || 0} lines</span>
         </div>
+      </div>
+
+      {/* Floating Toolbar Toggle — ⚡ at bottom-left, draggable */}
+      <div
+        className="fixed z-[70] flex flex-col items-center gap-1"
+        style={{
+          left: togglePos.x,
+          bottom: Math.abs(togglePos.y),
+        }}
+      >
+        <motion.button
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => setShowShortcuts(!showShortcuts)}
+          onMouseDown={handleToggleMouseDown}
+          onTouchStart={handleToggleTouchStart}
+          className={cn(
+            "w-10 h-10 rounded-full shadow-lg shadow-purple-500/30 flex items-center justify-center transition-all cursor-grab active:cursor-grabbing",
+            showShortcuts
+              ? "bg-gradient-to-r from-sky-500 to-purple-500 text-white"
+              : "bg-slate-800 text-slate-400 hover:text-white border border-slate-700"
+          )}
+          title="Drag to move • Click to toggle toolbar"
+        >
+          <Zap size={18} />
+        </motion.button>
+        <span className="text-[9px] text-slate-500 bg-slate-900/80 px-1.5 py-0.5 rounded">
+          {showShortcuts ? "Hide" : "Tools"}
+        </span>
       </div>
     </div>
   );
