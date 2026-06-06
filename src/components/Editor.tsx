@@ -1346,60 +1346,74 @@ export function EditorPanel({
         </motion.button>
       )}
 
-      {/* Floating ⚡ Dock — Panel slides out from bottom */}
+      {/* Floating ⚡ Radial Burst Dock */}
       {!zenMode && (
         <div
-          className="fixed z-[70] flex flex-col items-center gap-2"
+          className="fixed z-[70] flex flex-col items-center"
           style={{
             left: togglePos.x,
             bottom: Math.abs(togglePos.y),
           }}
         >
-          {/* Sliding Toolbar Panel — rises from bottom */}
-          <AnimatePresence>
-            {showShortcuts && (
-              <motion.div
-                initial={{ opacity: 0, y: 20, scale: 0.9 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 20, scale: 0.9 }}
-                transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                className="flex flex-col bg-slate-900/95 backdrop-blur-xl border border-slate-700/50 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden w-[80px] max-h-[60vh]"
-              >
-                <div className="flex-1 overflow-y-auto py-2 px-1.5 space-y-0.5 scrollbar-hide">
-                  {Object.entries(groupedShortcuts).map(([group, items]) => (
-                    <div key={group} className="mb-1">
-                      <div className="text-[7px] text-slate-500 uppercase tracking-wider px-1 py-0.5 font-bold flex items-center gap-1">
-                        {group === "AI" && <Sparkles size={8} className="text-purple-400" />}
-                        {group === "Edit" && <Pencil size={8} className="text-sky-400" />}
-                        {group === "Format" && <AlignLeft size={8} className="text-emerald-400" />}
-                        {group === "Insert" && <Code size={8} className="text-amber-400" />}
-                        {group === "Navigate" && <Hash size={8} className="text-rose-400" />}
-                        {group === "View" && <Eye size={8} className="text-cyan-400" />}
-                        {group}
-                      </div>
-                      {items.map((s, i) => (
-                        <motion.button
-                          key={i}
-                          initial={{ opacity: 0, x: -10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: i * 0.02 }}
-                          onClick={() => handleShortcut(s)}
-                          className={cn(
-                            "w-full p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors flex flex-col items-center gap-0.5 mb-0.5",
-                            s.group === "AI" && "hover:bg-purple-500/10 hover:text-purple-400"
-                          )}
-                          title={`${s.label}${s.insert ? ` — "${s.insert}"` : ""}`}
-                        >
-                          <s.icon size={14} />
-                          <span className="text-[7px] leading-none text-center">{s.label}</span>
-                        </motion.button>
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              </motion.div>
+          {/* Radial Buttons Container */}
+          <div className="relative w-[1px] h-[1px] mb-3">
+            {Object.entries(groupedShortcuts).flatMap(([group, items], groupIndex) =>
+              items.map((s, i) => {
+                const totalIndex = groupIndex * 10 + i;
+                const angle = -140 + (totalIndex * 35); // Fan arc from left to right
+                const radius = 90;
+                const rad = (angle * Math.PI) / 180;
+                const x = Math.cos(rad) * radius;
+                const y = Math.sin(rad) * radius;
+                
+                const groupColors: Record<string, string> = {
+                  Edit: "hover:text-sky-400",
+                  Format: "hover:text-emerald-400",
+                  Insert: "hover:text-amber-400",
+                  Navigate: "hover:text-rose-400",
+                  View: "hover:text-cyan-400",
+                  AI: "hover:text-purple-400",
+                };
+                
+                return (
+                  <motion.button
+                    key={`${group}-${i}`}
+                    initial={{ opacity: 0, scale: 0, x: 0, y: 0 }}
+                    animate={showShortcuts ? {
+                      opacity: 1,
+                      scale: 1,
+                      x,
+                      y,
+                      transition: {
+                        type: "spring",
+                        stiffness: 400,
+                        damping: 20,
+                        delay: totalIndex * 0.03,
+                      }
+                    } : {
+                      opacity: 0,
+                      scale: 0,
+                      x: 0,
+                      y: 0,
+                      transition: {
+                        duration: 0.2,
+                        delay: (Object.entries(groupedShortcuts).flatMap(([_, items]) => items).length - totalIndex) * 0.02,
+                      }
+                    }}
+                    onClick={() => handleShortcut(s)}
+                    className={cn(
+                      "absolute w-10 h-10 rounded-xl bg-slate-900/95 backdrop-blur-xl border border-slate-700/50 shadow-lg shadow-black/50 flex flex-col items-center justify-center gap-0.5 text-slate-400 hover:bg-slate-800 transition-colors",
+                      groupColors[group] || "hover:text-slate-200"
+                    )}
+                    title={`${s.label}${s.insert ? ` — "${s.insert}"` : ""}`}
+                  >
+                    <s.icon size={13} />
+                    <span className="text-[6px] leading-none">{s.label}</span>
+                  </motion.button>
+                );
+              })
             )}
-          </AnimatePresence>
+          </div>
 
           {/* ⚡ Toggle Button */}
           <motion.button
@@ -1409,7 +1423,7 @@ export function EditorPanel({
             onMouseDown={handleToggleMouseDown}
             onTouchStart={handleToggleTouchStart}
             className={cn(
-              "w-11 h-11 rounded-full shadow-xl flex items-center justify-center transition-all shrink-0 cursor-grab active:cursor-grabbing",
+              "w-11 h-11 rounded-full shadow-xl flex items-center justify-center transition-all shrink-0 cursor-grab active:cursor-grabbing z-10 relative",
               showShortcuts
                 ? "bg-gradient-to-r from-sky-500 to-purple-500 text-white shadow-purple-500/40"
                 : "bg-slate-800 text-slate-400 hover:text-white border border-slate-700 shadow-black/50"
