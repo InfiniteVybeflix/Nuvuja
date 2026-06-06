@@ -519,6 +519,10 @@ export function EditorPanel({
   const [showHelp, setShowHelp] = useState(false);
   const [autoSave, setAutoSave] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [orbitRotation, setOrbitRotation] = useState(0);
+  const [isOrbiting, setIsOrbiting] = useState(false);
+  const orbitStartRef = useRef({ x: 0, rotation: 0 });
+
 
   // Floating toggle button position
   const [togglePos, setTogglePos] = useState({ x: 16, y: -60 });
@@ -1349,9 +1353,71 @@ export function EditorPanel({
 
 
 {/* ═══════════════════════════════════════════════════════════════════════ */}
-{/* CONSTELLATION DOCK — Secondary items form a viewport-safe mini-grid    */}
-{/* Primary: r=65 radial  |  Secondary: local offset grid from parent      */}
-{/* No arc math. No off-screen items. Every tool is visible and clickable. */}
+{/* ORBITAL CAROUSEL DOCK — Secondary items orbit around parent, scrollable */}
+{/* Drag or scroll to rotate the ring and reveal all items                 */}
+{/* ═══════════════════════════════════════════════════════════════════════ */}
+
+{/* ─── STATE (add these to your component state) ─── */}
+const [orbitRotation, setOrbitRotation] = useState(0);
+const [isOrbiting, setIsOrbiting] = useState(false);
+const orbitStartRef = useRef({ x: 0, rotation: 0 });
+
+{/* ─── WHEEL HANDLER ─── */}
+const handleOrbitWheel = useCallback((e: React.WheelEvent) => {
+  if (!activeGroup) return;
+  e.preventDefault();
+  setOrbitRotation(prev => prev + e.deltaY * 0.3);
+}, [activeGroup]);
+
+{/* ─── DRAG HANDLERS ─── */}
+const handleOrbitMouseDown = useCallback((e: React.MouseEvent) => {
+  if (!activeGroup) return;
+  setIsOrbiting(true);
+  orbitStartRef.current = { x: e.clientX, rotation: orbitRotation };
+}, [activeGroup, orbitRotation]);
+
+const handleOrbitTouchStart = useCallback((e: React.TouchEvent) => {
+  if (!activeGroup) return;
+  setIsOrbiting(true);
+  orbitStartRef.current = { x: e.touches[0].clientX, rotation: orbitRotation };
+}, [activeGroup, orbitRotation]);
+
+{/* ─── GLOBAL DRAG MOVE/UP (add to useEffect) ─── */}
+useEffect(() => {
+  const handleMove = (e: MouseEvent) => {
+    if (!isOrbiting) return;
+    const dx = e.clientX - orbitStartRef.current.x;
+    setOrbitRotation(orbitStartRef.current.rotation + dx * 0.5);
+  };
+  const handleUp = () => setIsOrbiting(false);
+  const handleTouchMove = (e: TouchEvent) => {
+    if (!isOrbiting) return;
+    const dx = e.touches[0].clientX - orbitStartRef.current.x;
+    setOrbitRotation(orbitStartRef.current.rotation + dx * 0.5);
+  };
+  const handleTouchEnd = () => setIsOrbiting(false);
+
+  if (isOrbiting) {
+    window.addEventListener("mousemove", handleMove);
+    window.addEventListener("mouseup", handleUp);
+    window.addEventListener("touchmove", handleTouchMove, { passive: false });
+    window.addEventListener("touchend", handleTouchEnd);
+  }
+  return () => {
+    window.removeEventListener("mousemove", handleMove);
+    window.removeEventListener("mouseup", handleUp);
+    window.removeEventListener("touchmove", handleTouchMove);
+    window.removeEventListener("touchend", handleTouchEnd);
+  };
+}, [isOrbiting]);
+
+{/* ─── RESET ORBIT WHEN GROUP CHANGES ─── */}
+useEffect(() => {
+  setOrbitRotation(0);
+}, [activeGroup]);
+
+{/* ═══════════════════════════════════════════════════════════════════════ */}
+{/* THE DOCK JSX — Replace your entire floating dock section with this    */}
 {/* ═══════════════════════════════════════════════════════════════════════ */}
 {!zenMode && (
   <div
@@ -1367,7 +1433,7 @@ export function EditorPanel({
           exit={{ opacity: 0 }}
           transition={{ duration: 0.3 }}
           className={cn(
-            "absolute pointer-events-none rounded-full w-[200px] h-[200px] blur-[60px]",
+            "absolute pointer-events-none rounded-full w-[220px] h-[220px] blur-[60px]",
             activeGroup === "Edit" && "bg-sky-500/15",
             activeGroup === "Format" && "bg-emerald-500/15",
             activeGroup === "Insert" && "bg-amber-500/15",
@@ -1380,53 +1446,39 @@ export function EditorPanel({
       )}
     </AnimatePresence>
 
-    {/* ─── SECONDARY GRID — Viewport-safe offset from parent position ─── */}
+    {/* ─── ORBITAL CAROUSEL — Secondary items in a small ring around parent ─── */}
     <AnimatePresence>
       {showShortcuts && activeGroup && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.15 }}
+          transition={{ duration: 0.2 }}
           className="relative w-[1px] h-[1px]"
+          onWheel={handleOrbitWheel}
+          onMouseDown={handleOrbitMouseDown}
+          onTouchStart={handleOrbitTouchStart}
+          style={{ cursor: isOrbiting ? "grabbing" : "grab" }}
         >
           {(() => {
-            // Parent angles (where each group sits on the primary ring)
-            const parentAngle: Record<string, number> = {
-              Edit: -90, Format: -30, Insert: 30,
-              Navigate: 90, View: 150, AI: 210,
-            };
             const items = groupedShortcuts[activeGroup] || [];
             const count = items.length;
-            const angle = parentAngle[activeGroup] ?? -90;
-
-            // Convert parent angle to direction vector
-            const rad = (angle * Math.PI) / 180;
-            const dirX = Math.cos(rad);
-            const dirY = -Math.sin(rad); // CSS flipped
-
-            // Grid offsets: items fan out PERPENDICULAR to the direction
-            // This creates a "hand of cards" or "comb" shape that stays visible
-            const spacing = 48; // px between items
-            const perpX = -dirY; // perpendicular vector (rotated 90°)
-            const perpY = dirX;
-
-            // Center the row of items around the parent's direction
-            const totalWidth = (count - 1) * spacing;
-            const startOffset = -totalWidth / 2;
+            // Small orbit radius — items circle CLOSE to parent
+            const orbitRadius = 52;
+            // Each item gets equal slice of 360°
+            const slice = 360 / count;
 
             return items.map((s, i) => {
-              // Position: parent direction * radius + perpendicular offset
-              // This creates a ROW of items perpendicular to the radial line
-              const perpOffset = startOffset + i * spacing;
-              const radius = 115; // distance from center
-
-              const x = dirX * radius + perpX * perpOffset;
-              const y = dirY * radius + perpY * perpOffset;
+              // Base angle + orbit rotation + user scroll/drag
+              const baseAngle = i * slice;
+              const finalAngle = baseAngle + orbitRotation;
+              const rad = (finalAngle * Math.PI) / 180;
+              const x = Math.cos(rad) * orbitRadius;
+              const y = -Math.sin(rad) * orbitRadius;
 
               return (
                 <motion.button
-                  key={`${activeGroup}-tool-${i}`}
+                  key={`orbit-${activeGroup}-${i}`}
                   initial={{ opacity: 0, scale: 0 }}
                   animate={{
                     opacity: 1,
@@ -1437,29 +1489,28 @@ export function EditorPanel({
                       type: "spring",
                       stiffness: 500,
                       damping: 22,
-                      delay: i * 0.04,
+                      delay: i * 0.03,
                     }
                   }}
                   exit={{
                     opacity: 0,
                     scale: 0,
-                    x: 0,
-                    y: 0,
-                    transition: { duration: 0.1, delay: (count - i) * 0.015 }
+                    transition: { duration: 0.1, delay: (count - i) * 0.01 }
                   }}
-                  whileHover={{ scale: 1.15, zIndex: 100 }}
+                  whileHover={{ scale: 1.2, zIndex: 100 }}
                   whileTap={{ scale: 0.9 }}
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     handleShortcut(s);
                     setActiveGroup(null);
                   }}
                   className={cn(
-                    "absolute w-10 h-10 rounded-xl",
+                    "absolute w-9 h-9 rounded-xl",
                     "bg-slate-900/95 backdrop-blur-xl",
                     "border shadow-lg shadow-black/50",
                     "flex flex-col items-center justify-center gap-0.5",
-                    "text-[8px] font-medium text-slate-400",
-                    "transition-colors",
+                    "text-[7px] font-medium text-slate-400",
+                    "transition-colors select-none",
                     activeGroup === "Edit" && "border-sky-500/30 hover:text-sky-400 hover:bg-sky-500/10",
                     activeGroup === "Format" && "border-emerald-500/30 hover:text-emerald-400 hover:bg-emerald-500/10",
                     activeGroup === "Insert" && "border-amber-500/30 hover:text-amber-400 hover:bg-amber-500/10",
@@ -1469,12 +1520,21 @@ export function EditorPanel({
                   )}
                   title={`${s.label}${s.insert ? ` — "${s.insert}"` : ""}`}
                 >
-                  <s.icon size={14} />
-                  <span className="leading-none">{s.label.length > 5 ? s.label.slice(0, 4) : s.label}</span>
+                  <s.icon size={13} />
+                  <span className="leading-none">{s.label.length > 4 ? s.label.slice(0, 3) : s.label}</span>
                 </motion.button>
               );
             });
           })()}
+
+          {/* ─── ORBIT HINT — shows it's scrollable/draggable ─── */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.4 }}
+            exit={{ opacity: 0 }}
+            className="absolute w-[104px] h-[104px] rounded-full border border-dashed border-slate-600/30 pointer-events-none"
+            style={{ left: "50%", top: "50%", transform: "translate(-50%, -50%)" }}
+          />
         </motion.div>
       )}
     </AnimatePresence>
@@ -1530,7 +1590,10 @@ export function EditorPanel({
                 }}
                 whileHover={{ scale: 1.15 }}
                 whileTap={{ scale: 0.9 }}
-                onClick={() => setActiveGroup(activeGroup === group ? null : group)}
+                onClick={() => {
+                  setOrbitRotation(0);
+                  setActiveGroup(activeGroup === group ? null : group);
+                }}
                 className={cn(
                   "absolute w-[42px] h-[42px] rounded-xl",
                   "bg-slate-900/95 backdrop-blur-xl border shadow-lg shadow-black/50",
@@ -1558,6 +1621,7 @@ export function EditorPanel({
       onClick={() => {
         setShowShortcuts(!showShortcuts);
         setActiveGroup(null);
+        setOrbitRotation(0);
       }}
       onMouseDown={handleToggleMouseDown}
       onTouchStart={handleToggleTouchStart}
@@ -1573,6 +1637,7 @@ export function EditorPanel({
     </motion.button>
   </div>
 )}
+
       
       {/* Command Palette */}
       <AnimatePresence>
