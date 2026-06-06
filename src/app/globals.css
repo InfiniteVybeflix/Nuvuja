@@ -432,3 +432,14 @@ html, body {
     transparent 100%
   );
 }
+
+@supports (padding: max(0px)) {
+  /* Ensures PWA content doesn't collide with notches / home bars */
+  body {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+}
+
