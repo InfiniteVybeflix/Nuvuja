@@ -528,67 +528,62 @@ export function EditorPanel({
   const [togglePos, setTogglePos] = useState({ x: 16, y: -60 });
   const hasAutoPositioned = useRef(false);
 
-  // ─── SAFE INITIAL POSITION (mobile / PWA aware) ───────────────────
+  // ─── SAFE INITIAL POSITION — visualViewport-aware, ring-safe ───────
   useEffect(() => {
     if (hasAutoPositioned.current) return;
     hasAutoPositioned.current = true;
+
+    const RING = 92 + 14; // 106px — r₂ + half secondary button
+    const BOX = 280;      // container size
+    const PAD = 16;       // minimum padding from viewport edges
 
     const position = () => {
       const vv = (window as any).visualViewport;
       const vw = vv ? vv.width : window.innerWidth;
       const vh = vv ? vv.height : window.innerHeight;
-
-      const RING = 92 + 14; // 106px total ring radius
-      const TOGGLE = 44;
-      const HALF = TOGGLE / 2; // 22
-      const BOX = 280;
-      const BOX_HALF = BOX / 2; // 140
-
-      // Center of viewport
-      const cx = vw / 2;
-      const cy = vh / 2;
-
-      // Default: center-bottom on mobile, bottom-left on desktop
       const isMobile = vw < 768;
-      
+
       let x: number;
       let y: number;
 
       if (isMobile) {
-        // Center horizontally, lift up from bottom to avoid home bar
-        x = cx;
-        y = -(vh - BOX_HALF - 30); // 30px padding from bottom
+        // Center horizontally, lift up from bottom so ring clears home bar
+        x = vw / 2;
+        y = -(vh - BOX / 2 - PAD - 20); // extra 20px for home indicator
       } else {
         // Desktop: bottom-left with padding
-        x = BOX_HALF + 20;
-        y = -(BOX_HALF + 20);
+        x = BOX / 2 + PAD;
+        y = -(BOX / 2 + PAD);
       }
 
-      // Clamp so 280×280 box stays inside viewport
-      x = Math.max(BOX_HALF, Math.min(vw - BOX_HALF, x));
-      y = Math.max(-(vh - BOX_HALF), Math.min(-BOX_HALF, y));
+      // Clamp so 280×280 box stays fully inside viewport
+      x = Math.max(BOX / 2, Math.min(vw - BOX / 2, x));
+      y = Math.max(-(vh - BOX / 2), Math.min(-BOX / 2, y));
 
       setTogglePos({ x, y });
     };
 
     position();
-    
+
     const vv = (window as any).visualViewport;
-    const events = ["resize", "orientationchange"];
-    events.forEach(e => window.addEventListener(e, position));
+    const onResize = () => position();
+    window.addEventListener("resize", onResize);
+    window.addEventListener("orientationchange", onResize);
     if (vv) {
-      vv.addEventListener("resize", position);
-      vv.addEventListener("scroll", position);
+      vv.addEventListener("resize", onResize);
+      vv.addEventListener("scroll", onResize);
     }
 
     return () => {
-      events.forEach(e => window.removeEventListener(e, position));
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener("orientationchange", onResize);
       if (vv) {
-        vv.removeEventListener("resize", position);
-        vv.removeEventListener("scroll", position);
+        vv.removeEventListener("resize", onResize);
+        vv.removeEventListener("scroll", onResize);
       }
     };
   }, []);
+
 
   const [isDraggingToggle, setIsDraggingToggle] = useState(false);
   const dragStartRef = useRef({ x: 0, y: 0, startX: 0, startY: 0 });
@@ -1522,12 +1517,12 @@ export function EditorPanel({
       )}
 
       {/* ═══════════════════════════════════════════════════════════════════════ */}
-      {/* ORBITAL CAROUSEL DOCK — 280×280 viewport, nothing clips, mobile-safe   */}
-      {/* r₁=52, r₂=92, toggle auto-centered on mobile/PWA, clamped on desktop    */}
+      {/* ORBITAL CAROUSEL DOCK — 280×280 container, ring-safe, mobile-aware    */}
+      {/* r₁=52, r₂=92, toggle at container center (140,140), no overflow clips   */}
       {/* ═══════════════════════════════════════════════════════════════════════ */}
       {!zenMode && (
         <div
-          className="fixed z-[70]"
+          className="fixed z-[70] pointer-events-none"
           style={{
             left: togglePos.x,
             bottom: togglePos.y < 0 ? Math.abs(togglePos.y) : togglePos.y,
@@ -1539,7 +1534,8 @@ export function EditorPanel({
             WebkitTapHighlightColor: "transparent",
           }}
         >
-          <div className="relative w-full h-full">
+          {/* Inner wrapper: pointer events only on buttons, not the container */}
+          <div className="relative w-full h-full pointer-events-auto">
 
             {/* ─── GLOW ORB ─── */}
             <AnimatePresence>
@@ -1735,7 +1731,7 @@ export function EditorPanel({
               )}
             </AnimatePresence>
 
-            {/* ─── ⚡ TOGGLE BUTTON — Center of 280×280 box ─── */}
+            {/* ─── ⚡ TOGGLE BUTTON — Center of 280×280 container ─── */}
             <motion.button
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.95 }}
