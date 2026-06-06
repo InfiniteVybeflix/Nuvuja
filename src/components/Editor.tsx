@@ -152,17 +152,17 @@ const SNIPPETS: Record<string, Array<{ label: string; insertText: string; detail
     { label: "union", insertText: "type ${1:Name} = ${2:A} | ${3:B};", detail: "Union type", kind: "Snippet" },
     { label: "intersection", insertText: "type ${1:Name} = ${2:A} & ${3:B};", detail: "Intersection type", kind: "Snippet" },
     { label: "mapped", insertText: "type ${1:Mapped} = {\n  [K in keyof ${2:T}]: ${3:T[K]};\n};", detail: "Mapped type", kind: "Snippet" },
-    { label: "utility-partial", insertText: "Partial<<${1:T}>", detail: "Partial utility", kind: "Type" },
-    { label: "utility-required", insertText: "Required<<${1:T}>", detail: "Required utility", kind: "Type" },
-    { label: "utility-pick", insertText: "Pick<<${1:T}, '${2:key}'>", detail: "Pick utility", kind: "Type" },
-    { label: "utility-omit", insertText: "Omit<<${1:T}, '${2:key}'>", detail: "Omit utility", kind: "Type" },
-    { label: "utility-record", insertText: "Record<<${1:string}, ${2:any}>", detail: "Record utility", kind: "Type" },
+    { label: "utility-partial", insertText: "Partial<${1:T}>", detail: "Partial utility", kind: "Type" },
+    { label: "utility-required", insertText: "Required<${1:T}>", detail: "Required utility", kind: "Type" },
+    { label: "utility-pick", insertText: "Pick<${1:T}, '${2:key}'>", detail: "Pick utility", kind: "Type" },
+    { label: "utility-omit", insertText: "Omit<${1:T}, '${2:key}'>", detail: "Omit utility", kind: "Type" },
+    { label: "utility-record", insertText: "Record<${1:string}, ${2:any}>", detail: "Record utility", kind: "Type" },
     { label: "satisfies", insertText: "const ${1:obj} = ${2} satisfies ${3:Type};", detail: "Satisfies operator", kind: "Snippet" },
     { label: "infer", insertText: "type ${1:Return} = ${2:T} extends (...args: any[]) => infer ${3:R} ? ${3:R} : never;", detail: "Infer keyword", kind: "Snippet" },
     { label: "keyof", insertText: "type ${1:Keys} = keyof ${2:T};", detail: "Keyof operator", kind: "Snippet" },
     { label: "typeof", insertText: "type ${1:Type} = typeof ${2:obj};", detail: "Typeof operator", kind: "Snippet" },
-    { label: "ReturnType", insertText: "type ${1:Return} = ReturnType<<${2:typeof fn}>;", detail: "ReturnType utility", kind: "Type" },
-    { label: "Awaited", insertText: "type ${1:Result} = Awaited<<${2:Promise<T}>>;", detail: "Awaited utility", kind: "Type" },
+    { label: "ReturnType", insertText: "type ${1:Return} = ReturnType<${2:typeof fn}>;", detail: "ReturnType utility", kind: "Type" },
+    { label: "Awaited", insertText: "type ${1:Result} = Awaited<${2:Promise<T}>>;", detail: "Awaited utility", kind: "Type" },
   ],
   python: [
     { label: "def", insertText: "def ${1:name}(${2}):\n    ${3:pass}", detail: "Function", kind: "Snippet" },
@@ -283,10 +283,10 @@ const SNIPPETS: Record<string, Array<{ label: string; insertText: string; detail
     { label: "for", insertText: "for (int ${1:i} = 0; ${1:i} < ${2:n}; ${1:i}++) {\n    ${3}\n}", detail: "For loop", kind: "Snippet" },
     { label: "if", insertText: "if (${1:condition}) {\n    ${2}\n}", detail: "If statement", kind: "Snippet" },
     { label: "cout", insertText: "std::cout << ${1} << std::endl;", detail: "Cout", kind: "Snippet" },
-    { label: "vector", insertText: "std::vector<<${1:int}> ${2:name};", detail: "Vector", kind: "Snippet" },
-    { label: "map", insertText: "std::map<<${1:string}, ${2:int}> ${3:name};", detail: "Map", kind: "Snippet" },
-    { label: "unique-ptr", insertText: "std::unique_ptr<<${1:T}> ${2:name} = std::make_unique<<${1:T}>();", detail: "Unique pointer", kind: "Snippet" },
-    { label: "shared-ptr", insertText: "std::shared_ptr<<${1:T}> ${2:name} = std::make_shared<<${1:T}>();", detail: "Shared pointer", kind: "Snippet" },
+    { label: "vector", insertText: "std::vector<${1:int}> ${2:name};", detail: "Vector", kind: "Snippet" },
+    { label: "map", insertText: "std::map<${1:string}, ${2:int}> ${3:name};", detail: "Map", kind: "Snippet" },
+    { label: "unique-ptr", insertText: "std::unique_ptr<${1:T}> ${2:name} = std::make_unique<${1:T}>();", detail: "Unique pointer", kind: "Snippet" },
+    { label: "shared-ptr", insertText: "std::shared_ptr<${1:T}> ${2:name} = std::make_shared<${1:T}>();", detail: "Shared pointer", kind: "Snippet" },
   ],
   php: [
     { label: "php", insertText: "<?php\n${1}\n?>", detail: "PHP tags", kind: "Snippet" },
@@ -369,8 +369,8 @@ const SNIPPETS: Record<string, Array<{ label: string; insertText: string; detail
     { label: "main", insertText: "void main() {\n  ${1}\n}", detail: "Main function", kind: "Snippet" },
     { label: "class", insertText: "class ${1:Name} {\n  ${2}\n}", detail: "Class", kind: "Snippet" },
     { label: "widget", insertText: "class ${1:MyWidget} extends StatelessWidget {\n  @override\n  Widget build(BuildContext context) {\n    return ${2:Container()};\n  }\n}", detail: "StatelessWidget", kind: "Snippet" },
-    { label: "stateful", insertText: "class ${1:MyWidget} extends StatefulWidget {\n  @override\n  _${1:MyWidget}State createState() => _${1:MyWidget}State();\n}\n\nclass _${1:MyWidget}State extends State<<${1:MyWidget}> {\n  @override\n  Widget build(BuildContext context) {\n    return ${2:Container()};\n  }\n}", detail: "StatefulWidget", kind: "Snippet" },
-    { label: "future", insertText: "Future<<${1:void}> ${2:name}() async {\n  ${3}\n}", detail: "Async function", kind: "Snippet" },
+    { label: "stateful", insertText: "class ${1:MyWidget} extends StatefulWidget {\n  @override\n  _${1:MyWidget}State createState() => _${1:MyWidget}State();\n}\n\nclass _${1:MyWidget}State extends State<${1:MyWidget}> {\n  @override\n  Widget build(BuildContext context) {\n    return ${2:Container()};\n  }\n}", detail: "StatefulWidget", kind: "Snippet" },
+    { label: "future", insertText: "Future<${1:void}> ${2:name}() async {\n  ${3}\n}", detail: "Async function", kind: "Snippet" },
   ],
   r: [
     { label: "function", insertText: "${1:name} <- function(${2}) {\n  ${3}\n}", detail: "Function", kind: "Snippet" },
@@ -502,8 +502,8 @@ export function EditorPanel({
   onAskAI,
   onInlineComplete,
 }: EditorPanelProps) {
-  const editorRef = useRef<<editor.IStandaloneCodeEditor | null>(null);
-  const splitEditorRef = useRef<<editor.IStandaloneCodeEditor | null>(null);
+  const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
+  const splitEditorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<any>(null);
   const [showShortcuts, setShowShortcuts] = useState(true);
   const [cursorPos, setCursorPos] = useState({ line: 1, col: 1 });
@@ -514,7 +514,7 @@ export function EditorPanel({
   const [wordWrap, setWordWrap] = useState(true);
   const [zenMode, setZenMode] = useState(false);
   const [splitView, setSplitView] = useState(false);
-  const [splitDirection, setSplitDirection] = useState<<"horizontal" | "vertical">("horizontal");
+  const [splitDirection, setSplitDirection] = useState<"horizontal" | "vertical">("horizontal");
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [commandQuery, setCommandQuery] = useState("");
   const [showHelp, setShowHelp] = useState(false);
@@ -595,7 +595,7 @@ export function EditorPanel({
     onAskAI(code, actionMap[action] || "explain");
   }, [onAskAI, activeTab]);
 
-  const COMMANDS = useMemo<<CommandDef[]>(() => [
+  const COMMANDS = useMemo<CommandDef[]>(() => [
     { id: "format", label: "Format Document", icon: AlignLeft, category: "Edit", shortcut: "Ctrl+Shift+I", action: () => triggerEditorAction("editor.action.formatDocument") },
     { id: "formatSelection", label: "Format Selection", icon: AlignLeft, category: "Edit", action: () => triggerEditorAction("editor.action.formatSelection") },
     { id: "toggleWrap", label: "Toggle Word Wrap", icon: WrapText, category: "View", shortcut: "Ctrl+Shift+W", action: () => setWordWrap(w => !w) },
@@ -660,7 +660,7 @@ export function EditorPanel({
     if (!snippets) return;
 
     return monaco.languages.registerCompletionItemProvider(languageId, {
-      triggerCharacters: ["<<", ".", "#", "@", ":", " ", "(", "{"],
+      triggerCharacters: ["<", ".", "#", "@", ":", " ", "(", "{"],
       provideCompletionItems: (model: any, position: any) => {
         const word = model.getWordUntilPosition(position);
         const range = {
@@ -672,7 +672,7 @@ export function EditorPanel({
 
         const lineContent = model.getLineContent(position.lineNumber);
         const beforeCursor = lineContent.slice(0, position.column - 1);
-        const lastWord = beforeCursor.match(/[\w<<.#@]*$/)?.[0] || "";
+        const lastWord = beforeCursor.match(/[\w<.#@]*$/)?.[0] || "";
 
         const suggestions = snippets
           .filter((s) => {
