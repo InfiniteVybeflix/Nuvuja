@@ -1011,13 +1011,14 @@ export function EditorPanel({
   };
 
   useEffect(() => {
+    const RING = 92 + 14; // r2 + half secondary button = 106px
     const handleMove = (e: MouseEvent) => {
       if (!isDraggingToggle) return;
       const dx = e.clientX - dragStartRef.current.x;
       const dy = e.clientY - dragStartRef.current.y;
       setTogglePos({
-        x: Math.max(0, Math.min(window.innerWidth - 48, dragStartRef.current.startX + dx)),
-        y: Math.max(-window.innerHeight + 48, Math.min(0, dragStartRef.current.startY + dy)),
+        x: Math.max(RING - 22, Math.min(window.innerWidth - RING - 22, dragStartRef.current.startX + dx)),
+        y: Math.max(-(window.innerHeight - RING - 22), Math.min(-(RING - 22), dragStartRef.current.startY + dy)),
       });
     };
     const handleUp = () => setIsDraggingToggle(false);
@@ -1026,9 +1027,10 @@ export function EditorPanel({
       const touch = e.touches[0];
       const dx = touch.clientX - dragStartRef.current.x;
       const dy = touch.clientY - dragStartRef.current.y;
+      const RING = 92 + 14;
       setTogglePos({
-        x: Math.max(0, Math.min(window.innerWidth - 48, dragStartRef.current.startX + dx)),
-        y: Math.max(-window.innerHeight + 48, Math.min(0, dragStartRef.current.startY + dy)),
+        x: Math.max(RING - 22, Math.min(window.innerWidth - RING - 22, dragStartRef.current.startX + dx)),
+        y: Math.max(-(window.innerHeight - RING - 22), Math.min(-(RING - 22), dragStartRef.current.startY + dy)),
       });
     };
     const handleTouchEnd = () => setIsDraggingToggle(false);
@@ -1420,14 +1422,16 @@ export function EditorPanel({
       )}
 
       {/* ═══════════════════════════════════════════════════════════════════════ */}
-      {/* ORBITAL CAROUSEL DOCK — ⚡ Toggle is the center of the universe         */}
+      {/* ORBITAL CAROUSEL DOCK — ⚡ Toggle is the sun, all rings orbit around it   */}
+      {/* r₁=52 (primary), r₂=92 (secondary), 5px ring gap, zero collision,        */}
+      {/* toggle clamped so the full 106px ring stays inside the viewport.        */}
       {/* ═══════════════════════════════════════════════════════════════════════ */}
       {!zenMode && (
         <div
           className="fixed z-[70] flex items-center justify-center"
           style={{ left: togglePos.x, bottom: Math.abs(togglePos.y), width: 44, height: 44 }}
         >
-          {/* ─── SHARED CENTER — All orbital elements originate from this point ─── */}
+          {/* ─── ORIGIN POINT (0,0) — All orbital math centers here ─── */}
           <div className="relative" style={{ width: 1, height: 1 }}>
 
             {/* ─── GLOW ORB behind active group ─── */}
@@ -1439,7 +1443,7 @@ export function EditorPanel({
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.3 }}
                   className={cn(
-                    "absolute pointer-events-none rounded-full w-[220px] h-[220px] blur-[60px]",
+                    "absolute pointer-events-none rounded-full blur-[60px]",
                     activeGroup === "Edit" && "bg-sky-500/15",
                     activeGroup === "Format" && "bg-emerald-500/15",
                     activeGroup === "Insert" && "bg-amber-500/15",
@@ -1447,12 +1451,18 @@ export function EditorPanel({
                     activeGroup === "View" && "bg-cyan-500/15",
                     activeGroup === "AI" && "bg-purple-500/15"
                   )}
-                  style={{ left: "50%", top: "50%", transform: "translate(-50%, -50%)" }}
+                  style={{ 
+                    width: 220, 
+                    height: 220, 
+                    left: "50%", 
+                    top: "50%", 
+                    transform: "translate(-50%, -50%)" 
+                  }}
                 />
               )}
             </AnimatePresence>
 
-            {/* ─── SECONDARY RING — r=78, orbits around the toggle center ─── */}
+            {/* ─── SECONDARY RING — r₂=92, 28px buttons ─── */}
             <AnimatePresence>
               {showShortcuts && activeGroup && (
                 <motion.div
@@ -1469,18 +1479,19 @@ export function EditorPanel({
                   {(() => {
                     const items = groupedShortcuts[activeGroup] || [];
                     const count = items.length;
-                    const orbitRadius = 78;
+                    const r2 = 92;           // secondary radius
                     const slice = 360 / count;
-                    const btnSize = 28;
-                    const halfBtn = btnSize / 2;
+                    const btnSize = 28;       // w-7 h-7
+                    const halfBtn = 14;       // btnSize / 2
 
                     return items.map((s, i) => {
                       const baseAngle = i * slice;
                       const finalAngle = baseAngle + orbitRotation;
                       const rad = (finalAngle * Math.PI) / 180;
-                      // Position relative to center (0,0) then offset by half button size
-                      const centerX = Math.cos(rad) * orbitRadius;
-                      const centerY = -Math.sin(rad) * orbitRadius;
+                      // Button center on orbit circle
+                      const centerX = Math.cos(rad) * r2;
+                      const centerY = -Math.sin(rad) * r2;
+                      // Offset by half button size to center it on the point
                       const x = centerX - halfBtn;
                       const y = centerY - halfBtn;
 
@@ -1535,15 +1546,15 @@ export function EditorPanel({
                     });
                   })()}
 
-                  {/* Orbit ring hint — diameter = 78*2 = 156 */}
+                  {/* Secondary ring hint — diameter = 92×2 = 184 */}
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 0.4 }}
                     exit={{ opacity: 0 }}
                     className="absolute rounded-full border border-dashed border-slate-600/30 pointer-events-none"
                     style={{ 
-                      width: 156, 
-                      height: 156, 
+                      width: 184, 
+                      height: 184, 
                       left: "50%", 
                       top: "50%", 
                       transform: "translate(-50%, -50%)" 
@@ -1553,7 +1564,7 @@ export function EditorPanel({
               )}
             </AnimatePresence>
 
-            {/* ─── PRIMARY RING — r=48, orbits around the toggle center ─── */}
+            {/* ─── PRIMARY RING — r₁=52, 42px buttons, 6 groups at 60° ─── */}
             <AnimatePresence>
               {showShortcuts && (
                 <motion.div
@@ -1565,15 +1576,17 @@ export function EditorPanel({
                   style={{ left: 0, top: 0, width: 1, height: 1 }}
                 >
                   {Object.keys(groupedShortcuts).map((group, i) => {
+                    // 6 groups at 60° intervals, starting from bottom (-90°)
                     const angles = [-90, -30, 30, 90, 150, 210];
                     const angle = angles[i];
                     const rad = (angle * Math.PI) / 180;
-                    const radius = 48;
-                    const btnSize = 42;
-                    const halfBtn = btnSize / 2;
-                    // Center of button on orbit circle, then offset by half size
-                    const centerX = Math.cos(rad) * radius;
-                    const centerY = -Math.sin(rad) * radius;
+                    const r1 = 52;            // primary radius
+                    const btnSize = 42;       // w-[42px] h-[42px]
+                    const halfBtn = 21;       // btnSize / 2
+                    // Button center on orbit circle
+                    const centerX = Math.cos(rad) * r1;
+                    const centerY = -Math.sin(rad) * r1;
+                    // Offset by half button size to center it on the point
                     const x = centerX - halfBtn;
                     const y = centerY - halfBtn;
 
@@ -1634,7 +1647,8 @@ export function EditorPanel({
               )}
             </AnimatePresence>
 
-            {/* ─── ⚡ TOGGLE BUTTON — Dead center, the sun of the system ─── */}
+            {/* ─── ⚡ TOGGLE BUTTON — Dead center of the orbital system ─── */}
+            {/* 44×44 button centered on (0,0): top-left at (-22,-22) */}
             <motion.button
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.95 }}
@@ -1651,13 +1665,7 @@ export function EditorPanel({
                   ? "bg-gradient-to-r from-sky-500 to-purple-500 text-white shadow-purple-500/40"
                   : "bg-slate-800 text-slate-400 hover:text-white border border-slate-700 shadow-black/50"
               )}
-              style={{ 
-                left: "50%", 
-                top: "50%", 
-                transform: "translate(-50%, -50%)",
-                marginLeft: -22,  // half of w-11 (44px)
-                marginTop: -22
-              }}
+              style={{ left: 0, top: 0, marginLeft: -22, marginTop: -22 }}
               title="Drag to move • Click to toggle tools"
             >
               <Zap size={20} />
