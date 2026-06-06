@@ -1107,7 +1107,7 @@ export function EditorPanel({
     renderLineHighlight: "all" as const,
     stickyScroll: { enabled: showStickyScroll, defaultModel: "outlineModel" as const, maxLineCount: 5 },
     inlayHints: { enabled: "on" as const },
-    lightbulb: { enabled: true },
+    lightbulb: { enabled: "on" as const },
     parameterHints: { enabled: true, cycle: true },
     suggest: {
       showKeywords: true,
