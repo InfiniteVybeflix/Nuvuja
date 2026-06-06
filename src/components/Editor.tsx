@@ -525,7 +525,6 @@ export function EditorPanel({
   const orbitStartRef = useRef({ x: 0, rotation: 0 });
 
   // Floating toggle button position
-  const [togglePos, setTogglePos] = useState({ x: 16, y: -60 });
   const [togglePos, setTogglePos] = useState({ x: -9999, y: -9999 });
   const hasAutoPositioned = useRef(false);
 
