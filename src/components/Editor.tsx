@@ -162,7 +162,7 @@ const SNIPPETS: Record<string, Array<{ label: string; insertText: string; detail
     { label: "keyof", insertText: "type ${1:Keys} = keyof ${2:T};", detail: "Keyof operator", kind: "Snippet" },
     { label: "typeof", insertText: "type ${1:Type} = typeof ${2:obj};", detail: "Typeof operator", kind: "Snippet" },
     { label: "ReturnType", insertText: "type ${1:Return} = ReturnType<<${2:typeof fn}>;", detail: "ReturnType utility", kind: "Type" },
-    { label: "Awaited", insertText: "type ${1:Result} = Awaited<<${2:Promise<T>}>;", detail: "Awaited utility", kind: "Type" },
+    { label: "Awaited", insertText: "type ${1:Result} = Awaited<<${2:Promise<T}>>;", detail: "Awaited utility", kind: "Type" },
   ],
   python: [
     { label: "def", insertText: "def ${1:name}(${2}):\n    ${3:pass}", detail: "Function", kind: "Snippet" },
@@ -409,7 +409,8 @@ type ShortcutAction =
   | "moveLineUp" | "moveLineDown" | "joinLines" | "sortLines" | "trimWhitespace"
   | "uppercase" | "lowercase" | "titlecase" | "selectAll" | "expandSelection" | "shrinkSelection"
   | "goToLine" | "goToSymbol" | "goToBracket" | "askAI" | "explain" | "fix" | "generate" 
-  | "review" | "optimize" | "document" | "test" | "insert";
+  | "review" | "optimize" | "document" | "test" | "insert"
+  | "toggleZen" | "toggleMinimap" | "toggleSticky" | "toggleSplit" | "fontIncrease" | "fontDecrease";
 
 interface ShortcutDef {
   label: string;
@@ -462,13 +463,13 @@ const SHORTCUTS: ShortcutDef[] = [
   { label: "Expand", icon: ChevronRight, action: "expandSelection", group: "Navigate" },
   { label: "Shrink", icon: ChevronLeft, action: "shrinkSelection", group: "Navigate" },
   // View group
-  { label: "Zen", icon: Focus, action: "askAI", group: "View" },
-  { label: "Minimap", icon: Eye, action: "askAI", group: "View" },
-  { label: "Sticky", icon: Eye, action: "askAI", group: "View" },
+  { label: "Zen", icon: Focus, action: "toggleZen", group: "View" },
+  { label: "Minimap", icon: Eye, action: "toggleMinimap", group: "View" },
+  { label: "Sticky", icon: Eye, action: "toggleSticky", group: "View" },
   { label: "Wrap", icon: WrapText, action: "wrap", group: "View" },
-  { label: "Split", icon: Split, action: "askAI", group: "View" },
-  { label: "Font+", icon: ZoomIn, action: "askAI", group: "View" },
-  { label: "Font−", icon: ZoomOut, action: "askAI", group: "View" },
+  { label: "Split", icon: Split, action: "toggleSplit", group: "View" },
+  { label: "Font+", icon: ZoomIn, action: "fontIncrease", group: "View" },
+  { label: "Font−", icon: ZoomOut, action: "fontDecrease", group: "View" },
   // AI group
   { label: "Ask AI", icon: MessageSquare, action: "askAI", group: "AI" },
   { label: "Explain", icon: Sparkles, action: "explain", group: "AI" },
@@ -501,8 +502,8 @@ export function EditorPanel({
   onAskAI,
   onInlineComplete,
 }: EditorPanelProps) {
-  const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
-  const splitEditorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
+  const editorRef = useRef<<editor.IStandaloneCodeEditor | null>(null);
+  const splitEditorRef = useRef<<editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<any>(null);
   const [showShortcuts, setShowShortcuts] = useState(true);
   const [cursorPos, setCursorPos] = useState({ line: 1, col: 1 });
@@ -513,7 +514,7 @@ export function EditorPanel({
   const [wordWrap, setWordWrap] = useState(true);
   const [zenMode, setZenMode] = useState(false);
   const [splitView, setSplitView] = useState(false);
-  const [splitDirection, setSplitDirection] = useState<"horizontal" | "vertical">("horizontal");
+  const [splitDirection, setSplitDirection] = useState<<"horizontal" | "vertical">("horizontal");
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [commandQuery, setCommandQuery] = useState("");
   const [showHelp, setShowHelp] = useState(false);
@@ -522,7 +523,6 @@ export function EditorPanel({
   const [orbitRotation, setOrbitRotation] = useState(0);
   const [isOrbiting, setIsOrbiting] = useState(false);
   const orbitStartRef = useRef({ x: 0, rotation: 0 });
-
 
   // Floating toggle button position
   const [togglePos, setTogglePos] = useState({ x: 16, y: -60 });
@@ -595,7 +595,7 @@ export function EditorPanel({
     onAskAI(code, actionMap[action] || "explain");
   }, [onAskAI, activeTab]);
 
-  const COMMANDS = useMemo<CommandDef[]>(() => [
+  const COMMANDS = useMemo<<CommandDef[]>(() => [
     { id: "format", label: "Format Document", icon: AlignLeft, category: "Edit", shortcut: "Ctrl+Shift+I", action: () => triggerEditorAction("editor.action.formatDocument") },
     { id: "formatSelection", label: "Format Selection", icon: AlignLeft, category: "Edit", action: () => triggerEditorAction("editor.action.formatSelection") },
     { id: "toggleWrap", label: "Toggle Word Wrap", icon: WrapText, category: "View", shortcut: "Ctrl+Shift+W", action: () => setWordWrap(w => !w) },
@@ -606,7 +606,7 @@ export function EditorPanel({
     { id: "gotoLine", label: "Go to Line", icon: Hash, category: "Navigate", shortcut: "Ctrl+G", action: () => triggerEditorAction("editor.action.gotoLine") },
     { id: "gotoSymbol", label: "Go to Symbol", icon: FunctionSquare, category: "Navigate", shortcut: "Ctrl+Shift+O", action: () => triggerEditorAction("editor.action.gotoSymbol") },
     { id: "find", label: "Find", icon: Search, category: "Edit", shortcut: "Ctrl+F", action: () => triggerEditorAction("actions.find") },
-    { id: "replace", label: "Replace", icon: Replace, category: "Edit", shortcut: "Ctrl+H", action: () => triggerEditorAction("editor.action.startFindReplaceAction:mk") },
+    { id: "replace", label: "Replace", icon: Replace, category: "Edit", shortcut: "Ctrl+H", action: () => triggerEditorAction("editor.action.startFindReplaceAction") },
     { id: "selectAll", label: "Select All", icon: AlignLeft, category: "Edit", shortcut: "Ctrl+A", action: () => triggerEditorAction("editor.action.selectAll") },
     { id: "expand", label: "Expand Selection", icon: ChevronRight, category: "Edit", shortcut: "Shift+Alt+Right", action: () => triggerEditorAction("editor.action.smartSelect.expand") },
     { id: "shrink", label: "Shrink Selection", icon: ChevronLeft, category: "Edit", shortcut: "Shift+Alt+Left", action: () => triggerEditorAction("editor.action.smartSelect.shrink") },
@@ -660,7 +660,7 @@ export function EditorPanel({
     if (!snippets) return;
 
     return monaco.languages.registerCompletionItemProvider(languageId, {
-      triggerCharacters: ["<", ".", "#", "@", ":", " ", "(", "{"],
+      triggerCharacters: ["<<", ".", "#", "@", ":", " ", "(", "{"],
       provideCompletionItems: (model: any, position: any) => {
         const word = model.getWordUntilPosition(position);
         const range = {
@@ -672,7 +672,7 @@ export function EditorPanel({
 
         const lineContent = model.getLineContent(position.lineNumber);
         const beforeCursor = lineContent.slice(0, position.column - 1);
-        const lastWord = beforeCursor.match(/[\w<.#@]*$/)?.[0] || "";
+        const lastWord = beforeCursor.match(/[\w<<.#@]*$/)?.[0] || "";
 
         const suggestions = snippets
           .filter((s) => {
@@ -888,7 +888,7 @@ export function EditorPanel({
         editor.trigger("keyboard", "actions.find", null);
         break;
       case "replace":
-        editor.trigger("keyboard", "editor.action.startFindReplaceAction:mk", null);
+        editor.trigger("keyboard", "editor.action.startFindReplaceAction", null);
         break;
       case "format":
         editor.trigger("keyboard", "editor.action.formatDocument", null);
@@ -949,6 +949,24 @@ export function EditorPanel({
         break;
       case "goToBracket":
         editor.trigger("keyboard", "editor.action.jumpToBracket", null);
+        break;
+      case "toggleZen":
+        setZenMode(z => !z);
+        break;
+      case "toggleMinimap":
+        setShowMinimap(m => !m);
+        break;
+      case "toggleSticky":
+        setShowStickyScroll(s => !s);
+        break;
+      case "toggleSplit":
+        setSplitView(s => !s);
+        break;
+      case "fontIncrease":
+        setFontSize(f => Math.min(32, f + 1));
+        break;
+      case "fontDecrease":
+        setFontSize(f => Math.max(8, f - 1));
         break;
       case "askAI":
       case "explain":
@@ -1028,6 +1046,57 @@ export function EditorPanel({
       window.removeEventListener("touchend", handleTouchEnd);
     };
   }, [isDraggingToggle]);
+
+  // ─── ORBIT HANDLERS & EFFECTS ─────────────────────────────────────
+  const handleOrbitWheel = useCallback((e: React.WheelEvent) => {
+    if (!activeGroup) return;
+    e.preventDefault();
+    setOrbitRotation(prev => prev + e.deltaY * 0.3);
+  }, [activeGroup]);
+
+  const handleOrbitMouseDown = useCallback((e: React.MouseEvent) => {
+    if (!activeGroup) return;
+    setIsOrbiting(true);
+    orbitStartRef.current = { x: e.clientX, rotation: orbitRotation };
+  }, [activeGroup, orbitRotation]);
+
+  const handleOrbitTouchStart = useCallback((e: React.TouchEvent) => {
+    if (!activeGroup) return;
+    setIsOrbiting(true);
+    orbitStartRef.current = { x: e.touches[0].clientX, rotation: orbitRotation };
+  }, [activeGroup, orbitRotation]);
+
+  useEffect(() => {
+    const handleMove = (e: MouseEvent) => {
+      if (!isOrbiting) return;
+      const dx = e.clientX - orbitStartRef.current.x;
+      setOrbitRotation(orbitStartRef.current.rotation + dx * 0.5);
+    };
+    const handleUp = () => setIsOrbiting(false);
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!isOrbiting) return;
+      const dx = e.touches[0].clientX - orbitStartRef.current.x;
+      setOrbitRotation(orbitStartRef.current.rotation + dx * 0.5);
+    };
+    const handleTouchEnd = () => setIsOrbiting(false);
+
+    if (isOrbiting) {
+      window.addEventListener("mousemove", handleMove);
+      window.addEventListener("mouseup", handleUp);
+      window.addEventListener("touchmove", handleTouchMove, { passive: false });
+      window.addEventListener("touchend", handleTouchEnd);
+    }
+    return () => {
+      window.removeEventListener("mousemove", handleMove);
+      window.removeEventListener("mouseup", handleUp);
+      window.removeEventListener("touchmove", handleTouchMove);
+      window.removeEventListener("touchend", handleTouchEnd);
+    };
+  }, [isOrbiting]);
+
+  useEffect(() => {
+    setOrbitRotation(0);
+  }, [activeGroup]);
 
   // Global keyboard shortcuts
   useEffect(() => {
@@ -1112,7 +1181,6 @@ export function EditorPanel({
     renderLineHighlight: "all" as const,
     stickyScroll: { enabled: showStickyScroll, defaultModel: "outlineModel" as const, maxLineCount: 5 },
     inlayHints: { enabled: "on" as const },
-    //lightbulb: { enabled: "on" as const },
     parameterHints: { enabled: true, cycle: true },
     suggest: {
       showKeywords: true,
@@ -1350,295 +1418,241 @@ export function EditorPanel({
           Exit Zen Mode (Esc)
         </motion.button>
       )}
-
-
-{/* ═══════════════════════════════════════════════════════════════════════ */}
-{/* ORBITAL CAROUSEL DOCK — Secondary items orbit around parent, scrollable */}
-{/* Drag or scroll to rotate the ring and reveal all items                 */}
-{/* ═══════════════════════════════════════════════════════════════════════ */}
-
-{/* ─── STATE (add these to your component state) ─── */}
-const [orbitRotation, setOrbitRotation] = useState(0);
-const [isOrbiting, setIsOrbiting] = useState(false);
-const orbitStartRef = useRef({ x: 0, rotation: 0 });
-
-{/* ─── WHEEL HANDLER ─── */}
-const handleOrbitWheel = useCallback((e: React.WheelEvent) => {
-  if (!activeGroup) return;
-  e.preventDefault();
-  setOrbitRotation(prev => prev + e.deltaY * 0.3);
-}, [activeGroup]);
-
-{/* ─── DRAG HANDLERS ─── */}
-const handleOrbitMouseDown = useCallback((e: React.MouseEvent) => {
-  if (!activeGroup) return;
-  setIsOrbiting(true);
-  orbitStartRef.current = { x: e.clientX, rotation: orbitRotation };
-}, [activeGroup, orbitRotation]);
-
-const handleOrbitTouchStart = useCallback((e: React.TouchEvent) => {
-  if (!activeGroup) return;
-  setIsOrbiting(true);
-  orbitStartRef.current = { x: e.touches[0].clientX, rotation: orbitRotation };
-}, [activeGroup, orbitRotation]);
-
-{/* ─── GLOBAL DRAG MOVE/UP (add to useEffect) ─── */}
-useEffect(() => {
-  const handleMove = (e: MouseEvent) => {
-    if (!isOrbiting) return;
-    const dx = e.clientX - orbitStartRef.current.x;
-    setOrbitRotation(orbitStartRef.current.rotation + dx * 0.5);
-  };
-  const handleUp = () => setIsOrbiting(false);
-  const handleTouchMove = (e: TouchEvent) => {
-    if (!isOrbiting) return;
-    const dx = e.touches[0].clientX - orbitStartRef.current.x;
-    setOrbitRotation(orbitStartRef.current.rotation + dx * 0.5);
-  };
-  const handleTouchEnd = () => setIsOrbiting(false);
-
-  if (isOrbiting) {
-    window.addEventListener("mousemove", handleMove);
-    window.addEventListener("mouseup", handleUp);
-    window.addEventListener("touchmove", handleTouchMove, { passive: false });
-    window.addEventListener("touchend", handleTouchEnd);
-  }
-  return () => {
-    window.removeEventListener("mousemove", handleMove);
-    window.removeEventListener("mouseup", handleUp);
-    window.removeEventListener("touchmove", handleTouchMove);
-    window.removeEventListener("touchend", handleTouchEnd);
-  };
-}, [isOrbiting]);
-
-{/* ─── RESET ORBIT WHEN GROUP CHANGES ─── */}
-useEffect(() => {
-  setOrbitRotation(0);
-}, [activeGroup]);
-
-{/* ═══════════════════════════════════════════════════════════════════════ */}
-{/* THE DOCK JSX — Replace your entire floating dock section with this    */}
-{/* ═══════════════════════════════════════════════════════════════════════ */}
-{!zenMode && (
-  <div
-    className="fixed z-[70] flex flex-col items-center"
-    style={{ left: togglePos.x, bottom: Math.abs(togglePos.y) }}
-  >
-    {/* ─── GLOW ORB behind active group ─── */}
-    <AnimatePresence>
-      {activeGroup && showShortcuts && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.3 }}
-          className={cn(
-            "absolute pointer-events-none rounded-full w-[220px] h-[220px] blur-[60px]",
-            activeGroup === "Edit" && "bg-sky-500/15",
-            activeGroup === "Format" && "bg-emerald-500/15",
-            activeGroup === "Insert" && "bg-amber-500/15",
-            activeGroup === "Navigate" && "bg-rose-500/15",
-            activeGroup === "View" && "bg-cyan-500/15",
-            activeGroup === "AI" && "bg-purple-500/15"
-          )}
-          style={{ left: "50%", top: "50%", transform: "translate(-50%, -50%)" }}
-        />
-      )}
-    </AnimatePresence>
-
-    {/* ─── ORBITAL CAROUSEL — Secondary items in a small ring around parent ─── */}
-    <AnimatePresence>
-      {showShortcuts && activeGroup && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
-          className="relative w-[1px] h-[1px]"
-          onWheel={handleOrbitWheel}
-          onMouseDown={handleOrbitMouseDown}
-          onTouchStart={handleOrbitTouchStart}
-          style={{ cursor: isOrbiting ? "grabbing" : "grab" }}
-        >
-          {(() => {
-            const items = groupedShortcuts[activeGroup] || [];
-            const count = items.length;
-            // Small orbit radius — items circle CLOSE to parent
-            const orbitRadius = 52;
-            // Each item gets equal slice of 360°
-            const slice = 360 / count;
-
-            return items.map((s, i) => {
-              // Base angle + orbit rotation + user scroll/drag
-              const baseAngle = i * slice;
-              const finalAngle = baseAngle + orbitRotation;
-              const rad = (finalAngle * Math.PI) / 180;
-              const x = Math.cos(rad) * orbitRadius;
-              const y = -Math.sin(rad) * orbitRadius;
-
-              return (
-                <motion.button
-                  key={`orbit-${activeGroup}-${i}`}
-                  initial={{ opacity: 0, scale: 0 }}
-                  animate={{
-                    opacity: 1,
-                    scale: 1,
-                    x,
-                    y,
-                    transition: {
-                      type: "spring",
-                      stiffness: 500,
-                      damping: 22,
-                      delay: i * 0.03,
-                    }
-                  }}
-                  exit={{
-                    opacity: 0,
-                    scale: 0,
-                    transition: { duration: 0.1, delay: (count - i) * 0.01 }
-                  }}
-                  whileHover={{ scale: 1.2, zIndex: 100 }}
-                  whileTap={{ scale: 0.9 }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleShortcut(s);
-                    setActiveGroup(null);
-                  }}
-                  className={cn(
-                    "absolute w-9 h-9 rounded-xl",
-                    "bg-slate-900/95 backdrop-blur-xl",
-                    "border shadow-lg shadow-black/50",
-                    "flex flex-col items-center justify-center gap-0.5",
-                    "text-[7px] font-medium text-slate-400",
-                    "transition-colors select-none",
-                    activeGroup === "Edit" && "border-sky-500/30 hover:text-sky-400 hover:bg-sky-500/10",
-                    activeGroup === "Format" && "border-emerald-500/30 hover:text-emerald-400 hover:bg-emerald-500/10",
-                    activeGroup === "Insert" && "border-amber-500/30 hover:text-amber-400 hover:bg-amber-500/10",
-                    activeGroup === "Navigate" && "border-rose-500/30 hover:text-rose-400 hover:bg-rose-500/10",
-                    activeGroup === "View" && "border-cyan-500/30 hover:text-cyan-400 hover:bg-cyan-500/10",
-                    activeGroup === "AI" && "border-purple-500/30 hover:text-purple-400 hover:bg-purple-500/10"
-                  )}
-                  title={`${s.label}${s.insert ? ` — "${s.insert}"` : ""}`}
-                >
-                  <s.icon size={13} />
-                  <span className="leading-none">{s.label.length > 4 ? s.label.slice(0, 3) : s.label}</span>
-                </motion.button>
-              );
-            });
-          })()}
-
-          {/* ─── ORBIT HINT — shows it's scrollable/draggable ─── */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 0.4 }}
-            exit={{ opacity: 0 }}
-            className="absolute w-[104px] h-[104px] rounded-full border border-dashed border-slate-600/30 pointer-events-none"
-            style={{ left: "50%", top: "50%", transform: "translate(-50%, -50%)" }}
-          />
-        </motion.div>
-      )}
-    </AnimatePresence>
-
-    {/* ─── PRIMARY RING — r=65, 6 groups at 60° intervals ─── */}
-    <AnimatePresence>
-      {showShortcuts && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0 }}
-          transition={{ type: "spring", stiffness: 500, damping: 25 }}
-          className="relative w-[1px] h-[1px] mb-3"
-        >
-          {Object.keys(groupedShortcuts).map((group, i) => {
-            const angles = [-90, -30, 30, 90, 150, 210];
-            const angle = angles[i];
-            const rad = (angle * Math.PI) / 180;
-            const radius = 65;
-            const x = Math.cos(rad) * radius;
-            const y = -Math.sin(rad) * radius;
-
-            const groupIcons: Record<string, React.ElementType> = {
-              Edit: Pencil, Format: AlignLeft, Insert: Code,
-              Navigate: Hash, View: Eye, AI: Sparkles,
-            };
-            const GroupIcon = groupIcons[group] || Code;
-
-            const groupColors: Record<string, string> = {
-              Edit: "text-sky-400 border-sky-500/30 hover:bg-sky-500/10",
-              Format: "text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10",
-              Insert: "text-amber-400 border-amber-500/30 hover:bg-amber-500/10",
-              Navigate: "text-rose-400 border-rose-500/30 hover:bg-rose-500/10",
-              View: "text-cyan-400 border-cyan-500/30 hover:bg-cyan-500/10",
-              AI: "text-purple-400 border-purple-500/30 hover:bg-purple-500/10",
-            };
-
-            return (
-              <motion.button
-                key={group}
-                initial={{ opacity: 0, scale: 0, x: 0, y: 0 }}
-                animate={{
-                  opacity: 1,
-                  scale: 1,
-                  x,
-                  y,
-                  transition: {
-                    type: "spring",
-                    stiffness: 400,
-                    damping: 20,
-                    delay: i * 0.06,
-                  }
-                }}
-                whileHover={{ scale: 1.15 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={() => {
-                  setOrbitRotation(0);
-                  setActiveGroup(activeGroup === group ? null : group);
-                }}
-                className={cn(
-                  "absolute w-[42px] h-[42px] rounded-xl",
-                  "bg-slate-900/95 backdrop-blur-xl border shadow-lg shadow-black/50",
-                  "flex flex-col items-center justify-center gap-0.5",
-                  "text-[9px] font-medium transition-all",
-                  activeGroup === group
-                    ? "bg-slate-800 scale-110 ring-2 ring-white/20 shadow-xl"
-                    : cn("text-slate-400 border-slate-700/50 hover:bg-slate-800", groupColors[group])
-                )}
-                title={group}
-              >
-                <GroupIcon size={16} />
-                <span className="leading-none">{group === "Navigate" ? "Nav" : group}</span>
-              </motion.button>
-            );
-          })}
-        </motion.div>
-      )}
-    </AnimatePresence>
-
-    {/* ─── ⚡ TOGGLE BUTTON ─── */}
-    <motion.button
-      whileHover={{ scale: 1.1 }}
-      whileTap={{ scale: 0.95 }}
-      onClick={() => {
-        setShowShortcuts(!showShortcuts);
-        setActiveGroup(null);
-        setOrbitRotation(0);
-      }}
-      onMouseDown={handleToggleMouseDown}
-      onTouchStart={handleToggleTouchStart}
-      className={cn(
-        "w-11 h-11 rounded-full shadow-xl flex items-center justify-center transition-all shrink-0 cursor-grab active:cursor-grabbing z-10 relative",
-        showShortcuts
-          ? "bg-gradient-to-r from-sky-500 to-purple-500 text-white shadow-purple-500/40"
-          : "bg-slate-800 text-slate-400 hover:text-white border border-slate-700 shadow-black/50"
-      )}
-      title="Drag to move • Click to toggle tools"
-    >
-      <Zap size={20} />
-    </motion.button>
-  </div>
-)}
-
       
+      {/* ═══════════════════════════════════════════════════════════════════════ */}
+      {/* ORBITAL CAROUSEL DOCK — Perfect radial math, zero collision             */}
+      {/* ═══════════════════════════════════════════════════════════════════════ */}
+      {!zenMode && (
+        <div
+          className="fixed z-[70] flex flex-col items-center"
+          style={{ left: togglePos.x, bottom: Math.abs(togglePos.y) }}
+        >
+          {/* ─── SHARED CENTER CONTAINER — Both rings originate from one point ─── */}
+          <div className="relative w-[1px] h-[1px] mb-3">
+            {/* ─── GLOW ORB behind active group ─── */}
+            <AnimatePresence>
+              {activeGroup && showShortcuts && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className={cn(
+                    "absolute pointer-events-none rounded-full w-[220px] h-[220px] blur-[60px]",
+                    activeGroup === "Edit" && "bg-sky-500/15",
+                    activeGroup === "Format" && "bg-emerald-500/15",
+                    activeGroup === "Insert" && "bg-amber-500/15",
+                    activeGroup === "Navigate" && "bg-rose-500/15",
+                    activeGroup === "View" && "bg-cyan-500/15",
+                    activeGroup === "AI" && "bg-purple-500/15"
+                  )}
+                  style={{ left: "50%", top: "50%", transform: "translate(-50%, -50%)" }}
+                />
+              )}
+            </AnimatePresence>
+
+            {/* ─── SECONDARY RING — r=92, 28px items, no self-collision, no primary overlap ─── */}
+            <AnimatePresence>
+              {showShortcuts && activeGroup && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="absolute inset-0"
+                  onWheel={handleOrbitWheel}
+                  onMouseDown={handleOrbitMouseDown}
+                  onTouchStart={handleOrbitTouchStart}
+                  style={{ cursor: isOrbiting ? "grabbing" : "grab" }}
+                >
+                  {(() => {
+                    const items = groupedShortcuts[activeGroup] || [];
+                    const count = items.length;
+                    const orbitRadius = 92;
+                    const slice = 360 / count;
+                    const btnSize = 28; // w-7 h-7
+                    const halfBtn = btnSize / 2;
+
+                    return items.map((s, i) => {
+                      const baseAngle = i * slice;
+                      const finalAngle = baseAngle + orbitRotation;
+                      const rad = (finalAngle * Math.PI) / 180;
+                      // Center the button on the orbit point by subtracting half size
+                      const x = Math.cos(rad) * orbitRadius - halfBtn;
+                      const y = -Math.sin(rad) * orbitRadius - halfBtn;
+
+                      return (
+                        <motion.button
+                          key={`orbit-${activeGroup}-${i}`}
+                          initial={{ opacity: 0, scale: 0 }}
+                          animate={{
+                            opacity: 1,
+                            scale: 1,
+                            x,
+                            y,
+                            transition: {
+                              type: "spring",
+                              stiffness: 500,
+                              damping: 22,
+                              delay: i * 0.03,
+                            }
+                          }}
+                          exit={{
+                            opacity: 0,
+                            scale: 0,
+                            transition: { duration: 0.1, delay: (count - i) * 0.01 }
+                          }}
+                          whileHover={{ scale: 1.2, zIndex: 100 }}
+                          whileTap={{ scale: 0.9 }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleShortcut(s);
+                            setActiveGroup(null);
+                          }}
+                          className={cn(
+                            "absolute w-7 h-7 rounded-lg",
+                            "bg-slate-900/95 backdrop-blur-xl",
+                            "border shadow-lg shadow-black/50",
+                            "flex flex-col items-center justify-center gap-px",
+                            "text-[6px] font-medium text-slate-400",
+                            "transition-colors select-none",
+                            activeGroup === "Edit" && "border-sky-500/30 hover:text-sky-400 hover:bg-sky-500/10",
+                            activeGroup === "Format" && "border-emerald-500/30 hover:text-emerald-400 hover:bg-emerald-500/10",
+                            activeGroup === "Insert" && "border-amber-500/30 hover:text-amber-400 hover:bg-amber-500/10",
+                            activeGroup === "Navigate" && "border-rose-500/30 hover:text-rose-400 hover:bg-rose-500/10",
+                            activeGroup === "View" && "border-cyan-500/30 hover:text-cyan-400 hover:bg-cyan-500/10",
+                            activeGroup === "AI" && "border-purple-500/30 hover:text-purple-400 hover:bg-purple-500/10"
+                          )}
+                          title={`${s.label}${s.insert ? ` — "${s.insert}"` : ""}`}
+                        >
+                          <s.icon size={11} />
+                          <span className="leading-none">{s.label.length > 3 ? s.label.slice(0, 3) : s.label}</span>
+                        </motion.button>
+                      );
+                    });
+                  })()}
+
+                  {/* Orbit ring hint — diameter = 92*2 = 184 */}
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 0.4 }}
+                    exit={{ opacity: 0 }}
+                    className="absolute rounded-full border border-dashed border-slate-600/30 pointer-events-none"
+                    style={{ 
+                      width: 184, 
+                      height: 184, 
+                      left: "50%", 
+                      top: "50%", 
+                      transform: "translate(-50%, -50%)" 
+                    }}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* ─── PRIMARY RING — r=55, 42px items, 60° hexagonal layout ─── */}
+            <AnimatePresence>
+              {showShortcuts && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0 }}
+                  transition={{ type: "spring", stiffness: 500, damping: 25 }}
+                  className="absolute inset-0"
+                >
+                  {Object.keys(groupedShortcuts).map((group, i) => {
+                    const angles = [-90, -30, 30, 90, 150, 210];
+                    const angle = angles[i];
+                    const rad = (angle * Math.PI) / 180;
+                    const radius = 55;
+                    const btnSize = 42;
+                    const halfBtn = btnSize / 2;
+                    // Center the button on the orbit point
+                    const x = Math.cos(rad) * radius - halfBtn;
+                    const y = -Math.sin(rad) * radius - halfBtn;
+
+                    const groupIcons: Record<string, React.ElementType> = {
+                      Edit: Pencil, Format: AlignLeft, Insert: Code,
+                      Navigate: Hash, View: Eye, AI: Sparkles,
+                    };
+                    const GroupIcon = groupIcons[group] || Code;
+
+                    const groupColors: Record<string, string> = {
+                      Edit: "text-sky-400 border-sky-500/30 hover:bg-sky-500/10",
+                      Format: "text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10",
+                      Insert: "text-amber-400 border-amber-500/30 hover:bg-amber-500/10",
+                      Navigate: "text-rose-400 border-rose-500/30 hover:bg-rose-500/10",
+                      View: "text-cyan-400 border-cyan-500/30 hover:bg-cyan-500/10",
+                      AI: "text-purple-400 border-purple-500/30 hover:bg-purple-500/10",
+                    };
+
+                    return (
+                      <motion.button
+                        key={group}
+                        initial={{ opacity: 0, scale: 0, x: 0, y: 0 }}
+                        animate={{
+                          opacity: 1,
+                          scale: 1,
+                          x,
+                          y,
+                          transition: {
+                            type: "spring",
+                            stiffness: 400,
+                            damping: 20,
+                            delay: i * 0.06,
+                          }
+                        }}
+                        whileHover={{ scale: 1.15 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => {
+                          setOrbitRotation(0);
+                          setActiveGroup(activeGroup === group ? null : group);
+                        }}
+                        className={cn(
+                          "absolute w-[42px] h-[42px] rounded-xl",
+                          "bg-slate-900/95 backdrop-blur-xl border shadow-lg shadow-black/50",
+                          "flex flex-col items-center justify-center gap-0.5",
+                          "text-[9px] font-medium transition-all",
+                          activeGroup === group
+                            ? "bg-slate-800 scale-110 ring-2 ring-white/20 shadow-xl"
+                            : cn("text-slate-400 border-slate-700/50 hover:bg-slate-800", groupColors[group])
+                        )}
+                        title={group}
+                      >
+                        <GroupIcon size={16} />
+                        <span className="leading-none">{group === "Navigate" ? "Nav" : group}</span>
+                      </motion.button>
+                    );
+                  })}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* ─── ⚡ TOGGLE BUTTON ─── */}
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => {
+              setShowShortcuts(!showShortcuts);
+              setActiveGroup(null);
+              setOrbitRotation(0);
+            }}
+            onMouseDown={handleToggleMouseDown}
+            onTouchStart={handleToggleTouchStart}
+            className={cn(
+              "w-11 h-11 rounded-full shadow-xl flex items-center justify-center transition-all shrink-0 cursor-grab active:cursor-grabbing z-10 relative",
+              showShortcuts
+                ? "bg-gradient-to-r from-sky-500 to-purple-500 text-white shadow-purple-500/40"
+                : "bg-slate-800 text-slate-400 hover:text-white border border-slate-700 shadow-black/50"
+            )}
+            title="Drag to move • Click to toggle tools"
+          >
+            <Zap size={20} />
+          </motion.button>
+        </div>
+      )}
+
       {/* Command Palette */}
       <AnimatePresence>
         {showCommandPalette && (
