@@ -1418,17 +1418,19 @@ export function EditorPanel({
           Exit Zen Mode (Esc)
         </motion.button>
       )}
-      
+
+
       {/* ═══════════════════════════════════════════════════════════════════════ */}
       {/* ORBITAL CAROUSEL DOCK — Perfect radial math, zero collision             */}
       {/* ═══════════════════════════════════════════════════════════════════════ */}
       {!zenMode && (
         <div
-          className="fixed z-[70] flex flex-col items-center"
-          style={{ left: togglePos.x, bottom: Math.abs(togglePos.y) }}
+          className="fixed z-[70] flex items-center justify-center"
+          style={{ left: togglePos.x, bottom: Math.abs(togglePos.y), width: 44, height: 44 }}
         >
-          {/* ─── SHARED CENTER CONTAINER — Both rings originate from one point ─── */}
-          <div className="relative w-[1px] h-[1px] mb-3">
+          {/* ─── SHARED CENTER CONTAINER — All rings + toggle originate from one point ─── */}
+          <div className="relative flex items-center justify-center" style={{ width: 1, height: 1 }}>
+            
             {/* ─── GLOW ORB behind active group ─── */}
             <AnimatePresence>
               {activeGroup && showShortcuts && (
@@ -1451,7 +1453,7 @@ export function EditorPanel({
               )}
             </AnimatePresence>
 
-            {/* ─── SECONDARY RING — r=92, 28px items, no self-collision, no primary overlap ─── */}
+            {/* ─── SECONDARY RING — r=92, 28px items ─── */}
             <AnimatePresence>
               {showShortcuts && activeGroup && (
                 <motion.div
@@ -1459,7 +1461,7 @@ export function EditorPanel({
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.2 }}
-                  className="absolute inset-0"
+                  className="absolute inset-0 flex items-center justify-center"
                   onWheel={handleOrbitWheel}
                   onMouseDown={handleOrbitMouseDown}
                   onTouchStart={handleOrbitTouchStart}
@@ -1470,14 +1472,13 @@ export function EditorPanel({
                     const count = items.length;
                     const orbitRadius = 92;
                     const slice = 360 / count;
-                    const btnSize = 28; // w-7 h-7
+                    const btnSize = 28;
                     const halfBtn = btnSize / 2;
 
                     return items.map((s, i) => {
                       const baseAngle = i * slice;
                       const finalAngle = baseAngle + orbitRotation;
                       const rad = (finalAngle * Math.PI) / 180;
-                      // Center the button on the orbit point by subtracting half size
                       const x = Math.cos(rad) * orbitRadius - halfBtn;
                       const y = -Math.sin(rad) * orbitRadius - halfBtn;
 
@@ -1532,7 +1533,7 @@ export function EditorPanel({
                     });
                   })()}
 
-                  {/* Orbit ring hint — diameter = 92*2 = 184 */}
+                  {/* Orbit ring hint */}
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 0.4 }}
@@ -1558,7 +1559,7 @@ export function EditorPanel({
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0 }}
                   transition={{ type: "spring", stiffness: 500, damping: 25 }}
-                  className="absolute inset-0"
+                  className="absolute inset-0 flex items-center justify-center"
                 >
                   {Object.keys(groupedShortcuts).map((group, i) => {
                     const angles = [-90, -30, 30, 90, 150, 210];
@@ -1567,7 +1568,6 @@ export function EditorPanel({
                     const radius = 55;
                     const btnSize = 42;
                     const halfBtn = btnSize / 2;
-                    // Center the button on the orbit point
                     const x = Math.cos(rad) * radius - halfBtn;
                     const y = -Math.sin(rad) * radius - halfBtn;
 
@@ -1627,29 +1627,31 @@ export function EditorPanel({
                 </motion.div>
               )}
             </AnimatePresence>
-          </div>
 
-          {/* ─── ⚡ TOGGLE BUTTON ─── */}
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => {
-              setShowShortcuts(!showShortcuts);
-              setActiveGroup(null);
-              setOrbitRotation(0);
-            }}
-            onMouseDown={handleToggleMouseDown}
-            onTouchStart={handleToggleTouchStart}
-            className={cn(
-              "w-11 h-11 rounded-full shadow-xl flex items-center justify-center transition-all shrink-0 cursor-grab active:cursor-grabbing z-10 relative",
-              showShortcuts
-                ? "bg-gradient-to-r from-sky-500 to-purple-500 text-white shadow-purple-500/40"
-                : "bg-slate-800 text-slate-400 hover:text-white border border-slate-700 shadow-black/50"
-            )}
-            title="Drag to move • Click to toggle tools"
-          >
-            <Zap size={20} />
-          </motion.button>
+            {/* ─── ⚡ TOGGLE BUTTON — Dead center of everything ─── */}
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => {
+                setShowShortcuts(!showShortcuts);
+                setActiveGroup(null);
+                setOrbitRotation(0);
+              }}
+              onMouseDown={handleToggleMouseDown}
+              onTouchStart={handleToggleTouchStart}
+              className={cn(
+                "absolute w-11 h-11 rounded-full shadow-xl flex items-center justify-center transition-all shrink-0 cursor-grab active:cursor-grabbing z-10",
+                showShortcuts
+                  ? "bg-gradient-to-r from-sky-500 to-purple-500 text-white shadow-purple-500/40"
+                  : "bg-slate-800 text-slate-400 hover:text-white border border-slate-700 shadow-black/50"
+              )}
+              style={{ left: "50%", top: "50%", transform: "translate(-50%, -50%)" }}
+              title="Drag to move • Click to toggle tools"
+            >
+              <Zap size={20} />
+            </motion.button>
+
+          </div>
         </div>
       )}
 
