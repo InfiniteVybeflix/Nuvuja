@@ -1347,163 +1347,137 @@ export function EditorPanel({
         </motion.button>
       )}
 
+
 {/* ═══════════════════════════════════════════════════════════════════════ */}
-{/* THE SATELLITE DOCK — Primary & Secondary on distinct radii, same angle  */}
-{/* Primary: r=65px  |  Secondary: r=125px  |  Gap: 60px — impossible overlap */}
+{/* CONSTELLATION DOCK — Secondary items form a viewport-safe mini-grid    */}
+{/* Primary: r=65 radial  |  Secondary: local offset grid from parent      */}
+{/* No arc math. No off-screen items. Every tool is visible and clickable. */}
 {/* ═══════════════════════════════════════════════════════════════════════ */}
 {!zenMode && (
   <div
     className="fixed z-[70] flex flex-col items-center"
     style={{ left: togglePos.x, bottom: Math.abs(togglePos.y) }}
   >
-    {/* ─── ORBIT RINGS (visual guide, dashed circles) ─── */}
-    <AnimatePresence>
-      {showShortcuts && (
-        <motion.svg
-          initial={{ opacity: 0, scale: 0.3 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.3 }}
-          transition={{ duration: 0.5, ease: [0.34, 1.56, 0.64, 1] }}
-          width="280"
-          height="280"
-          viewBox="0 0 280 280"
-          className="absolute pointer-events-none"
-          style={{ left: "50%", top: "50%", transform: "translate(-50%, -50%)" }}
-        >
-          <motion.circle
-            cx="140" cy="140" r="65"
-            fill="none"
-            stroke="rgba(56, 189, 248, 0.15)"
-            strokeWidth="1"
-            strokeDasharray="3 6"
-            initial={{ pathLength: 0 }}
-            animate={{ pathLength: 1 }}
-            transition={{ duration: 0.8, delay: 0.1 }}
-          />
-          <motion.circle
-            cx="140" cy="140" r="125"
-            fill="none"
-            stroke="rgba(139, 92, 246, 0.1)"
-            strokeWidth="1"
-            strokeDasharray="3 6"
-            initial={{ pathLength: 0 }}
-            animate={{ pathLength: 1 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-          />
-        </motion.svg>
-      )}
-    </AnimatePresence>
-
     {/* ─── GLOW ORB behind active group ─── */}
     <AnimatePresence>
       {activeGroup && showShortcuts && (
         <motion.div
-          initial={{ opacity: 0, scale: 0.5 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.5 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
           transition={{ duration: 0.3 }}
           className={cn(
-            "absolute pointer-events-none rounded-full",
-            "w-[180px] h-[180px] blur-[50px]",
-            activeGroup === "Edit" && "bg-sky-500/20",
-            activeGroup === "Format" && "bg-emerald-500/20",
-            activeGroup === "Insert" && "bg-amber-500/20",
-            activeGroup === "Navigate" && "bg-rose-500/20",
-            activeGroup === "View" && "bg-cyan-500/20",
-            activeGroup === "AI" && "bg-purple-500/20"
+            "absolute pointer-events-none rounded-full w-[200px] h-[200px] blur-[60px]",
+            activeGroup === "Edit" && "bg-sky-500/15",
+            activeGroup === "Format" && "bg-emerald-500/15",
+            activeGroup === "Insert" && "bg-amber-500/15",
+            activeGroup === "Navigate" && "bg-rose-500/15",
+            activeGroup === "View" && "bg-cyan-500/15",
+            activeGroup === "AI" && "bg-purple-500/15"
           )}
           style={{ left: "50%", top: "50%", transform: "translate(-50%, -50%)" }}
         />
       )}
     </AnimatePresence>
 
-{/* ─── SECONDARY RING — Arc-distributed at r=125 ─── */}
-{/* Each group's items fan out in a 40° arc around the parent's angle.   */}
-{/* This makes ALL items visible and clickable — no stacking.            */}
-<AnimatePresence>
-  {showShortcuts && activeGroup && (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.15 }}
-      className="relative w-[1px] h-[1px]"
-    >
-      {(() => {
-        // Parent angle for each group
-        const parentAngle: Record<string, number> = {
-          Edit: -90, Format: -30, Insert: 30,
-          Navigate: 90, View: 150, AI: 210,
-        };
-        const items = groupedShortcuts[activeGroup] || [];
-        const count = items.length;
-        const spread = 40; // degrees of arc spread
-        const radius = 125;
-        const baseAngle = parentAngle[activeGroup] ?? -90;
-        const startAngle = baseAngle - spread / 2;
-        const step = count > 1 ? spread / (count - 1) : 0;
+    {/* ─── SECONDARY GRID — Viewport-safe offset from parent position ─── */}
+    <AnimatePresence>
+      {showShortcuts && activeGroup && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15 }}
+          className="relative w-[1px] h-[1px]"
+        >
+          {(() => {
+            // Parent angles (where each group sits on the primary ring)
+            const parentAngle: Record<string, number> = {
+              Edit: -90, Format: -30, Insert: 30,
+              Navigate: 90, View: 150, AI: 210,
+            };
+            const items = groupedShortcuts[activeGroup] || [];
+            const count = items.length;
+            const angle = parentAngle[activeGroup] ?? -90;
 
-        return items.map((s, i) => {
-          const angle = startAngle + i * step;
-          const rad = (angle * Math.PI) / 180;
-          const x = Math.cos(rad) * radius;
-          const y = Math.sin(rad) * radius;
+            // Convert parent angle to direction vector
+            const rad = (angle * Math.PI) / 180;
+            const dirX = Math.cos(rad);
+            const dirY = -Math.sin(rad); // CSS flipped
 
-          return (
-            <motion.button
-              key={`${activeGroup}-${s.label}-${i}`}
-              initial={{ opacity: 0, scale: 0, x: 0, y: 0 }}
-              animate={{
-                opacity: 1,
-                scale: 1,
-                x,
-                y: -y,
-                transition: {
-                  type: "spring",
-                  stiffness: 450,
-                  damping: 20,
-                  delay: i * 0.04,
-                }
-              }}
-              exit={{
-                opacity: 0,
-                scale: 0,
-                x: 0,
-                y: 0,
-                transition: { duration: 0.12, delay: (count - i) * 0.015 }
-              }}
-              whileHover={{ scale: 1.2 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={() => {
-                handleShortcut(s);
-                setActiveGroup(null);
-              }}
-              className={cn(
-                "absolute w-10 h-10 rounded-xl",
-                "bg-slate-900/95 backdrop-blur-xl",
-                "border shadow-lg shadow-black/50",
-                "flex flex-col items-center justify-center gap-0.5",
-                "text-[8px] font-medium text-slate-400",
-                "transition-colors",
-                activeGroup === "Edit" && "border-sky-500/30 hover:text-sky-400 hover:bg-sky-500/10 hover:border-sky-400/50",
-                activeGroup === "Format" && "border-emerald-500/30 hover:text-emerald-400 hover:bg-emerald-500/10 hover:border-emerald-400/50",
-                activeGroup === "Insert" && "border-amber-500/30 hover:text-amber-400 hover:bg-amber-500/10 hover:border-amber-400/50",
-                activeGroup === "Navigate" && "border-rose-500/30 hover:text-rose-400 hover:bg-rose-500/10 hover:border-rose-400/50",
-                activeGroup === "View" && "border-cyan-500/30 hover:text-cyan-400 hover:bg-cyan-500/10 hover:border-cyan-400/50",
-                activeGroup === "AI" && "border-purple-500/30 hover:text-purple-400 hover:bg-purple-500/10 hover:border-purple-400/50"
-              )}
-              title={`${s.label}${s.insert ? ` — "${s.insert}"` : ""}`}
-            >
-              <s.icon size={14} />
-              <span className="leading-none">{s.label.length > 5 ? s.label.slice(0, 4) : s.label}</span>
-            </motion.button>
-          );
-        });
-      })()}
-    </motion.div>
-  )}
-</AnimatePresence>
+            // Grid offsets: items fan out PERPENDICULAR to the direction
+            // This creates a "hand of cards" or "comb" shape that stays visible
+            const spacing = 48; // px between items
+            const perpX = -dirY; // perpendicular vector (rotated 90°)
+            const perpY = dirX;
 
+            // Center the row of items around the parent's direction
+            const totalWidth = (count - 1) * spacing;
+            const startOffset = -totalWidth / 2;
+
+            return items.map((s, i) => {
+              // Position: parent direction * radius + perpendicular offset
+              // This creates a ROW of items perpendicular to the radial line
+              const perpOffset = startOffset + i * spacing;
+              const radius = 115; // distance from center
+
+              const x = dirX * radius + perpX * perpOffset;
+              const y = dirY * radius + perpY * perpOffset;
+
+              return (
+                <motion.button
+                  key={`${activeGroup}-tool-${i}`}
+                  initial={{ opacity: 0, scale: 0 }}
+                  animate={{
+                    opacity: 1,
+                    scale: 1,
+                    x,
+                    y,
+                    transition: {
+                      type: "spring",
+                      stiffness: 500,
+                      damping: 22,
+                      delay: i * 0.04,
+                    }
+                  }}
+                  exit={{
+                    opacity: 0,
+                    scale: 0,
+                    x: 0,
+                    y: 0,
+                    transition: { duration: 0.1, delay: (count - i) * 0.015 }
+                  }}
+                  whileHover={{ scale: 1.15, zIndex: 100 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => {
+                    handleShortcut(s);
+                    setActiveGroup(null);
+                  }}
+                  className={cn(
+                    "absolute w-10 h-10 rounded-xl",
+                    "bg-slate-900/95 backdrop-blur-xl",
+                    "border shadow-lg shadow-black/50",
+                    "flex flex-col items-center justify-center gap-0.5",
+                    "text-[8px] font-medium text-slate-400",
+                    "transition-colors",
+                    activeGroup === "Edit" && "border-sky-500/30 hover:text-sky-400 hover:bg-sky-500/10",
+                    activeGroup === "Format" && "border-emerald-500/30 hover:text-emerald-400 hover:bg-emerald-500/10",
+                    activeGroup === "Insert" && "border-amber-500/30 hover:text-amber-400 hover:bg-amber-500/10",
+                    activeGroup === "Navigate" && "border-rose-500/30 hover:text-rose-400 hover:bg-rose-500/10",
+                    activeGroup === "View" && "border-cyan-500/30 hover:text-cyan-400 hover:bg-cyan-500/10",
+                    activeGroup === "AI" && "border-purple-500/30 hover:text-purple-400 hover:bg-purple-500/10"
+                  )}
+                  title={`${s.label}${s.insert ? ` — "${s.insert}"` : ""}`}
+                >
+                  <s.icon size={14} />
+                  <span className="leading-none">{s.label.length > 5 ? s.label.slice(0, 4) : s.label}</span>
+                </motion.button>
+              );
+            });
+          })()}
+        </motion.div>
+      )}
+    </AnimatePresence>
 
     {/* ─── PRIMARY RING — r=65, 6 groups at 60° intervals ─── */}
     <AnimatePresence>
@@ -1516,31 +1490,26 @@ export function EditorPanel({
           className="relative w-[1px] h-[1px] mb-3"
         >
           {Object.keys(groupedShortcuts).map((group, i) => {
-            // 6 groups, 60° apart, starting from -90° (top)
             const angles = [-90, -30, 30, 90, 150, 210];
             const angle = angles[i];
             const rad = (angle * Math.PI) / 180;
             const radius = 65;
             const x = Math.cos(rad) * radius;
-            const y = Math.sin(rad) * radius;
+            const y = -Math.sin(rad) * radius;
 
             const groupIcons: Record<string, React.ElementType> = {
-              Edit: Pencil,
-              Format: AlignLeft,
-              Insert: Code,
-              Navigate: Hash,
-              View: Eye,
-              AI: Sparkles,
+              Edit: Pencil, Format: AlignLeft, Insert: Code,
+              Navigate: Hash, View: Eye, AI: Sparkles,
             };
             const GroupIcon = groupIcons[group] || Code;
 
             const groupColors: Record<string, string> = {
-              Edit: "text-sky-400 border-sky-500/30 hover:bg-sky-500/10 hover:border-sky-400/50",
-              Format: "text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10 hover:border-emerald-400/50",
-              Insert: "text-amber-400 border-amber-500/30 hover:bg-amber-500/10 hover:border-amber-400/50",
-              Navigate: "text-rose-400 border-rose-500/30 hover:bg-rose-500/10 hover:border-rose-400/50",
-              View: "text-cyan-400 border-cyan-500/30 hover:bg-cyan-500/10 hover:border-cyan-400/50",
-              AI: "text-purple-400 border-purple-500/30 hover:bg-purple-500/10 hover:border-purple-400/50",
+              Edit: "text-sky-400 border-sky-500/30 hover:bg-sky-500/10",
+              Format: "text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10",
+              Insert: "text-amber-400 border-amber-500/30 hover:bg-amber-500/10",
+              Navigate: "text-rose-400 border-rose-500/30 hover:bg-rose-500/10",
+              View: "text-cyan-400 border-cyan-500/30 hover:bg-cyan-500/10",
+              AI: "text-purple-400 border-purple-500/30 hover:bg-purple-500/10",
             };
 
             return (
@@ -1551,7 +1520,7 @@ export function EditorPanel({
                   opacity: 1,
                   scale: 1,
                   x,
-                  y: -y,
+                  y,
                   transition: {
                     type: "spring",
                     stiffness: 400,
@@ -1603,7 +1572,8 @@ export function EditorPanel({
       <Zap size={20} />
     </motion.button>
   </div>
-)}                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+)}
+      
       {/* Command Palette */}
       <AnimatePresence>
         {showCommandPalette && (
