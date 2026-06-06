@@ -19,7 +19,7 @@ import {
   Trash2, BookOpen, TestTube, Globe, Database,
   LayoutTemplate, FileJson, GitBranch, Activity,
   XCircle, ChevronRight, ChevronLeft, GripVertical,
-  Sun, Moon, HelpCircle, Hash, SquareFunction,
+  Sun, Moon, HelpCircle, Hash, FunctionSquare,
   List, Filter, Pencil,
 } from "lucide-react";
 
@@ -457,7 +457,7 @@ const SHORTCUTS: ShortcutDef[] = [
   { label: "Try", icon: Code, insert: "try {\n  \n} catch (err) {\n  \n}", cursorOffset: -22, group: "Insert" },
   // Navigate group
   { label: "Go Line", icon: Hash, action: "goToLine", group: "Navigate" },
-  { label: "Go Symbol", icon: SquareFunction, action: "goToSymbol", group: "Navigate" },
+  { label: "Go Symbol", icon: FunctionSquare, action: "goToSymbol", group: "Navigate" },
   { label: "Bracket", icon: Braces, action: "goToBracket", group: "Navigate" },
   { label: "Expand", icon: ChevronRight, action: "expandSelection", group: "Navigate" },
   { label: "Shrink", icon: ChevronLeft, action: "shrinkSelection", group: "Navigate" },
@@ -599,7 +599,7 @@ export function EditorPanel({
     { id: "zenMode", label: "Toggle Zen Mode", icon: Focus, category: "View", shortcut: "Ctrl+Shift+Z", action: () => setZenMode(z => !z) },
     { id: "splitView", label: "Toggle Split View", icon: Split, category: "View", shortcut: "Ctrl+Shift+S", action: () => setSplitView(s => !s) },
     { id: "gotoLine", label: "Go to Line", icon: Hash, category: "Navigate", shortcut: "Ctrl+G", action: () => triggerEditorAction("editor.action.gotoLine") },
-    { id: "gotoSymbol", label: "Go to Symbol", icon: SquareFunction, category: "Navigate", shortcut: "Ctrl+Shift+O", action: () => triggerEditorAction("editor.action.gotoSymbol") },
+    { id: "gotoSymbol", label: "Go to Symbol", icon: FunctionSquare, category: "Navigate", shortcut: "Ctrl+Shift+O", action: () => triggerEditorAction("editor.action.gotoSymbol") },
     { id: "find", label: "Find", icon: Search, category: "Edit", shortcut: "Ctrl+F", action: () => triggerEditorAction("actions.find") },
     { id: "replace", label: "Replace", icon: Replace, category: "Edit", shortcut: "Ctrl+H", action: () => triggerEditorAction("editor.action.startFindReplaceAction:mk") },
     { id: "selectAll", label: "Select All", icon: AlignLeft, category: "Edit", shortcut: "Ctrl+A", action: () => triggerEditorAction("editor.action.selectAll") },
