@@ -1346,56 +1346,7 @@ export function EditorPanel({
           Exit Zen Mode (Esc)
         </motion.button>
       )}
-
-      {/* Floating ⚡ Radial Burst Dock */}
-      {!zenMode && (
-        <div
-          className="fixed z-[70] flex flex-col items-center"
-          style={{
-            left: togglePos.x,
-            bottom: Math.abs(togglePos.y),
-          }}
-        >
-          {/* Radial Buttons Container */}
-          <div className="relative w-[1px] h-[1px] mb-3">
-            {Object.entries(groupedShortcuts).flatMap(([group, items], groupIndex) =>
-              items.map((s, i) => {
-                const totalIndex = groupIndex * 10 + i;
-                const angle = -140 + (totalIndex * 35); // Fan arc from left to right
-                const radius = 90;
-                const rad = (angle * Math.PI) / 180;
-                const x = Math.cos(rad) * radius;
-                const y = Math.sin(rad) * radius;
-                
-                const groupColors: Record<string, string> = {
-                  Edit: "hover:text-sky-400",
-                  Format: "hover:text-emerald-400",
-                  Insert: "hover:text-amber-400",
-                  Navigate: "hover:text-rose-400",
-                  View: "hover:text-cyan-400",
-                  AI: "hover:text-purple-400",
-                };
-                
-                return (
-                  <motion.button
-                    key={`${group}-${i}`}
-                    initial={{ opacity: 0, scale: 0, x: 0, y: 0 }}
-                    animate={showShortcuts ? {
-                      opacity: 1,
-                      scale: 1,
-                      x,
-                      y,
-                      transition: {
-                        type: "spring",
-                        stiffness: 400,
-                        damping: 20,
-                        delay: totalIndex * 0.03,
-                      }
-                    } : {
-                      opacity: 0,
-                      scale: 0,
-                      x: 0,
-                      y: 0,
+                      
       {/* Floating ⚡ Collapsible Group Radial Dock */}
       {!zenMode && (
         <div
