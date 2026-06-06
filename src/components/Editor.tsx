@@ -506,6 +506,7 @@ export function EditorPanel({
   const monacoRef = useRef<any>(null);
   const [showShortcuts, setShowShortcuts] = useState(true);
   const [cursorPos, setCursorPos] = useState({ line: 1, col: 1 });
+  const [activeGroup, setActiveGroup] = useState<string | null>(null);
   const [fontSize, setFontSize] = useState(14);
   const [showMinimap, setShowMinimap] = useState(true);
   const [showStickyScroll, setShowStickyScroll] = useState(true);
@@ -1395,31 +1396,149 @@ export function EditorPanel({
                       scale: 0,
                       x: 0,
                       y: 0,
-                      transition: {
-                        duration: 0.2,
-                        delay: (Object.entries(groupedShortcuts).flatMap(([_, items]) => items).length - totalIndex) * 0.02,
-                      }
-                    }}
-                    onClick={() => handleShortcut(s)}
-                    className={cn(
-                      "absolute w-10 h-10 rounded-xl bg-slate-900/95 backdrop-blur-xl border border-slate-700/50 shadow-lg shadow-black/50 flex flex-col items-center justify-center gap-0.5 text-slate-400 hover:bg-slate-800 transition-colors",
-                      groupColors[group] || "hover:text-slate-200"
-                    )}
-                    title={`${s.label}${s.insert ? ` — "${s.insert}"` : ""}`}
-                  >
-                    <s.icon size={13} />
-                    <span className="text-[6px] leading-none">{s.label}</span>
-                  </motion.button>
-                );
-              })
+      {/* Floating ⚡ Collapsible Group Radial Dock */}
+      {!zenMode && (
+        <div
+          className="fixed z-[70] flex flex-col items-center"
+          style={{
+            left: togglePos.x,
+            bottom: Math.abs(togglePos.y),
+          }}
+        >
+          {/* Expanded Group Tools — secondary ring */}
+          <AnimatePresence>
+            {activeGroup && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0 }}
+                transition={{ type: "spring", stiffness: 500, damping: 25 }}
+                className="relative w-[1px] h-[1px] mb-3"
+              >
+                {groupedShortcuts[activeGroup]?.map((s, i) => {
+                  const totalItems = groupedShortcuts[activeGroup]?.length || 1;
+                  const angle = -90 + (i * (180 / Math.max(totalItems - 1, 1)));
+                  const rad = (angle * Math.PI) / 180;
+                  const radius = 75;
+                  const x = Math.cos(rad) * radius;
+                  const y = Math.sin(rad) * radius;
+
+                  return (
+                    <motion.button
+                      key={`${activeGroup}-${i}`}
+                      initial={{ opacity: 0, scale: 0, x: 0, y: 0 }}
+                      animate={{
+                        opacity: 1,
+                        scale: 1,
+                        x,
+                        y,
+                        transition: {
+                          type: "spring",
+                          stiffness: 400,
+                          damping: 20,
+                          delay: i * 0.04,
+                        }
+                      }}
+                      exit={{
+                        opacity: 0,
+                        scale: 0,
+                        x: 0,
+                        y: 0,
+                        transition: { duration: 0.15, delay: (totalItems - i) * 0.02 }
+                      }}
+                      onClick={() => {
+                        handleShortcut(s);
+                        setActiveGroup(null);
+                      }}
+                      className={cn(
+                        "absolute w-10 h-10 rounded-xl bg-slate-900/95 backdrop-blur-xl border border-slate-700/50 shadow-lg shadow-black/50 flex flex-col items-center justify-center gap-0.5 text-slate-400 hover:bg-slate-800 transition-colors",
+                        activeGroup === "AI" && "hover:text-purple-400 hover:bg-purple-500/10",
+                        activeGroup === "Edit" && "hover:text-sky-400",
+                        activeGroup === "Format" && "hover:text-emerald-400",
+                        activeGroup === "Insert" && "hover:text-amber-400",
+                        activeGroup === "Navigate" && "hover:text-rose-400",
+                        activeGroup === "View" && "hover:text-cyan-400"
+                      )}
+                      title={`${s.label}${s.insert ? ` — "${s.insert}"` : ""}`}
+                    >
+                      <s.icon size={13} />
+                      <span className="text-[6px] leading-none">{s.label}</span>
+                    </motion.button>
+                  );
+                })}
+              </motion.div>
             )}
+          </AnimatePresence>
+
+          {/* Primary Group Orbit Buttons */}
+          <div className="relative w-[1px] h-[1px] mb-3">
+            {Object.keys(groupedShortcuts).map((group, i) => {
+              const totalGroups = Object.keys(groupedShortcuts).length;
+              const angle = -120 + (i * (240 / Math.max(totalGroups - 1, 1)));
+              const rad = (angle * Math.PI) / 180;
+              const radius = 55;
+              const x = Math.cos(rad) * radius;
+              const y = Math.sin(rad) * radius;
+
+              const groupIcons: Record<string, React.ElementType> = {
+                Edit: Pencil,
+                Format: AlignLeft,
+                Insert: Code,
+                Navigate: Hash,
+                View: Eye,
+                AI: Sparkles,
+              };
+              const GroupIcon = groupIcons[group] || Code;
+              const groupColors: Record<string, string> = {
+                Edit: "text-sky-400 border-sky-500/30 hover:bg-sky-500/10",
+                Format: "text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10",
+                Insert: "text-amber-400 border-amber-500/30 hover:bg-amber-500/10",
+                Navigate: "text-rose-400 border-rose-500/30 hover:bg-rose-500/10",
+                View: "text-cyan-400 border-cyan-500/30 hover:bg-cyan-500/10",
+                AI: "text-purple-400 border-purple-500/30 hover:bg-purple-500/10",
+              };
+
+              return (
+                <motion.button
+                  key={group}
+                  initial={{ opacity: 0, scale: 0 }}
+                  animate={{
+                    opacity: 1,
+                    scale: 1,
+                    x,
+                    y,
+                    transition: {
+                      type: "spring",
+                      stiffness: 400,
+                      damping: 20,
+                      delay: i * 0.05,
+                    }
+                  }}
+                  whileHover={{ scale: 1.15 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => setActiveGroup(activeGroup === group ? null : group)}
+                  className={cn(
+                    "absolute w-9 h-9 rounded-xl bg-slate-900/95 backdrop-blur-xl border shadow-lg shadow-black/50 flex items-center justify-center transition-colors",
+                    activeGroup === group
+                      ? "bg-slate-800 scale-110 ring-2 ring-white/20"
+                      : groupColors[group] || "text-slate-400 border-slate-700/50 hover:bg-slate-800"
+                  )}
+                  title={group}
+                >
+                  <GroupIcon size={16} />
+                </motion.button>
+              );
+            })}
           </div>
 
           {/* ⚡ Toggle Button */}
           <motion.button
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => setShowShortcuts(!showShortcuts)}
+            onClick={() => {
+              setShowShortcuts(!showShortcuts);
+              setActiveGroup(null);
+            }}
             onMouseDown={handleToggleMouseDown}
             onTouchStart={handleToggleTouchStart}
             className={cn(
@@ -1434,6 +1553,7 @@ export function EditorPanel({
           </motion.button>
         </div>
       )}
+
 
       {/* Command Palette */}
       <AnimatePresence>
