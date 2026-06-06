@@ -526,64 +526,38 @@ export function EditorPanel({
 
   // Floating toggle button position
   const [togglePos, setTogglePos] = useState({ x: 16, y: -60 });
+  const [togglePos, setTogglePos] = useState({ x: -9999, y: -9999 });
   const hasAutoPositioned = useRef(false);
 
-  // ─── SAFE INITIAL POSITION — visualViewport-aware, ring-safe ───────
+  // ─── SAFE INITIAL POSITION — works on Web, PWA, all screen sizes ─────
   useEffect(() => {
     if (hasAutoPositioned.current) return;
     hasAutoPositioned.current = true;
 
-    const RING = 92 + 14; // 106px — r₂ + half secondary button
-    const BOX = 280;      // container size
-    const PAD = 16;       // minimum padding from viewport edges
-
     const position = () => {
-      const vv = (window as any).visualViewport;
-      const vw = vv ? vv.width : window.innerWidth;
-      const vh = vv ? vv.height : window.innerHeight;
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
       const isMobile = vw < 768;
 
-      let x: number;
-      let y: number;
+      // Center horizontally (always safe)
+      const x = vw / 2;
 
-      if (isMobile) {
-        // Center horizontally, lift up from bottom so ring clears home bar
-        x = vw / 2;
-        y = -(vh - BOX / 2 - PAD - 20); // extra 20px for home indicator
-      } else {
-        // Desktop: bottom-left with padding
-        x = BOX / 2 + PAD;
-        y = -(BOX / 2 + PAD);
-      }
-
-      // Clamp so 280×280 box stays fully inside viewport
-      x = Math.max(BOX / 2, Math.min(vw - BOX / 2, x));
-      y = Math.max(-(vh - BOX / 2), Math.min(-BOX / 2, y));
+      // Bottom: 120px on mobile (clears URL bar + home indicator), 80px on desktop
+      const bottomOffset = isMobile ? 120 : 80;
+      const y = -bottomOffset;
 
       setTogglePos({ x, y });
     };
 
-    position();
-
-    const vv = (window as any).visualViewport;
-    const onResize = () => position();
-    window.addEventListener("resize", onResize);
-    window.addEventListener("orientationchange", onResize);
-    if (vv) {
-      vv.addEventListener("resize", onResize);
-      vv.addEventListener("scroll", onResize);
-    }
+    // Delay slightly to let PWA viewport settle
+    const timer = setTimeout(position, 100);
+    window.addEventListener("resize", position);
 
     return () => {
-      window.removeEventListener("resize", onResize);
-      window.removeEventListener("orientationchange", onResize);
-      if (vv) {
-        vv.removeEventListener("resize", onResize);
-        vv.removeEventListener("scroll", onResize);
-      }
+      clearTimeout(timer);
+      window.removeEventListener("resize", position);
     };
   }, []);
-
 
   const [isDraggingToggle, setIsDraggingToggle] = useState(false);
   const dragStartRef = useRef({ x: 0, y: 0, startX: 0, startY: 0 });
@@ -1516,13 +1490,15 @@ export function EditorPanel({
         </motion.button>
       )}
 
+
       {/* ═══════════════════════════════════════════════════════════════════════ */}
-      {/* ORBITAL CAROUSEL DOCK — 280×280 container, ring-safe, mobile-aware    */}
-      {/* r₁=52, r₂=92, toggle at container center (140,140), no overflow clips   */}
+      {/* ORBITAL CAROUSEL DOCK — ⚡ Toggle is the sun, all rings orbit around it   */}
+      {/* r₁=52 (primary), r₂=92 (secondary), 5px ring gap, zero collision,        */}
+      {/* toggle clamped so the full 106px ring stays inside the viewport.        */}
       {/* ═══════════════════════════════════════════════════════════════════════ */}
       {!zenMode && (
         <div
-          className="fixed z-[70] pointer-events-none"
+          className="fixed z-[70]"
           style={{
             left: togglePos.x,
             bottom: togglePos.y < 0 ? Math.abs(togglePos.y) : togglePos.y,
@@ -1530,14 +1506,12 @@ export function EditorPanel({
             height: 280,
             marginLeft: -140,
             marginBottom: -140,
-            touchAction: "none",
-            WebkitTapHighlightColor: "transparent",
           }}
         >
-          {/* Inner wrapper: pointer events only on buttons, not the container */}
-          <div className="relative w-full h-full pointer-events-auto">
+          {/* ─── ORIGIN POINT (0,0) — All orbital math centers here ─── */}
+          <div className="relative w-full h-full">
 
-            {/* ─── GLOW ORB ─── */}
+            {/* ─── GLOW ORB behind active group ─── */}
             <AnimatePresence>
               {activeGroup && showShortcuts && (
                 <motion.div
@@ -1546,7 +1520,7 @@ export function EditorPanel({
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.3 }}
                   className={cn(
-                    "absolute pointer-events-none rounded-full blur-[60px] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2",
+                    "absolute pointer-events-none rounded-full blur-[60px]",
                     activeGroup === "Edit" && "bg-sky-500/15",
                     activeGroup === "Format" && "bg-emerald-500/15",
                     activeGroup === "Insert" && "bg-amber-500/15",
@@ -1554,12 +1528,18 @@ export function EditorPanel({
                     activeGroup === "View" && "bg-cyan-500/15",
                     activeGroup === "AI" && "bg-purple-500/15"
                   )}
-                  style={{ width: 220, height: 220 }}
+                  style={{ 
+                    width: 220, 
+                    height: 220, 
+                    left: "50%", 
+                    top: "50%", 
+                    transform: "translate(-50%, -50%)" 
+                  }}
                 />
               )}
             </AnimatePresence>
 
-            {/* ─── SECONDARY RING — r₂=92 ─── */}
+            {/* ─── SECONDARY RING — r₂=92, 28px buttons ─── */}
             <AnimatePresence>
               {showShortcuts && activeGroup && (
                 <motion.div
@@ -1567,8 +1547,8 @@ export function EditorPanel({
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.2 }}
-                  className="absolute left-1/2 top-1/2"
-                  style={{ width: 1, height: 1, marginLeft: -0.5, marginTop: -0.5 }}
+                  className="absolute"
+                  style={{ left: 0, top: 0, width: 1, height: 1 }}
                   onWheel={handleOrbitWheel}
                   onMouseDown={handleOrbitMouseDown}
                   onTouchStart={handleOrbitTouchStart}
@@ -1576,16 +1556,19 @@ export function EditorPanel({
                   {(() => {
                     const items = groupedShortcuts[activeGroup] || [];
                     const count = items.length;
-                    const r2 = 92;
+                    const r2 = 92;           // secondary radius
                     const slice = 360 / count;
-                    const halfBtn = 14;
+                    const btnSize = 28;       // w-7 h-7
+                    const halfBtn = 14;       // btnSize / 2
 
                     return items.map((s, i) => {
                       const baseAngle = i * slice;
                       const finalAngle = baseAngle + orbitRotation;
                       const rad = (finalAngle * Math.PI) / 180;
+                      // Button center on orbit circle
                       const centerX = Math.cos(rad) * r2;
                       const centerY = -Math.sin(rad) * r2;
+                      // Offset by half button size to center it on the point
                       const x = centerX - halfBtn;
                       const y = centerY - halfBtn;
 
@@ -1640,19 +1623,25 @@ export function EditorPanel({
                     });
                   })()}
 
-                  {/* Secondary hint ring — diameter = 184 */}
+                  {/* Secondary ring hint — diameter = 92×2 = 184 */}
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 0.4 }}
                     exit={{ opacity: 0 }}
-                    className="absolute rounded-full border border-dashed border-slate-600/30 pointer-events-none left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
-                    style={{ width: 184, height: 184 }}
+                    className="absolute rounded-full border border-dashed border-slate-600/30 pointer-events-none"
+                    style={{ 
+                      width: 184, 
+                      height: 184, 
+                      left: "50%", 
+                      top: "50%", 
+                      transform: "translate(-50%, -50%)" 
+                    }}
                   />
                 </motion.div>
               )}
             </AnimatePresence>
 
-            {/* ─── PRIMARY RING — r₁=52 ─── */}
+            {/* ─── PRIMARY RING — r₁=52, 42px buttons, 6 groups at 60° ─── */}
             <AnimatePresence>
               {showShortcuts && (
                 <motion.div
@@ -1660,17 +1649,21 @@ export function EditorPanel({
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0 }}
                   transition={{ type: "spring", stiffness: 500, damping: 25 }}
-                  className="absolute left-1/2 top-1/2"
-                  style={{ width: 1, height: 1, marginLeft: -0.5, marginTop: -0.5 }}
+                  className="absolute"
+                  style={{ left: 0, top: 0, width: 1, height: 1 }}
                 >
                   {Object.keys(groupedShortcuts).map((group, i) => {
+                    // 6 groups at 60° intervals, starting from bottom (-90°)
                     const angles = [-90, -30, 30, 90, 150, 210];
                     const angle = angles[i];
                     const rad = (angle * Math.PI) / 180;
-                    const r1 = 52;
-                    const halfBtn = 21;
+                    const r1 = 52;            // primary radius
+                    const btnSize = 42;       // w-[42px] h-[42px]
+                    const halfBtn = 21;       // btnSize / 2
+                    // Button center on orbit circle
                     const centerX = Math.cos(rad) * r1;
                     const centerY = -Math.sin(rad) * r1;
+                    // Offset by half button size to center it on the point
                     const x = centerX - halfBtn;
                     const y = centerY - halfBtn;
 
@@ -1731,7 +1724,8 @@ export function EditorPanel({
               )}
             </AnimatePresence>
 
-            {/* ─── ⚡ TOGGLE BUTTON — Center of 280×280 container ─── */}
+            {/* ─── ⚡ TOGGLE BUTTON — Dead center of the orbital system ─── */}
+            {/* 44×44 button centered on (0,0): top-left at (-22,-22) */}
             <motion.button
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.95 }}
@@ -1743,14 +1737,12 @@ export function EditorPanel({
               onMouseDown={handleToggleMouseDown}
               onTouchStart={handleToggleTouchStart}
               className={cn(
-                "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2",
-                "w-11 h-11 rounded-full shadow-xl flex items-center justify-center transition-all shrink-0 cursor-grab active:cursor-grabbing z-20",
-                "touch-none select-none",
+                "absolute w-11 h-11 rounded-full shadow-xl flex items-center justify-center transition-all shrink-0 cursor-grab active:cursor-grabbing z-20",
                 showShortcuts
                   ? "bg-gradient-to-r from-sky-500 to-purple-500 text-white shadow-purple-500/40"
                   : "bg-slate-800 text-slate-400 hover:text-white border border-slate-700 shadow-black/50"
               )}
-              style={{ WebkitTapHighlightColor: "transparent" }}
+              style={{ left: 0, top: 0, marginLeft: -22, marginTop: -22 }}
               title="Drag to move • Click to toggle tools"
             >
               <Zap size={20} />
@@ -1759,7 +1751,6 @@ export function EditorPanel({
           </div>
         </div>
       )}
-
 
       {/* Command Palette */}
       <AnimatePresence>
