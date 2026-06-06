@@ -1157,7 +1157,7 @@ export function EditorPanel({
     insertFinalNewline: true,
     trimTrailingWhitespace: true,
     semanticHighlighting: { enabled: true },
-    linkedEditing: { enabled: true },
+    linkedEditing: true,
     unicodeHighlighting: { ambiguousCharacters: true, invisibleCharacters: true },
     accessibilitySupport: "on" as const,
     unfoldOnClickAfterEndOfLine: true,
