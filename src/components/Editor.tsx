@@ -1417,86 +1417,93 @@ export function EditorPanel({
       )}
     </AnimatePresence>
 
-    {/* ─── SECONDARY RING — r=125, same angle as parent ─── */}
-    {/* These shoot straight out from their parent group. No arc sharing. */}
-    <AnimatePresence>
-      {showShortcuts && activeGroup && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.15 }}
-          className="relative w-[1px] h-[1px]"
-        >
-          {groupedShortcuts[activeGroup]?.map((s, i) => {
-            // Each group has a fixed angle. Secondary uses SAME angle at r=125.
-            const angleMap: Record<string, number> = {
-              Edit: -90,      // top
-              Format: -30,    // top-right
-              Insert: 30,     // right
-              Navigate: 90,   // bottom-right
-              View: 150,      // bottom
-              AI: 210,        // bottom-left
-            };
-            const angle = angleMap[activeGroup] ?? -90;
-            const rad = (angle * Math.PI) / 180;
-            const radius = 125; // DOUBLE the primary radius — 60px gap
-            const x = Math.cos(rad) * radius;
-            const y = Math.sin(rad) * radius;
+{/* ─── SECONDARY RING — Arc-distributed at r=125 ─── */}
+{/* Each group's items fan out in a 40° arc around the parent's angle.   */}
+{/* This makes ALL items visible and clickable — no stacking.            */}
+<AnimatePresence>
+  {showShortcuts && activeGroup && (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.15 }}
+      className="relative w-[1px] h-[1px]"
+    >
+      {(() => {
+        // Parent angle for each group
+        const parentAngle: Record<string, number> = {
+          Edit: -90, Format: -30, Insert: 30,
+          Navigate: 90, View: 150, AI: 210,
+        };
+        const items = groupedShortcuts[activeGroup] || [];
+        const count = items.length;
+        const spread = 40; // degrees of arc spread
+        const radius = 125;
+        const baseAngle = parentAngle[activeGroup] ?? -90;
+        const startAngle = baseAngle - spread / 2;
+        const step = count > 1 ? spread / (count - 1) : 0;
 
-            return (
-              <motion.button
-                key={`${activeGroup}-${s.label}-${i}`}
-                initial={{ opacity: 0, scale: 0, x: 0, y: 0 }}
-                animate={{
-                  opacity: 1,
-                  scale: 1,
-                  x,
-                  y: -y, // flip Y for CSS coordinates
-                  transition: {
-                    type: "spring",
-                    stiffness: 450,
-                    damping: 20,
-                    delay: i * 0.05,
-                  }
-                }}
-                exit={{
-                  opacity: 0,
-                  scale: 0,
-                  x: 0,
-                  y: 0,
-                  transition: { duration: 0.12, delay: (groupedShortcuts[activeGroup].length - i) * 0.02 }
-                }}
-                whileHover={{ scale: 1.2 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={() => {
-                  handleShortcut(s);
-                  setActiveGroup(null);
-                }}
-                className={cn(
-                  "absolute w-10 h-10 rounded-xl",
-                  "bg-slate-900/95 backdrop-blur-xl",
-                  "border shadow-lg shadow-black/50",
-                  "flex flex-col items-center justify-center gap-0.5",
-                  "text-[8px] font-medium text-slate-400",
-                  "transition-colors",
-                  activeGroup === "Edit" && "border-sky-500/30 hover:text-sky-400 hover:bg-sky-500/10 hover:border-sky-400/50",
-                  activeGroup === "Format" && "border-emerald-500/30 hover:text-emerald-400 hover:bg-emerald-500/10 hover:border-emerald-400/50",
-                  activeGroup === "Insert" && "border-amber-500/30 hover:text-amber-400 hover:bg-amber-500/10 hover:border-amber-400/50",
-                  activeGroup === "Navigate" && "border-rose-500/30 hover:text-rose-400 hover:bg-rose-500/10 hover:border-rose-400/50",
-                  activeGroup === "View" && "border-cyan-500/30 hover:text-cyan-400 hover:bg-cyan-500/10 hover:border-cyan-400/50",
-                  activeGroup === "AI" && "border-purple-500/30 hover:text-purple-400 hover:bg-purple-500/10 hover:border-purple-400/50"
-                )}
-                title={`${s.label}${s.insert ? ` — "${s.insert}"` : ""}`}
-              >
-                <s.icon size={14} />
-                <span className="leading-none">{s.label.length > 5 ? s.label.slice(0, 4) : s.label}</span>
-              </motion.button>
-            );
-          })}
-        </motion.div>
-      )}
-    </AnimatePresence>
+        return items.map((s, i) => {
+          const angle = startAngle + i * step;
+          const rad = (angle * Math.PI) / 180;
+          const x = Math.cos(rad) * radius;
+          const y = Math.sin(rad) * radius;
+
+          return (
+            <motion.button
+              key={`${activeGroup}-${s.label}-${i}`}
+              initial={{ opacity: 0, scale: 0, x: 0, y: 0 }}
+              animate={{
+                opacity: 1,
+                scale: 1,
+                x,
+                y: -y,
+                transition: {
+                  type: "spring",
+                  stiffness: 450,
+                  damping: 20,
+                  delay: i * 0.04,
+                }
+              }}
+              exit={{
+                opacity: 0,
+                scale: 0,
+                x: 0,
+                y: 0,
+                transition: { duration: 0.12, delay: (count - i) * 0.015 }
+              }}
+              whileHover={{ scale: 1.2 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={() => {
+                handleShortcut(s);
+                setActiveGroup(null);
+              }}
+              className={cn(
+                "absolute w-10 h-10 rounded-xl",
+                "bg-slate-900/95 backdrop-blur-xl",
+                "border shadow-lg shadow-black/50",
+                "flex flex-col items-center justify-center gap-0.5",
+                "text-[8px] font-medium text-slate-400",
+                "transition-colors",
+                activeGroup === "Edit" && "border-sky-500/30 hover:text-sky-400 hover:bg-sky-500/10 hover:border-sky-400/50",
+                activeGroup === "Format" && "border-emerald-500/30 hover:text-emerald-400 hover:bg-emerald-500/10 hover:border-emerald-400/50",
+                activeGroup === "Insert" && "border-amber-500/30 hover:text-amber-400 hover:bg-amber-500/10 hover:border-amber-400/50",
+                activeGroup === "Navigate" && "border-rose-500/30 hover:text-rose-400 hover:bg-rose-500/10 hover:border-rose-400/50",
+                activeGroup === "View" && "border-cyan-500/30 hover:text-cyan-400 hover:bg-cyan-500/10 hover:border-cyan-400/50",
+                activeGroup === "AI" && "border-purple-500/30 hover:text-purple-400 hover:bg-purple-500/10 hover:border-purple-400/50"
+              )}
+              title={`${s.label}${s.insert ? ` — "${s.insert}"` : ""}`}
+            >
+              <s.icon size={14} />
+              <span className="leading-none">{s.label.length > 5 ? s.label.slice(0, 4) : s.label}</span>
+            </motion.button>
+          );
+        });
+      })()}
+    </motion.div>
+  )}
+</AnimatePresence>
+
 
     {/* ─── PRIMARY RING — r=65, 6 groups at 60° intervals ─── */}
     <AnimatePresence>
