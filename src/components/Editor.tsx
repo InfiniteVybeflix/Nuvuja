@@ -526,6 +526,44 @@ export function EditorPanel({
 
   // Floating toggle button position
   const [togglePos, setTogglePos] = useState({ x: 16, y: -60 });
+  const hasAutoPositioned = useRef(false);
+
+  // ─── SAFE INITIAL POSITION (mobile / PWA aware) ───────────────────
+  useEffect(() => {
+    if (hasAutoPositioned.current) return;
+    hasAutoPositioned.current = true;
+
+    const vv = (window as any).visualViewport;
+    const vw = vv ? vv.width : window.innerWidth;
+    const vh = vv ? vv.height : window.innerHeight;
+
+    const isStandalone = window.matchMedia("(display-mode: standalone)").matches;
+    const isMobile = vw < 768;
+    const RING = 92 + 14; // 106px — r₂ + half secondary button
+    const TOGGLE = 44;
+    const HALF = TOGGLE / 2; // 22
+
+    let x: number;
+    let y: number;
+
+    if (isMobile || isStandalone) {
+      // Center horizontally so the ring never clips left/right edges
+      x = Math.max(RING - HALF, Math.min(vw - RING - HALF, (vw - TOGGLE) / 2));
+      // Lift it above home indicator / gesture bar (extra 24px breathing room)
+      const bottomPad = isStandalone ? 24 : 16;
+      y = -(vh - RING - HALF - bottomPad);
+    } else {
+      // Desktop: bottom-left with full ring visible
+      x = RING - HALF; // 84
+      y = -(RING + 20); // bottom: 126
+    }
+
+    // Final clamp just in case
+    x = Math.max(RING - HALF, Math.min(vw - RING - HALF, x));
+    y = Math.max(-(vh - RING - HALF), Math.min(-(RING - HALF), y));
+
+    setTogglePos({ x, y });
+  }, []);
   const [isDraggingToggle, setIsDraggingToggle] = useState(false);
   const dragStartRef = useRef({ x: 0, y: 0, startX: 0, startY: 0 });
 
@@ -1011,29 +1049,50 @@ export function EditorPanel({
   };
 
   useEffect(() => {
-    const RING = 92 + 14; // r2 + half secondary button = 106px
+    const RING = 92 + 14; // 106
+    const HALF = 22;
+
+    const getViewport = () => {
+      const vv = (window as any).visualViewport;
+      return {
+        w: vv ? vv.width : window.innerWidth,
+        h: vv ? vv.height : window.innerHeight,
+      };
+    };
+
     const handleMove = (e: MouseEvent) => {
       if (!isDraggingToggle) return;
       const dx = e.clientX - dragStartRef.current.x;
       const dy = e.clientY - dragStartRef.current.y;
+      const { w, h } = getViewport();
       setTogglePos({
-        x: Math.max(RING - 22, Math.min(window.innerWidth - RING - 22, dragStartRef.current.startX + dx)),
-        y: Math.max(-(window.innerHeight - RING - 22), Math.min(-(RING - 22), dragStartRef.current.startY + dy)),
+        x: Math.max(RING - HALF, Math.min(w - RING - HALF, dragStartRef.current.startX + dx)),
+        y: Math.max(-(h - RING - HALF), Math.min(-(RING - HALF), dragStartRef.current.startY + dy)),
       });
     };
     const handleUp = () => setIsDraggingToggle(false);
+
     const handleTouchMove = (e: TouchEvent) => {
       if (!isDraggingToggle) return;
       const touch = e.touches[0];
       const dx = touch.clientX - dragStartRef.current.x;
       const dy = touch.clientY - dragStartRef.current.y;
-      const RING = 92 + 14;
+      const { w, h } = getViewport();
       setTogglePos({
-        x: Math.max(RING - 22, Math.min(window.innerWidth - RING - 22, dragStartRef.current.startX + dx)),
-        y: Math.max(-(window.innerHeight - RING - 22), Math.min(-(RING - 22), dragStartRef.current.startY + dy)),
+        x: Math.max(RING - HALF, Math.min(w - RING - HALF, dragStartRef.current.startX + dx)),
+        y: Math.max(-(h - RING - HALF), Math.min(-(RING - HALF), dragStartRef.current.startY + dy)),
       });
     };
     const handleTouchEnd = () => setIsDraggingToggle(false);
+
+    // Keep toggle on screen when viewport changes (keyboard, rotation, PWA chrome)
+    const handleViewportChange = () => {
+      const { w, h } = getViewport();
+      setTogglePos(prev => ({
+        x: Math.max(RING - HALF, Math.min(w - RING - HALF, prev.x)),
+        y: Math.max(-(h - RING - HALF), Math.min(-(RING - HALF), prev.y)),
+      }));
+    };
 
     if (isDraggingToggle) {
       window.addEventListener("mousemove", handleMove);
@@ -1041,11 +1100,26 @@ export function EditorPanel({
       window.addEventListener("touchmove", handleTouchMove, { passive: false });
       window.addEventListener("touchend", handleTouchEnd);
     }
+
+    const vv = (window as any).visualViewport;
+    if (vv) {
+      vv.addEventListener("resize", handleViewportChange);
+      vv.addEventListener("scroll", handleViewportChange);
+    }
+    window.addEventListener("resize", handleViewportChange);
+    window.addEventListener("orientationchange", handleViewportChange);
+
     return () => {
       window.removeEventListener("mousemove", handleMove);
       window.removeEventListener("mouseup", handleUp);
       window.removeEventListener("touchmove", handleTouchMove);
       window.removeEventListener("touchend", handleTouchEnd);
+      if (vv) {
+        vv.removeEventListener("resize", handleViewportChange);
+        vv.removeEventListener("scroll", handleViewportChange);
+      }
+      window.removeEventListener("resize", handleViewportChange);
+      window.removeEventListener("orientationchange", handleViewportChange);
     };
   }, [isDraggingToggle]);
 
