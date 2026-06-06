@@ -1346,52 +1346,60 @@ export function EditorPanel({
         </motion.button>
       )}
 
-      {/* Floating ⚡ Toggle + Sliding Toolbar Panel */}
+      {/* Floating ⚡ Dock — Panel slides out from bottom */}
       {!zenMode && (
         <div
-          className="fixed z-[70] flex items-end gap-2"
+          className="fixed z-[70] flex flex-col items-center gap-2"
           style={{
             left: togglePos.x,
             bottom: Math.abs(togglePos.y),
           }}
         >
-          {/* Sliding Toolbar Panel */}
-          <div
-            className={cn(
-              "flex flex-col bg-slate-900/95 backdrop-blur-xl border border-slate-700/50 rounded-2xl shadow-2xl shadow-black/50 transition-all duration-300 overflow-hidden",
-              showShortcuts ? "w-[80px] opacity-100 translate-x-0" : "w-0 opacity-0 -translate-x-4 pointer-events-none"
-            )}
-          >
-            <div className="flex-1 overflow-y-auto py-2 px-1.5 space-y-0.5 max-h-[70vh]">
-              {Object.entries(groupedShortcuts).map(([group, items]) => (
-                <div key={group} className="mb-1">
-                  <div className="text-[7px] text-slate-500 uppercase tracking-wider px-1 py-0.5 font-bold flex items-center gap-1">
-                    {group === "AI" && <Sparkles size={8} className="text-purple-400" />}
-                    {group === "Edit" && <Pencil size={8} className="text-sky-400" />}
-                    {group === "Format" && <AlignLeft size={8} className="text-emerald-400" />}
-                    {group === "Insert" && <Code size={8} className="text-amber-400" />}
-                    {group === "Navigate" && <Hash size={8} className="text-rose-400" />}
-                    {group === "View" && <Eye size={8} className="text-cyan-400" />}
-                    {group}
-                  </div>
-                  {items.map((s, i) => (
-                    <button
-                      key={i}
-                      onClick={() => handleShortcut(s)}
-                      className={cn(
-                        "w-full p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors flex flex-col items-center gap-0.5 mb-0.5",
-                        s.group === "AI" && "hover:bg-purple-500/10 hover:text-purple-400"
-                      )}
-                      title={`${s.label}${s.insert ? ` — "${s.insert}"` : ""}`}
-                    >
-                      <s.icon size={14} />
-                      <span className="text-[7px] leading-none text-center">{s.label}</span>
-                    </button>
+          {/* Sliding Toolbar Panel — rises from bottom */}
+          <AnimatePresence>
+            {showShortcuts && (
+              <motion.div
+                initial={{ opacity: 0, y: 20, scale: 0.9 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 20, scale: 0.9 }}
+                transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                className="flex flex-col bg-slate-900/95 backdrop-blur-xl border border-slate-700/50 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden w-[80px] max-h-[60vh]"
+              >
+                <div className="flex-1 overflow-y-auto py-2 px-1.5 space-y-0.5 scrollbar-hide">
+                  {Object.entries(groupedShortcuts).map(([group, items]) => (
+                    <div key={group} className="mb-1">
+                      <div className="text-[7px] text-slate-500 uppercase tracking-wider px-1 py-0.5 font-bold flex items-center gap-1">
+                        {group === "AI" && <Sparkles size={8} className="text-purple-400" />}
+                        {group === "Edit" && <Pencil size={8} className="text-sky-400" />}
+                        {group === "Format" && <AlignLeft size={8} className="text-emerald-400" />}
+                        {group === "Insert" && <Code size={8} className="text-amber-400" />}
+                        {group === "Navigate" && <Hash size={8} className="text-rose-400" />}
+                        {group === "View" && <Eye size={8} className="text-cyan-400" />}
+                        {group}
+                      </div>
+                      {items.map((s, i) => (
+                        <motion.button
+                          key={i}
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: i * 0.02 }}
+                          onClick={() => handleShortcut(s)}
+                          className={cn(
+                            "w-full p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors flex flex-col items-center gap-0.5 mb-0.5",
+                            s.group === "AI" && "hover:bg-purple-500/10 hover:text-purple-400"
+                          )}
+                          title={`${s.label}${s.insert ? ` — "${s.insert}"` : ""}`}
+                        >
+                          <s.icon size={14} />
+                          <span className="text-[7px] leading-none text-center">{s.label}</span>
+                        </motion.button>
+                      ))}
+                    </div>
                   ))}
                 </div>
-              ))}
-            </div>
-          </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* ⚡ Toggle Button */}
           <motion.button
