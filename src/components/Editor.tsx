@@ -1164,7 +1164,7 @@ export function EditorPanel({
     dragAndDrop: true,
     dropIntoEditor: { enabled: true },
     pasteAs: { enabled: true },
-    multiCursorModifier: "altCmd" as const,
+    multiCursorModifier: "ctrlCmd" as const,
     multiCursorPaste: "spread" as const,
     cursorStyle: "line" as const,
     cursorWidth: 2,
