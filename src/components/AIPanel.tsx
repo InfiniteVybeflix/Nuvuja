@@ -791,20 +791,20 @@ export function AIPanel({
 
   if (!isOpen) {
     return (
-      <AnimatePresence>
-        <motion.button
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.8, opacity: 0 }}
-          whileHover={{ scale: 1.08, boxShadow: "0 0 40px rgba(168, 85, 247, 0.4)" }}
-          whileTap={{ scale: 0.95 }}
-          onClick={onToggle}
-          className="fixed z-[60] flex items-center gap-2.5 px-5 py-3.5 rounded-2xl shadow-2xl transition-all bg-gradient-to-r from-sky-500 via-purple-500 to-purple-600 text-white shadow-purple-500/30 backdrop-blur-sm border border-white/10"
-          style={{
-            right: "max(16px, env(safe-area-inset-right))",
-            bottom: "calc(40px + env(safe-area-inset-bottom))",
-          }}
-        >
+      <motion.button
+        key="nuvuja-toggle"
+        initial={{ scale: 0.8, opacity: 0, y: 20 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.8, opacity: 0, y: 20 }}
+        whileHover={{ scale: 1.08, boxShadow: "0 0 40px rgba(168, 85, 247, 0.4)" }}
+        whileTap={{ scale: 0.95 }}
+        onClick={onToggle}
+        className="fixed z-[60] flex items-center gap-2.5 px-5 py-3.5 rounded-2xl shadow-2xl bg-gradient-to-r from-sky-500 via-purple-500 to-purple-600 text-white shadow-purple-500/30 backdrop-blur-sm border border-white/10 pointer-events-auto"
+        style={{
+          right: "max(16px, env(safe-area-inset-right))",
+          bottom: "calc(40px + env(safe-area-inset-bottom))",
+        }}
+      >
           <motion.div
             animate={{ rotate: [0, 360] }}
             transition={{ duration: 20, repeat: Infinity, ease: "linear" } as any}
@@ -827,7 +827,6 @@ export function AIPanel({
             />
           )}
         </motion.button>
-      </AnimatePresence>
     );
   }
 
