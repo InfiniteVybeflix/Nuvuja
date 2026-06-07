@@ -27,6 +27,7 @@ export interface AIConversation {
     model?: string;
     tokens?: number;
     action?: "review" | "fix" | "explain" | "generate" | "chat";
+    needsContinuation?: boolean;  
   };
 }
 
