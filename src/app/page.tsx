@@ -413,7 +413,13 @@ export default function Home() {
       const activeChat = chats.find((c) => c.id === activeChatId);
       const chatMessages = activeChat?.messages || [];
 
-      const buildProjectContext = (includeContent: boolean): string => {
+      // ═── TOKEN-SAFE CONTEXT BUILDER ───
+      const MAX_CONTEXT_CHARS = 6000;   // ~1500 tokens for project context
+      const MAX_FILE_CHARS = 1000;      // ~250 tokens per file
+      const MAX_CONSOLE_ERRORS = 3;     // Only last 3 errors
+      const MAX_HISTORY = 4;            // Match backend limit
+
+      const buildSafeContext = (includeContent: boolean): string => {
         const lines: string[] = ["=== PROJECT FILES ==="];
         const walk = (nodes: FileNode[], prefix = "") => {
           for (const node of nodes) {
@@ -423,10 +429,9 @@ export default function Home() {
             } else {
               lines.push(`${prefix}📄 ${node.name} (${node.language || "txt"})`);
               if (includeContent && node.content) {
-                const truncated =
-                  node.content.length > 2000
-                    ? node.content.slice(0, 2000) + `\n... [${node.content.length - 2000} more chars]`
-                    : node.content;
+                const truncated = node.content.length > MAX_FILE_CHARS
+                  ? node.content.slice(0, MAX_FILE_CHARS) + `\n... [${node.content.length - MAX_FILE_CHARS} more chars]`
+                  : node.content;
                 lines.push(`${prefix}---`);
                 lines.push(truncated);
                 lines.push(`${prefix}---`);
@@ -435,7 +440,10 @@ export default function Home() {
           }
         };
         walk(files);
-        return lines.join("\n");
+        const result = lines.join("\n");
+        return result.length > MAX_CONTEXT_CHARS
+          ? result.slice(0, MAX_CONTEXT_CHARS) + "\n... [context truncated to save tokens]"
+          : result;
       };
 
       const needsFullContext =
@@ -448,24 +456,24 @@ export default function Home() {
 
       let apiContent = message;
       if (needsFullContext) {
-        apiContent += "\n\n" + buildProjectContext(true);
+        apiContent += "\n\n" + buildSafeContext(true);
       } else {
-        apiContent += "\n\n" + buildProjectContext(false);
+        apiContent += "\n\n" + buildSafeContext(false);
       }
 
       const recentErrors = consoleEntries
         .filter((e) => e.type === "error" || e.type === "warn")
-        .slice(-10);
+        .slice(-MAX_CONSOLE_ERRORS);
       if (recentErrors.length > 0) {
         apiContent += "\n\n=== CONSOLE OUTPUT ===\n";
         recentErrors.forEach((e) => {
           apiContent += `[${e.type.toUpperCase()}] ${e.message}\n`;
-          if (e.stack) apiContent += `Stack: ${e.stack}\n`;
+          if (e.stack) apiContent += `Stack: ${e.stack.slice(0, 500)}\n`; // Truncate stack traces
         });
         apiContent += "=== END CONSOLE ===";
       }
 
-      const trimmedHistory = chatMessages.slice(-8);
+      const trimmedHistory = chatMessages.slice(-MAX_HISTORY);
       const apiMessages = [
         ...trimmedHistory.map((c) => ({ role: c.role, content: c.content })),
         { role: "user" as const, content: apiContent },
