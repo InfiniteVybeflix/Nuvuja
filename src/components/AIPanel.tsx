@@ -258,7 +258,7 @@ function ThinkingAnimation() {
               key={idx}
               className="w-1.5 h-1.5 rounded-full bg-purple-400"
               animate={{ opacity: [0.3, 1, 0.3], scale: [0.8, 1.2, 0.8] }}
-              transition={{ duration: 1.2, repeat: Infinity, delay: idx * 0.2 }}
+              transition={{ duration: 1.2, repeat: Infinity, delay: idx * 0.2 } as any}
             />
           ))}
         </div>
@@ -807,7 +807,7 @@ export function AIPanel({
         >
           <motion.div
             animate={{ rotate: [0, 360] }}
-            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+            transition={{ duration: 20, repeat: Infinity, ease: "linear" } as any}
           >
             <Orbit size={20} />
           </motion.div>
@@ -815,14 +815,14 @@ export function AIPanel({
           {hasConsoleErrors && (
             <motion.span
               animate={{ scale: [1, 1.3, 1] }}
-              transition={{ duration: 1.5, repeat: Infinity }}
+              transition={{ duration: 1.5, repeat: Infinity } as any}
               className="w-2.5 h-2.5 rounded-full bg-red-400 shadow-lg shadow-red-400/50"
             />
           )}
           {!hasConsoleErrors && conversations.length > 0 && (
             <motion.span
               animate={{ opacity: [0.5, 1, 0.5] }}
-              transition={{ duration: 2, repeat: Infinity }}
+              transition={{ duration: 2, repeat: Infinity } as any}
               className="w-2 h-2 rounded-full bg-white"
             />
           )}
@@ -981,7 +981,7 @@ export function AIPanel({
                 >
                   <motion.div
                     animate={{ rotate: [0, 360] }}
-                    transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
+                    transition={{ duration: 30, repeat: Infinity, ease: "linear" } as any}
                     className="w-20 h-20 mx-auto mb-6 rounded-3xl bg-gradient-to-br from-purple-500/20 via-sky-500/20 to-purple-600/20 flex items-center justify-center border border-purple-500/20 shadow-2xl shadow-purple-500/20"
                   >
                     <Atom size={36} className="text-purple-400" />
@@ -1111,7 +1111,7 @@ export function AIPanel({
                 {isListening && (
                   <motion.div
                     animate={{ opacity: [0.3, 1, 0.3] }}
-                    transition={{ duration: 1, repeat: Infinity }}
+                    transition={{ duration: 1, repeat: Infinity } as any}
                     className="absolute right-3 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-rose-400"
                   />
                 )}
