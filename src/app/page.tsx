@@ -482,7 +482,7 @@ export default function Home() {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: apiMessages, action }),
+        body: JSON.stringify({ messages: apiMessages, action, continuation: isContinuation }),
       });
 
       if (!response.ok) {
@@ -771,8 +771,9 @@ export default function Home() {
       if (needsContinuation && !isContinuation) {
         setContinuationContext(fullContent);
         setIsContinuing(true);
+        // Small delay to let state settle
         setTimeout(() => {
-          handleSendMessage("Continue from where you stopped.", action, true);
+          handleSendMessage("Continue from where you stopped. Do NOT repeat what you already wrote. Output ONLY the new content that follows.", action, true);
         }, 800);
       }
     } catch (error: any) {
