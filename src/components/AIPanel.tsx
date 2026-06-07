@@ -253,12 +253,12 @@ function ThinkingAnimation() {
       <div className="flex flex-col gap-1">
         <span className="text-xs font-medium text-purple-300">ᓄᕙᔭ is thinking...</span>
         <div className="flex gap-1">
-          {[0, 1, 2].map((i: number) => (
+          {[0, 1, 2].map((idx: number) => (
             <motion.div
-              key={i}
+              key={idx}
               className="w-1.5 h-1.5 rounded-full bg-purple-400"
               animate={{ opacity: [0.3, 1, 0.3], scale: [0.8, 1.2, 0.8] }}
-              transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.2 }}
+              transition={{ duration: 1.2, repeat: Infinity, delay: idx * 0.2 }}
             />
           ))}
         </div>
