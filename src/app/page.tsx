@@ -60,6 +60,8 @@ export default function Home() {
   }, [chats, activeChatId]);
 
   const [isAILoading, setIsAILoading] = useState(false);
+  const [continuationContext, setContinuationContext] = useState("");
+  const [isContinuing, setIsContinuing] = useState(false);
   const [showAI, setShowAI] = useState(false);
   const [consoleEntries, setConsoleEntries] = useState<ConsoleEntry[]>([]);
   const [showConsole, setShowConsole] = useState(false);
@@ -378,7 +380,11 @@ export default function Home() {
     }
   }, [openFile]);
 
-  const handleSendMessage = useCallback(async (message: string, action: "chat" | "review" | "fix" | "explain" | "generate" = "chat") => {
+  const handleSendMessage = useCallback(async (
+    message: string, 
+    action: "chat" | "review" | "fix" | "explain" | "generate" = "chat",
+    isContinuation: boolean = false
+  ) => {
     if (!activeChatId) return;
 
     const userMsg: AIConversation = {
@@ -505,12 +511,19 @@ export default function Home() {
         }
       }
 
+      // Check for continuation marker in response
+      let needsContinuation = false;
+      if (fullContent.includes("###CONTINUE###")) {
+        needsContinuation = true;
+        fullContent = fullContent.replace("###CONTINUE###", "");
+      }
+
       const assistantMsg: AIConversation = {
         id: generateId(),
         role: "assistant",
         content: fullContent,
         timestamp: Date.now(),
-        metadata: { model, action },
+        metadata: { model, action, needsContinuation },
       };
 
       // FIX_LINE parser
@@ -745,6 +758,15 @@ export default function Home() {
 
       setAIStatus("ready");
       setIsConnected(true);
+
+      // Auto-continue if needed
+      if (needsContinuation && !isContinuation) {
+        setContinuationContext(fullContent);
+        setIsContinuing(true);
+        setTimeout(() => {
+          handleSendMessage("Continue from where you stopped.", action, true);
+        }, 800);
+      }
     } catch (error: any) {
       setAIStatus("error");
       setIsConnected(false);
@@ -769,6 +791,7 @@ export default function Home() {
       );
     } finally {
       setIsAILoading(false);
+      setIsContinuing(false);
     }
   }, [activeChatId, chats, files, consoleEntries, handleContentChange, openFile]);
 
