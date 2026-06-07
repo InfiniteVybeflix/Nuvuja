@@ -48,8 +48,6 @@ import {
   VolumeX,
   Mic,
   MicOff,
-  Radio,
-  Satellite,
   Maximize2,
   Minimize2,
   Settings,
