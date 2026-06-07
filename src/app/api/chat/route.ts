@@ -601,9 +601,7 @@ export async function POST(req: NextRequest) {
 
   // For continuation requests, add a system instruction to continue without repeating
   const continuationInstruction = continuation
-    ? "
-
-[CONTINUATION] Continue exactly where you stopped. NEVER repeat what you already wrote. Output ONLY the new content that follows."
+    ? "[CONTINUATION] Continue exactly where you stopped. NEVER repeat what you already wrote. Output ONLY the new content that follows."
     : "";
 
   // ─── API Keys ───────────────────────────────────────────────────────────────
