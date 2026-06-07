@@ -33,7 +33,25 @@ function cn(...classes: (string | boolean | undefined)[]) {
   return classes.filter(Boolean).join(" ");
 }
 
+// Mobile detection hook
+function useIsMobile(breakpoint = 768) {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < breakpoint);
+    check();
+    window.addEventListener("resize", check);
+    window.addEventListener("orientationchange", () => setTimeout(check, 100));
+    return () => {
+      window.removeEventListener("resize", check);
+      window.removeEventListener("orientationchange", check);
+    };
+  }, [breakpoint]);
+  return isMobile;
+}
+
 export default function Home() {
+  const isMobile = useIsMobile();
+
   const [showWelcome, setShowWelcome] = useState(true);
   const [files, setFiles] = useState<FileNode[]>([]);
   const [tabs, setTabs] = useState<EditorTab[]>([]);
@@ -66,8 +84,23 @@ export default function Home() {
   const [consoleEntries, setConsoleEntries] = useState<ConsoleEntry[]>([]);
   const [showConsole, setShowConsole] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
-  const [showSidebar, setShowSidebar] = useState(true);
-  const [viewMode, setViewMode] = useState<ViewMode>("code");
+
+  // MOBILE: Hide sidebar by default on small screens
+  const [showSidebar, setShowSidebar] = useState(() => {
+    if (typeof window !== "undefined") {
+      return window.innerWidth >= 768;
+    }
+    return true;
+  });
+
+  // MOBILE: Default to "code" view on mobile, "split" on desktop
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    if (typeof window !== "undefined") {
+      return window.innerWidth < 768 ? "code" : "code";
+    }
+    return "code";
+  });
+
   const [theme, setTheme] = useState<"nuvuja-dark" | "light">("nuvuja-dark");
   const [aiStatus, setAIStatus] = useState("ready");
   const [isConnected, setIsConnected] = useState(true);
@@ -181,6 +214,19 @@ export default function Home() {
     };
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
+  }, []);
+
+  // MOBILE: Handle sidebar and view mode on resize
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 768;
+      if (mobile) {
+        // On mobile, if we were in split mode, switch to code
+        setViewMode((prev) => prev === "split" ? "code" : prev);
+      }
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   const findFileRecursive = (fileList: FileNode[], name: string): FileNode | null => {
@@ -414,10 +460,10 @@ export default function Home() {
       const chatMessages = activeChat?.messages || [];
 
       // ═── TOKEN-SAFE CONTEXT BUILDER ───
-      const MAX_CONTEXT_CHARS = 6000;   // ~1500 tokens for project context
-      const MAX_FILE_CHARS = 1000;      // ~250 tokens per file
-      const MAX_CONSOLE_ERRORS = 3;     // Only last 3 errors
-      const MAX_HISTORY = 4;            // Match backend limit
+      const MAX_CONTEXT_CHARS = 6000;
+      const MAX_FILE_CHARS = 1000;
+      const MAX_CONSOLE_ERRORS = 3;
+      const MAX_HISTORY = 4;
 
       const buildSafeContext = (includeContent: boolean): string => {
         const lines: string[] = ["=== PROJECT FILES ==="];
@@ -468,7 +514,7 @@ export default function Home() {
         apiContent += "\n\n=== CONSOLE OUTPUT ===\n";
         recentErrors.forEach((e) => {
           apiContent += `[${e.type.toUpperCase()}] ${e.message}\n`;
-          if (e.stack) apiContent += `Stack: ${e.stack.slice(0, 500)}\n`; // Truncate stack traces
+          if (e.stack) apiContent += `Stack: ${e.stack.slice(0, 500)}\n`;
         });
         apiContent += "=== END CONSOLE ===";
       }
@@ -519,7 +565,6 @@ export default function Home() {
         }
       }
 
-      // Check for continuation marker in response
       let needsContinuation = false;
       if (fullContent.includes("###CONTINUE###")) {
         needsContinuation = true;
@@ -582,7 +627,7 @@ export default function Home() {
         }
       }
 
-      // EDITOR_START parser — supports optional filename: ###EDITOR_START:path/to/file.js
+      // EDITOR_START parser
       const editorRegex = /###EDITOR_START(?::([^\n#]+))?###\n([\s\S]*?)###EDITOR_END###/g;
       let editorMatch;
       while ((editorMatch = editorRegex.exec(fullContent)) !== null) {
@@ -590,7 +635,6 @@ export default function Home() {
         const codeToApply = editorMatch[2].trim();
 
         if (filePath) {
-          // Target specific file by path
           const targetFile = findFileByPath(files, filePath);
           if (targetFile) {
             setFiles((prev) => updateFileContent(prev, targetFile.id, codeToApply));
@@ -599,7 +643,6 @@ export default function Home() {
                 t.fileId === targetFile.id ? { ...t, content: codeToApply, isDirty: true } : t
               )
             );
-            // Open the file if not already open
             const isOpen = tabs.some((t) => t.fileId === targetFile.id);
             if (!isOpen) {
               setTimeout(() => openFile(targetFile), 0);
@@ -608,7 +651,6 @@ export default function Home() {
             console.warn(`[Nuvuja] EDITOR_START: File not found: "${filePath}"`);
           }
         } else {
-          // No path specified — apply to active tab (old behavior)
           setActiveTabId((currentTabId) => {
             if (currentTabId) {
               handleContentChange(currentTabId, codeToApply);
@@ -771,7 +813,6 @@ export default function Home() {
       if (needsContinuation && !isContinuation) {
         setContinuationContext(fullContent);
         setIsContinuing(true);
-        // Small delay to let state settle
         setTimeout(() => {
           handleSendMessage("Continue from where you stopped. Do NOT repeat what you already wrote. Output ONLY the new content that follows.", action, true);
         }, 800);
@@ -813,7 +854,7 @@ export default function Home() {
   }
 
   return (
-    <div className="h-[100dvh] flex flex-col bg-slate-950 overflow-hidden" data-theme={theme}>
+    <div className="h-[100dvh] flex flex-col bg-slate-950 overflow-hidden nuvuja-root" data-theme={theme}>
       <Toolbar
         onRun={() => setViewMode((m) => m === "code" ? "split" : m === "split" ? "preview" : "code")}
         onSave={handleSave}
@@ -876,7 +917,7 @@ export default function Home() {
                     const input = document.querySelector('input[placeholder*="Ask ᓄᕙᔭ"]') as HTMLInputElement;
                     if (input) {
                       const prefix = action.includes("fix") ? "/fix" : action.includes("explain") ? "/explain" : "";
-                      input.value = `${prefix} ${action}:\n\n\`\`\`\n${code.slice(0, 800)}\n\`\`\``;
+                      input.value = `${prefix} ${action}:\n\n\` + "`" + "`" + "`" + `\n${code.slice(0, 800)}\n` + "`" + "`" + "`";
                       input.focus();
                     }
                   }, 100);
