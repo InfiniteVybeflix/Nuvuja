@@ -14,7 +14,7 @@ const STREAM_TIMEOUT = 30000; // 30s stream timeout
 const TOOL_TIMEOUT = 15000; // 15s per tool
 
 // ─── TOOL DEFINITIONS — Nuvuja's Arsenal ──────────────────────────────────────
-const TOOLS: Groq.Chat.Completions.ChatCompletionTool[] = [
+const TOOLS = [
   {
     type: "function",
     function: {
@@ -637,11 +637,11 @@ function decodeHtmlEntities(text: string): string {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 async function tryGroqRequest(
-  messages: Groq.Chat.Completions.ChatCompletionMessageParam[],
+  messages: any[],
   model: string,
   apiKey: string,
-  tools?: Groq.Chat.Completions.ChatCompletionTool[]
-): Promise<AsyncIterable<Groq.Chat.Completions.ChatCompletionChunk>> {
+  tools?: any[]
+): Promise<any> {
   const groq = new Groq({ apiKey });
   return groq.chat.completions.create({
     messages,
@@ -669,7 +669,7 @@ export async function POST(req: NextRequest) {
   }
 
   let body: {
-    messages?: Groq.Chat.Completions.ChatCompletionMessageParam[];
+    messages?: any[];
     action?: string;
     toolResults?: Array<{ tool: string; result: unknown; tool_call_id?: string }>;
     continuation?: boolean;
@@ -705,13 +705,13 @@ export async function POST(req: NextRequest) {
   }
 
   // ─── Build system message ───────────────────────────────────────────────────
-  const systemMessage: Groq.Chat.Completions.ChatCompletionSystemMessageParam = {
+  const systemMessage: { role: string; content: string } = {
     role: "system",
     content: SYSTEM_PROMPT + `\n\nCurrent action: ${action}\nAvailable tools: web_search, github_fetch, github_search, npm_search, analyze_code, fetch_url, cve_lookup, stackoverflow_search\nUse tools for real-time data. Use continuation for long outputs.`,
   };
 
   // ─── Build message chain with tool results (proper tool role) ───────────────
-  const fullMessages: Groq.Chat.Completions.ChatCompletionMessageParam[] = [systemMessage];
+  const fullMessages: any[] = [systemMessage];
 
   for (const result of toolResults) {
     if (result.tool_call_id) {
@@ -737,7 +737,7 @@ export async function POST(req: NextRequest) {
     targetModel = reasoningModel;
   }
 
-  let stream: AsyncIterable<Groq.Chat.Completions.ChatCompletionChunk>;
+  let stream: any;
   let usedModel = targetModel;
   let usedKey = "primary";
 
