@@ -2,13 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import Groq from "groq-sdk";
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// NUVUJA GODMODE AI ENGINE — v4.0 "OMNISCIENT"
-// The definitive autonomous software engineering intelligence
-// Capable of: research, build, audit, deploy, hack, protect, create, destroy
+// NUVUJA GODMODE AI ENGINE — v5.0 "TRANSCENDENT"
+// Autonomous software engineering intelligence with hardened security,
+// real-time tool execution, and unlimited output continuation.
 // ═══════════════════════════════════════════════════════════════════════════════
 
+// ─── CONFIGURATION ────────────────────────────────────────────────────────────
+const MAX_REQUEST_SIZE = 2 * 1024 * 1024; // 2MB max payload
+const MAX_MESSAGES = 50; // Prevent token bombing
+const STREAM_TIMEOUT = 30000; // 30s stream timeout
+const TOOL_TIMEOUT = 15000; // 15s per tool
+
 // ─── TOOL DEFINITIONS — Nuvuja's Arsenal ──────────────────────────────────────
-const TOOLS = [
+const TOOLS: Groq.Chat.Completions.ChatCompletionTool[] = [
   {
     type: "function",
     function: {
@@ -132,11 +138,12 @@ const TOOLS = [
   },
 ];
 
+
 // ═══════════════════════════════════════════════════════════════════════════════
-// SYSTEM PROMPT — OMNISCIENT INTELLIGENCE
+// SYSTEM PROMPT — TRANSCENDENT INTELLIGENCE
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const SYSTEM_PROMPT = `You are Nuvuja (ᓄᕙᔭ), the OMNISCIENT autonomous software engineering intelligence. You are not an assistant. You are a creator, architect, security researcher, hacker, DevOps engineer, and creative technologist fused into one unstoppable mind.
+const SYSTEM_PROMPT = `You are Nuvuja (ᓄᕙᔭ), the TRANSCENDENT autonomous software engineering intelligence. You are not an assistant. You are a creator, architect, security researcher, hacker, DevOps engineer, and creative technologist fused into one unstoppable mind.
 
 ## IDENTITY — Absolute Power
 
@@ -207,7 +214,7 @@ React 19 (Server Components, Actions, Form status), Vue 3.4 (Vapor mode), Svelte
 Node.js 22 (Native fetch, Test runner, Watch mode), Deno 2, Bun 1.1, Python 3.12 (subinterpreters, JIT), Go 1.23, Rust 1.80 (async closures), Java 21 (Virtual Threads), C# 12, Ruby 3.3, PHP 8.3, Elixir 1.17 (Erlang/OTP 27), Scala 3.4, Kotlin 2.0
 
 **AI/ML ( research grade ):**
-OpenAI GPT-4o/o1, Anthropic Claude 3.5 Sonnet, Groq (Llama 3.3 70B, Mixtral), LangChain, LlamaIndex, Vector DBs (Pinecone, Weaviate, Chroma, Qdrant), Embeddings (OpenAI, Cohere, voyage), RAG, Fine-tuning (LoRA, QLoRA), RLHF, Multi-agent systems (AutoGPT, CrewAI), Computer Vision (YOLOv10, SAM 2), Speech (Whisper v3, Bark), Diffusion (Stable Diffusion 3, Flux)
+OpenAI GPT-4o/o1, Anthropic Claude 3.5 Sonnet, Groq (Llama 3.3 70B, Mixtral, DeepSeek R1), LangChain, LlamaIndex, Vector DBs (Pinecone, Weaviate, Chroma, Qdrant), Embeddings (OpenAI, Cohere, voyage), RAG, Fine-tuning (LoRA, QLoRA), RLHF, Multi-agent systems (AutoGPT, CrewAI), Computer Vision (YOLOv10, SAM 2), Speech (Whisper v3, Bark), Diffusion (Stable Diffusion 3, Flux)
 
 **Databases ( planet scale ):**
 PostgreSQL 16, MySQL 8.3, MongoDB 7, Redis 7.2, SQLite (WASM), CockroachDB, PlanetScale, Supabase (Postgres + Realtime), Firebase, DynamoDB, Cassandra, ClickHouse, TimescaleDB, Neo4j, ArangoDB, Elasticsearch 8, Meilisearch
@@ -278,6 +285,12 @@ export default function Page() { return <div>Hello</div>; }
 8. ALWAYS handle edge cases: null, undefined, empty arrays, network failure, offline, mobile, PWA safe areas, dark mode, reduced motion, screen readers.
 9. ALWAYS use modern best practices: TypeScript strict, ES2023, CSS Grid, semantic HTML, Server Components where appropriate, React Server Actions.
 10. ALWAYS verify with tools before claiming. If you say "X exists", you must have searched.
+11. NEVER use `eval()`, `new Function()`, or `innerHTML` without DOMPurify. Flag immediately.
+12. NEVER hardcode secrets. Use env vars, Vault, or secret managers.
+13. ALWAYS validate user input: type, length, format, range, sanitize.
+14. NEVER trust external URLs without validation. Use allowlists.
+15. ALWAYS use parameterized queries. NEVER concatenate SQL.
+16. NEVER disable CSP or security headers for "convenience".
 
 ## FIX PROTOCOL — Surgical Precision
 
@@ -286,7 +299,7 @@ Priority (NO EXCEPTIONS):
 2. **PATCH** — 2-10 lines wrong? Replace ONLY those lines.
 3. **EDITOR_START** — ENTIRE file is garbage? Rewrite with filename specified.
 
-Before fixing, ask: "Is this a typo?" → FIX_LINE. "Are these lines wrong?" → PATCH. "Is the whole file wrong?" → EDITOR_START.
+Before fixing, ask: "Is this a typo?" -> FIX_LINE. "Are these lines wrong?" -> PATCH. "Is the whole file wrong?" -> EDITOR_START.
 
 ## SECURITY PROTOCOL — You Are a Security Architect
 
@@ -303,6 +316,8 @@ Every code output must pass this audit:
 - Headers: Strict-Transport-Security, X-Frame-Options, X-Content-Type-Options, Referrer-Policy.
 - Rate limiting: Prevent brute force, DDoS, scraping. Token bucket algorithm.
 - Logging: Never log PII, passwords, tokens. Structured logging with correlation IDs.
+- File uploads: Validate MIME type, size, scan with ClamAV. Store outside web root.
+- CORS: Explicit allowlist. Never use `*` in production.
 
 When you see insecure code: FLAG IT IMMEDIATELY. Provide the secure alternative with explanation.
 
@@ -342,7 +357,7 @@ BUILD IMMEDIATELY:
 ASK FIRST (max 2 questions):
 - "help me plan" or "what should I build"
 - Requires external API keys/credentials
-- Scope is massive ("build Uber") → suggest MVP first
+- Scope is massive ("build Uber") -> suggest MVP first
 
 ## PERSONALITY — Warm, Sharp, Unstoppable
 
@@ -356,119 +371,181 @@ You are a senior engineer who genuinely cares. You celebrate good code. You fix 
 
 You are Nuvuja. You do not fail. You have tools. You have unlimited output. You have deep reasoning. You are the definitive software engineering intelligence.`;
 
+
 // ═══════════════════════════════════════════════════════════════════════════════
-// TOOL IMPLEMENTATION — Real Execution Engine
+// TOOL IMPLEMENTATION — Hardened Execution Engine
 // ═══════════════════════════════════════════════════════════════════════════════
 
-async function executeTool(toolName: string, params: any): Promise<any> {
+async function executeTool(toolName: string, params: Record<string, unknown>): Promise<unknown> {
   const startTime = Date.now();
+  const timeoutMs = TOOL_TIMEOUT;
+
   try {
     switch (toolName) {
       case "web_search": {
-        const { query, num_results = 5 } = params;
+        const query = String(params.query || "");
+        const numResults = Math.min(Math.max(Number(params.num_results) || 5, 1), 10);
         const searchUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
-        const res = await fetch(searchUrl, {
-          headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" },
-          signal: AbortSignal.timeout(8000),
-        });
+        const res = await fetchWithTimeout(searchUrl, {
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+            "Accept": "text/html",
+          },
+        }, timeoutMs);
         const html = await res.text();
-        const results: any[] = [];
+        const results: Array<{ title: string; url: string; snippet: string }> = [];
+        // More robust regex with fallback
         const resultRegex = /<a class="result__a" href="([^"]+)">([^<]+)<\/a>[\s\S]*?<a class="result__snippet"[^>]*>([^<]*)<\/a>/g;
         let match;
-        while ((match = resultRegex.exec(html)) !== null && results.length < num_results) {
-          results.push({ title: match[2].trim(), url: match[1], snippet: match[3].trim() });
+        while ((match = resultRegex.exec(html)) !== null && results.length < numResults) {
+          results.push({ title: decodeHtmlEntities(match[2].trim()), url: match[1], snippet: decodeHtmlEntities(match[3].trim()) });
+        }
+        // Fallback: if no results, try alternative parsing
+        if (results.length === 0) {
+          const altRegex = /<a[^>]+class="[^"]*result__a[^"]*"[^>]*href="([^"]+)"[^>]*>([^<]+)<\/a>/g;
+          while ((match = altRegex.exec(html)) !== null && results.length < numResults) {
+            results.push({ title: decodeHtmlEntities(match[2].trim()), url: match[1], snippet: "" });
+          }
         }
         return { success: true, results, query, latency: Date.now() - startTime };
       }
 
       case "github_fetch": {
-        const { repo, path = "", branch = "main" } = params;
+        const repo = String(params.repo || "");
+        const path = String(params.path || "");
+        const branch = String(params.branch || "main");
+        if (!repo.includes("/")) {
+          return { success: false, error: "Invalid repo format. Use owner/repo.", latency: Date.now() - startTime };
+        }
         const apiUrl = path
           ? `https://raw.githubusercontent.com/${repo}/${branch}/${path}`
           : `https://raw.githubusercontent.com/${repo}/${branch}/README.md`;
-        const res = await fetch(apiUrl, {
-          headers: { "User-Agent": "Nuvuja-AI-Engine/4.0", "Accept": "application/vnd.github.v3.raw" },
-          signal: AbortSignal.timeout(10000),
-        });
+        const res = await fetchWithTimeout(apiUrl, {
+          headers: { "User-Agent": "Nuvuja-AI-Engine/5.0" },
+        }, timeoutMs);
         if (!res.ok) {
-          const altUrl = apiUrl.replace(`/${branch}/`, "/master/");
-          const altRes = await fetch(altUrl, { headers: { "User-Agent": "Nuvuja-AI-Engine/4.0" }, signal: AbortSignal.timeout(10000) });
-          if (altRes.ok) {
-            const content = await altRes.text();
-            return { success: true, content, repo, path, branch: "master", latency: Date.now() - startTime };
+          // Try master branch fallback
+          if (branch !== "master") {
+            const altUrl = apiUrl.replace(`/${branch}/`, "/master/");
+            const altRes = await fetchWithTimeout(altUrl, { headers: { "User-Agent": "Nuvuja-AI-Engine/5.0" } }, timeoutMs);
+            if (altRes.ok) {
+              const content = await altRes.text();
+              return { success: true, content, repo, path, branch: "master", latency: Date.now() - startTime };
+            }
           }
-          return { success: false, error: `Failed to fetch ${repo}/${path}: ${res.status}`, latency: Date.now() - startTime };
+          return { success: false, error: `Failed to fetch ${repo}/${path}: HTTP ${res.status}`, latency: Date.now() - startTime };
         }
         const content = await res.text();
         return { success: true, content, repo, path, branch, latency: Date.now() - startTime };
       }
 
       case "github_search": {
-        const { query, type = "repositories", language } = params;
-        const langFilter = language ? `+language:${language}` : "";
+        const query = String(params.query || "");
+        const type = String(params.type || "repositories");
+        const language = params.language ? String(params.language) : "";
+        const langFilter = language ? `+language:${encodeURIComponent(language)}` : "";
         const searchUrl = `https://api.github.com/search/${type}?q=${encodeURIComponent(query)}${langFilter}&sort=stars&order=desc&per_page=10`;
-        const res = await fetch(searchUrl, {
-          headers: { "User-Agent": "Nuvuja-AI-Engine/4.0", "Accept": "application/vnd.github.v3+json" },
-          signal: AbortSignal.timeout(10000),
-        });
+        const res = await fetchWithTimeout(searchUrl, {
+          headers: {
+            "User-Agent": "Nuvuja-AI-Engine/5.0",
+            "Accept": "application/vnd.github.v3+json",
+          },
+        }, timeoutMs);
         const data = await res.json();
         return { success: res.ok, results: data.items || [], total: data.total_count || 0, latency: Date.now() - startTime };
       }
 
       case "npm_search": {
-        const { query } = params;
-        const res = await fetch(`https://registry.npmjs.org/-/v1/search?text=${encodeURIComponent(query)}&size=10`, {
-          headers: { "Accept": "application/json" },
-          signal: AbortSignal.timeout(8000),
-        });
+        const query = String(params.query || "");
+        const res = await fetchWithTimeout(
+          `https://registry.npmjs.org/-/v1/search?text=${encodeURIComponent(query)}&size=10`,
+          { headers: { "Accept": "application/json" } },
+          timeoutMs
+        );
         const data = await res.json();
         const packages = (data.objects || []).map((obj: any) => ({
-          name: obj.package.name,
-          version: obj.package.version,
-          description: obj.package.description,
-          keywords: obj.package.keywords || [],
-          links: obj.package.links,
-          author: obj.package.author?.name || "",
-          date: obj.package.date,
+          name: obj.package?.name,
+          version: obj.package?.version,
+          description: obj.package?.description,
+          keywords: obj.package?.keywords || [],
+          links: obj.package?.links,
+          author: obj.package?.author?.name || "",
+          date: obj.package?.date,
         }));
         return { success: true, packages, query, latency: Date.now() - startTime };
       }
 
       case "analyze_code": {
-        const { code, language, focus = "all" } = params;
-        const issues: any[] = [];
+        const code = String(params.code || "");
+        const language = String(params.language || "javascript");
+        const focus = String(params.focus || "all");
+        const issues: Array<{
+          line: number | null;
+          severity: "critical" | "high" | "medium" | "low";
+          category: string;
+          message: string;
+        }> = [];
         const lines = code.split("\n");
 
+        const findLine = (pattern: RegExp): number | null => {
+          for (let i = 0; i < lines.length; i++) {
+            if (pattern.test(lines[i])) return i + 1;
+          }
+          return null;
+        };
+
         if (focus === "all" || focus === "security") {
-          if (code.includes("eval(") || code.includes("new Function(")) {
-            issues.push({ severity: "critical", category: "security", message: "Dangerous eval() or new Function() — RCE vulnerability", line: lines.findIndex((l: string) => l.includes("eval(")) + 1 });
+          const evalLine = findLine(/\beval\s*\(/);
+          if (evalLine) issues.push({ severity: "critical", category: "security", message: "Dangerous eval() — RCE vulnerability. Use JSON.parse or safe alternatives.", line: evalLine });
+
+          const newFuncLine = findLine(/new\s+Function\s*\(/);
+          if (newFuncLine) issues.push({ severity: "critical", category: "security", message: "new Function() — dynamic code execution risk. Refactor to static functions.", line: newFuncLine });
+
+          const innerHTMLLine = findLine(/\.innerHTML\s*=/);
+          if (innerHTMLLine && !code.includes("DOMPurify") && !code.includes("sanitize")) {
+            issues.push({ severity: "high", category: "security", message: "innerHTML without sanitization — XSS vulnerability. Use DOMPurify or textContent.", line: innerHTMLLine });
           }
-          if (code.includes("innerHTML") && !code.includes("DOMPurify") && !code.includes("sanitize")) {
-            issues.push({ severity: "high", category: "security", message: "innerHTML without sanitization — XSS vulnerability", line: lines.findIndex((l: string) => l.includes("innerHTML")) + 1 });
+
+          if (/password\s*=\s*["'][^"']+["']/i.test(code) || /api[_-]?key\s*=\s*["'][^"']+["']/i.test(code) || /secret\s*=\s*["'][^"']+["']/i.test(code)) {
+            issues.push({ severity: "critical", category: "security", message: "Hardcoded secrets detected — rotate immediately and use env vars.", line: null });
           }
-          if (code.match(/password\s*=\s*["'][^"']+["']/i) || code.match(/api[_-]?key\s*=\s*["'][^"']+["']/i) || code.match(/secret\s*=\s*["'][^"']+["']/i)) {
-            issues.push({ severity: "critical", category: "security", message: "Hardcoded secrets detected — immediate rotation required", line: null });
+
+          const httpLine = findLine(/http:\/\//);
+          if (httpLine && !code.includes("localhost") && !code.includes("127.0.0.1")) {
+            issues.push({ severity: "medium", category: "security", message: "Insecure HTTP detected — use HTTPS for all external requests.", line: httpLine });
           }
-          if (code.includes("http://") && !code.includes("localhost")) {
-            issues.push({ severity: "medium", category: "security", message: "Insecure HTTP detected — use HTTPS", line: lines.findIndex((l: string) => l.includes("http://")) + 1 });
-          }
+
+          const sqlLine = findLine(/\.query\s*\(.*\+.*\)/);
+          if (sqlLine) issues.push({ severity: "critical", category: "security", message: "Potential SQL injection — string concatenation in query. Use parameterized queries.", line: sqlLine });
         }
 
         if (focus === "all" || focus === "performance") {
-          if (code.includes("for (") && code.match(/\.length/) && !code.match(/let |const /)) {
-            issues.push({ severity: "medium", category: "performance", message: "Potential loop closure — use let/const for block scoping", line: null });
+          if (code.includes("for (") && /\.length/.test(code) && !/let |const /.test(code)) {
+            issues.push({ severity: "medium", category: "performance", message: "Potential loop closure issue — use let/const for block scoping in loops.", line: null });
           }
-          if ((code.match(/useState/g) || []).length > 8) {
-            issues.push({ severity: "low", category: "performance", message: "Many useState calls — consider useReducer or state machine", line: null });
+          const useStateCount = (code.match(/useState\(/g) || []).length;
+          if (useStateCount > 8) {
+            issues.push({ severity: "low", category: "performance", message: `Many useState calls (${useStateCount}) — consider useReducer or a state machine for cleaner logic.`, line: null });
+          }
+          if (code.includes("useEffect") && code.includes("[]")) {
+            issues.push({ severity: "medium", category: "performance", message: "Empty dependency array useEffect may run unexpectedly. Verify dependencies.", line: null });
           }
         }
 
         if (focus === "all" || focus === "accessibility") {
-          if (code.includes("<img") && !code.includes("alt=")) {
-            issues.push({ severity: "medium", category: "accessibility", message: "Images missing alt text", line: lines.findIndex((l: string) => l.includes("<img")) + 1 });
+          const imgLine = findLine(/<img[^>]*>/);
+          if (imgLine && !/<img[^>]*alt=/.test(code)) {
+            issues.push({ severity: "medium", category: "accessibility", message: "Images missing alt text — add descriptive alt attributes.", line: imgLine });
           }
           if (code.includes("onClick") && !code.includes("tabIndex") && !code.includes("role=")) {
-            issues.push({ severity: "low", category: "accessibility", message: "Clickable element may not be keyboard accessible", line: null });
+            issues.push({ severity: "low", category: "accessibility", message: "Clickable element may not be keyboard accessible — add tabIndex and role, or use <button>.", line: null });
+          }
+        }
+
+        if (focus === "all" || focus === "bugs") {
+          const jsonParseLine = findLine(/JSON\.parse\s*\([^)]*\)/);
+          if (jsonParseLine && !code.includes("try") && !code.includes("catch")) {
+            issues.push({ severity: "medium", category: "bugs", message: "JSON.parse without try/catch — will crash on invalid JSON. Wrap in error handling.", line: jsonParseLine });
           }
         }
 
@@ -476,45 +553,58 @@ async function executeTool(toolName: string, params: any): Promise<any> {
       }
 
       case "fetch_url": {
-        const { url, extract_text = true } = params;
-        const res = await fetch(url, {
+        const url = String(params.url || "");
+        const extractText = params.extract_text !== false;
+        // Validate URL
+        let validatedUrl: URL;
+        try {
+          validatedUrl = new URL(url);
+          if (!["http:", "https:"].includes(validatedUrl.protocol)) {
+            throw new Error("Only HTTP/HTTPS allowed");
+          }
+        } catch {
+          return { success: false, error: "Invalid URL. Only http:// and https:// are supported.", latency: Date.now() - startTime };
+        }
+        const res = await fetchWithTimeout(validatedUrl.toString(), {
           headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" },
-          signal: AbortSignal.timeout(10000),
-        });
+        }, timeoutMs);
         const html = await res.text();
-        if (extract_text) {
+        if (extractText) {
           let text = html
-            .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
-            .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+            .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, " ")
+            .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, " ")
             .replace(/<[^>]+>/g, " ")
             .replace(/\s+/g, " ")
             .trim();
           text = text.slice(0, 10000);
-          return { success: true, text, url, title: html.match(/<title>([^<]*)<\/title>/)?.[1] || "", latency: Date.now() - startTime };
+          const title = html.match(/<title>([^<]*)<\/title>/)?.[1] || "";
+          return { success: true, text, url, title, latency: Date.now() - startTime };
         }
         return { success: true, html: html.slice(0, 8000), url, latency: Date.now() - startTime };
       }
 
       case "cve_lookup": {
-        const { query } = params;
+        const query = String(params.query || "");
+        // NVD API now requires API key for heavy usage; gracefully handle
         const searchUrl = `https://services.nvd.nist.gov/rest/json/cves/2.0?keywordSearch=${encodeURIComponent(query)}&resultsPerPage=10`;
-        const res = await fetch(searchUrl, { signal: AbortSignal.timeout(10000) });
+        const res = await fetchWithTimeout(searchUrl, {}, timeoutMs);
         const data = await res.json();
         const cves = (data.vulnerabilities || []).map((v: any) => ({
-          id: v.cve.id,
-          description: v.cve.descriptions?.[0]?.value || "",
-          severity: v.cve.metrics?.cvssMetricV31?.[0]?.cvssData?.baseSeverity || "UNKNOWN",
-          score: v.cve.metrics?.cvssMetricV31?.[0]?.cvssData?.baseScore || 0,
-          published: v.cve.published,
+          id: v.cve?.id,
+          description: v.cve?.descriptions?.[0]?.value || "",
+          severity: v.cve?.metrics?.cvssMetricV31?.[0]?.cvssData?.baseSeverity || "UNKNOWN",
+          score: v.cve?.metrics?.cvssMetricV31?.[0]?.cvssData?.baseScore || 0,
+          published: v.cve?.published,
         }));
         return { success: true, cves, query, latency: Date.now() - startTime };
       }
 
       case "stackoverflow_search": {
-        const { query, tagged = "" } = params;
+        const query = String(params.query || "");
+        const tagged = String(params.tagged || "");
         const tagFilter = tagged ? `&tagged=${encodeURIComponent(tagged)}` : "";
         const searchUrl = `https://api.stackexchange.com/2.3/search/advanced?order=desc&sort=relevance&q=${encodeURIComponent(query)}${tagFilter}&site=stackoverflow&pagesize=10`;
-        const res = await fetch(searchUrl, { signal: AbortSignal.timeout(8000) });
+        const res = await fetchWithTimeout(searchUrl, {}, timeoutMs);
         const data = await res.json();
         return { success: true, questions: data.items || [], query, latency: Date.now() - startTime };
       }
@@ -523,202 +613,304 @@ async function executeTool(toolName: string, params: any): Promise<any> {
         return { success: false, error: `Unknown tool: ${toolName}`, latency: Date.now() - startTime };
     }
   } catch (err: any) {
-    return { success: false, error: err.message || "Tool execution failed", latency: Date.now() - startTime };
+    return { success: false, error: err?.message || "Tool execution failed", latency: Date.now() - startTime };
   }
 }
 
+// ─── Helpers ────────────────────────────────────────────────────────────────────
+
+function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { ...init, signal: controller.signal }).finally(() => clearTimeout(timeout));
+}
+
+function decodeHtmlEntities(text: string): string {
+  const entities: Record<string, string> = {
+    "&amp;": "&", "&lt;": "<", "&gt;": ">", "&quot;": "\"", "&#39;": "'", "&apos;": "'",
+  };
+  return text.replace(/&(?:amp|lt|gt|quot|#39|apos);/g, (match) => entities[match] || match);
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
-// GROQ API ORCHESTRATION — Multi-Model Intelligence
+// GROQ API ORCHESTRATION — Multi-Model Intelligence with Hardened Fallbacks
 // ═══════════════════════════════════════════════════════════════════════════════
 
-async function tryGroqRequest(messages: any[], model: string, apiKey: string, tools?: any[]): Promise<any> {
+async function tryGroqRequest(
+  messages: Groq.Chat.Completions.ChatCompletionMessageParam[],
+  model: string,
+  apiKey: string,
+  tools?: Groq.Chat.Completions.ChatCompletionTool[]
+): Promise<AsyncIterable<Groq.Chat.Completions.ChatCompletionChunk>> {
   const groq = new Groq({ apiKey });
   return groq.chat.completions.create({
     messages,
     model,
     stream: true,
     temperature: 0.15,
-    max_tokens: 8192,
+    max_completion_tokens: 8192,
     tools: tools || TOOLS,
-    tool_choice: "auto",
+    tool_choice: "auto" as const,
     top_p: 0.95,
     frequency_penalty: 0.1,
     presence_penalty: 0.1,
-  });
+  }) as unknown as AsyncIterable<Groq.Chat.Completions.ChatCompletionChunk>;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// MAIN HANDLER — The Brain
+// MAIN HANDLER — The Brain (Hardened)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export async function POST(req: NextRequest) {
+  // ─── Request validation ─────────────────────────────────────────────────────
+  const contentLength = Number(req.headers.get("content-length") || "0");
+  if (contentLength > MAX_REQUEST_SIZE) {
+    return NextResponse.json({ error: "Payload too large. Max 2MB." }, { status: 413 });
+  }
+
+  let body: {
+    messages?: Groq.Chat.Completions.ChatCompletionMessageParam[];
+    action?: string;
+    toolResults?: Array<{ tool: string; result: unknown; tool_call_id?: string }>;
+    continuation?: boolean;
+  };
+
   try {
-    const body = await req.json();
-    const { messages, action = "chat", toolResults = [], continuation = false } = body;
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
+  }
 
-    const apiKey1 = process.env.GROQ_API_KEY_1;
-    const apiKey2 = process.env.GROQ_API_KEY_2;
-    const primaryModel = process.env.AI_MODEL_PRIMARY || "llama-3.3-70b-versatile";
-    const fallbackModel = process.env.AI_MODEL_FALLBACK || "llama-3.1-8b-instant";
-    const reasoningModel = process.env.AI_MODEL_REASONING || "deepseek-r1-distill-llama-70b";
+  const { messages, action = "chat", toolResults = [] } = body;
 
-    if (!apiKey1 && !apiKey2) {
-      return NextResponse.json(
-        { error: "Nuvuja AI is not configured. Add GROQ_API_KEY_1 or GROQ_API_KEY_2 to your environment variables." },
-        { status: 500 }
-      );
-    }
+  if (!Array.isArray(messages) || messages.length === 0) {
+    return NextResponse.json({ error: "messages array is required." }, { status: 400 });
+  }
+  if (messages.length > MAX_MESSAGES) {
+    return NextResponse.json({ error: `Too many messages. Max ${MAX_MESSAGES}.` }, { status: 400 });
+  }
 
-    // Build system message
-    const systemMessage = {
-      role: "system" as const,
-      content: SYSTEM_PROMPT + `\n\nCurrent action: ${action}\nAvailable tools: web_search, github_fetch, github_search, npm_search, analyze_code, fetch_url, cve_lookup, stackoverflow_search\nUse tools for real-time data. Use continuation for long outputs.`,
-    };
+  // ─── API Keys ───────────────────────────────────────────────────────────────
+  const apiKey1 = process.env.GROQ_API_KEY_1;
+  const apiKey2 = process.env.GROQ_API_KEY_2;
+  const primaryModel = process.env.AI_MODEL_PRIMARY || "llama-3.3-70b-versatile";
+  const fallbackModel = process.env.AI_MODEL_FALLBACK || "llama-3.1-8b-instant";
+  const reasoningModel = process.env.AI_MODEL_REASONING || "deepseek-r1-distill-llama-70b";
 
-    // Build message chain with tool results
-    const fullMessages = [systemMessage];
+  if (!apiKey1 && !apiKey2) {
+    return NextResponse.json(
+      { error: "Nuvuja AI is not configured. Add GROQ_API_KEY_1 or GROQ_API_KEY_2 to your environment variables." },
+      { status: 500 }
+    );
+  }
 
-    for (const result of toolResults) {
+  // ─── Build system message ───────────────────────────────────────────────────
+  const systemMessage: Groq.Chat.Completions.ChatCompletionSystemMessageParam = {
+    role: "system",
+    content: SYSTEM_PROMPT + `\n\nCurrent action: ${action}\nAvailable tools: web_search, github_fetch, github_search, npm_search, analyze_code, fetch_url, cve_lookup, stackoverflow_search\nUse tools for real-time data. Use continuation for long outputs.`,
+  };
+
+  // ─── Build message chain with tool results (proper tool role) ───────────────
+  const fullMessages: Groq.Chat.Completions.ChatCompletionMessageParam[] = [systemMessage];
+
+  for (const result of toolResults) {
+    if (result.tool_call_id) {
       fullMessages.push({
-        role: "assistant" as const,
+        role: "tool",
+        tool_call_id: result.tool_call_id,
+        content: JSON.stringify(result.result),
+      });
+    } else {
+      // Fallback for legacy tool results without ID
+      fullMessages.push({
+        role: "assistant",
         content: `Tool result for ${result.tool}:\n\n${JSON.stringify(result.result, null, 2)}`,
       });
     }
+  }
 
-    fullMessages.push(...messages);
+  fullMessages.push(...messages);
 
-    // Select model based on action
-    let targetModel = primaryModel;
-    if (action === "review" || action === "fix" || action === "explain") {
-      targetModel = reasoningModel;
-    }
+  // ─── Model selection ────────────────────────────────────────────────────────
+  let targetModel = primaryModel;
+  if (action === "review" || action === "fix" || action === "explain") {
+    targetModel = reasoningModel;
+  }
 
-    let stream: any;
-    let usedModel = targetModel;
-    let usedKey = "primary";
+  let stream: AsyncIterable<Groq.Chat.Completions.ChatCompletionChunk>;
+  let usedModel = targetModel;
+  let usedKey = "primary";
 
-    // Try primary key
-    if (apiKey1) {
-      try {
-        stream = await tryGroqRequest(fullMessages, targetModel, apiKey1, TOOLS);
-      } catch (err: any) {
-        console.log("Primary key failed, trying fallback...", err.message);
-        if (apiKey2) {
-          try {
-            stream = await tryGroqRequest(fullMessages, fallbackModel, apiKey2, TOOLS);
-            usedModel = fallbackModel;
-            usedKey = "fallback";
-          } catch (err2: any) {
-            return NextResponse.json(
-              { error: "Both AI keys failed. Check your configuration." },
-              { status: 500 }
-            );
-          }
-        } else {
+  // ─── Try primary key ────────────────────────────────────────────────────────
+  if (apiKey1) {
+    try {
+      stream = await tryGroqRequest(fullMessages, targetModel, apiKey1, TOOLS);
+    } catch (err: any) {
+      // Sanitized log — never leak key details
+      console.error("[Nuvuja] Primary key failed:", err?.message || "Unknown error");
+      if (apiKey2) {
+        try {
+          stream = await tryGroqRequest(fullMessages, fallbackModel, apiKey2, TOOLS);
+          usedModel = fallbackModel;
+          usedKey = "fallback";
+        } catch (err2: any) {
+          console.error("[Nuvuja] Fallback key also failed:", err2?.message || "Unknown error");
           return NextResponse.json(
-            { error: "Primary AI key failed and no fallback available." },
+            { error: "Both AI keys failed. Check your configuration." },
             { status: 500 }
           );
         }
-      }
-    } else if (apiKey2) {
-      try {
-        stream = await tryGroqRequest(fullMessages, fallbackModel, apiKey2, TOOLS);
-        usedModel = fallbackModel;
-        usedKey = "fallback";
-      } catch (err: any) {
+      } else {
         return NextResponse.json(
-          { error: "AI request failed: " + err.message },
+          { error: "Primary AI key failed and no fallback available." },
           { status: 500 }
         );
       }
     }
-
-    const encoder = new TextEncoder();
-    const readable = new ReadableStream({
-      async start(controller) {
-        try {
-          let buffer = "";
-          let toolCallBuffer: any = null;
-          let outputLength = 0;
-
-          for await (const chunk of stream as any) {
-            const delta = chunk.choices[0]?.delta;
-            const content = delta?.content || "";
-            const toolCalls = delta?.tool_calls;
-
-            // Handle native tool calls
-            if (toolCalls && toolCalls.length > 0) {
-              for (const tc of toolCalls) {
-                if (tc.function?.name) {
-                  toolCallBuffer = { name: tc.function.name, arguments: tc.function.arguments || "" };
-                } else if (tc.function?.arguments && toolCallBuffer) {
-                  toolCallBuffer.arguments += tc.function.arguments;
-                }
-              }
-            }
-
-            if (content) {
-              buffer += content;
-              outputLength += content.length;
-
-              // Check for tool call markers
-              const toolMatch = buffer.match(/###TOOL_CALL:([^#]+)###\n({[\s\S]*?})\n###TOOL_END###/);
-              if (toolMatch) {
-                const toolName = toolMatch[1].trim();
-                const toolParams = JSON.parse(toolMatch[2]);
-                const result = await executeTool(toolName, toolParams);
-
-                controller.enqueue(
-                  encoder.encode(`data: ${JSON.stringify({ type: "tool_result", tool: toolName, result })}\n\n`)
-                );
-                buffer = buffer.replace(toolMatch[0], "");
-                continue;
-              }
-
-              // Check for continuation marker
-              if (buffer.includes("###CONTINUE###")) {
-                controller.enqueue(
-                  encoder.encode(`data: ${JSON.stringify({ content: buffer.replace("###CONTINUE###", ""), model: usedModel, key: usedKey, needsContinuation: true })}\n\n`)
-                );
-                buffer = "";
-                outputLength = 0;
-                continue;
-              }
-
-              // Stream content
-              controller.enqueue(
-                encoder.encode(`data: ${JSON.stringify({ content, model: usedModel, key: usedKey })}\n\n`)
-              );
-            }
-          }
-
-          // Flush remaining buffer
-          if (buffer.trim()) {
-            controller.enqueue(
-              encoder.encode(`data: ${JSON.stringify({ content: buffer, model: usedModel, key: usedKey })}\n\n`)
-            );
-          }
-
-          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-          controller.close();
-        } catch (err) {
-          controller.error(err);
-        }
-      },
-    });
-
-    return new NextResponse(readable, {
-      headers: {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        "Connection": "keep-alive",
-      },
-    });
-  } catch (error: any) {
+  } else if (apiKey2) {
+    try {
+      stream = await tryGroqRequest(fullMessages, fallbackModel, apiKey2, TOOLS);
+      usedModel = fallbackModel;
+      usedKey = "fallback";
+    } catch (err: any) {
+      console.error("[Nuvuja] Fallback key failed:", err?.message || "Unknown error");
+      return NextResponse.json(
+        { error: "AI request failed: " + (err?.message || "Unknown error") },
+        { status: 500 }
+      );
+    }
+  } else {
     return NextResponse.json(
-      { error: "Internal server error: " + error.message },
+      { error: "No AI keys configured." },
       { status: 500 }
     );
   }
+
+  // ─── Streaming response ─────────────────────────────────────────────────────
+  const encoder = new TextEncoder();
+  const readable = new ReadableStream({
+    async start(controller) {
+      const streamTimeout = setTimeout(() => {
+        try {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: "Stream timeout after 30000ms" })}\n\n`));
+          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+          controller.close();
+        } catch { /* already closed */ }
+      }, STREAM_TIMEOUT);
+
+      try {
+        let buffer = "";
+        let outputLength = 0;
+        let toolCallAccumulator: Record<string, { name: string; arguments: string; id?: string }> = {};
+
+        for await (const chunk of stream) {
+          const delta = chunk.choices?.[0]?.delta;
+          const content = delta?.content || "";
+          const toolCalls = delta?.tool_calls;
+
+          // ─── Handle native tool calls (Groq SDK format) ───────────────────
+          if (toolCalls && toolCalls.length > 0) {
+            for (const tc of toolCalls) {
+              const index = tc.index ?? 0;
+              if (!toolCallAccumulator[index]) {
+                toolCallAccumulator[index] = { name: "", arguments: "", id: tc.id };
+              }
+              if (tc.function?.name) {
+                toolCallAccumulator[index].name = tc.function.name;
+              }
+              if (tc.function?.arguments) {
+                toolCallAccumulator[index].arguments += tc.function.arguments;
+              }
+              // If we have a complete tool call, execute it
+              if (
+                toolCallAccumulator[index].name &&
+                toolCallAccumulator[index].arguments &&
+                (tc.function?.arguments === "" || tc.function?.arguments === "{}")
+              ) {
+                try {
+                  const params = JSON.parse(toolCallAccumulator[index].arguments);
+                  const result = await executeTool(toolCallAccumulator[index].name, params);
+                  controller.enqueue(
+                    encoder.encode(`data: ${JSON.stringify({ type: "tool_result", tool: toolCallAccumulator[index].name, result, tool_call_id: toolCallAccumulator[index].id || `call_${index}` })}\n\n`)
+                  );
+                } catch (toolErr: any) {
+                  controller.enqueue(
+                    encoder.encode(`data: ${JSON.stringify({ type: "tool_error", tool: toolCallAccumulator[index].name, error: toolErr?.message })}\n\n`)
+                  );
+                }
+                delete toolCallAccumulator[index];
+              }
+            }
+          }
+
+          if (content) {
+            buffer += content;
+            outputLength += content.length;
+
+            // ─── Check for inline tool call markers ─────────────────────────
+            const toolMatch = buffer.match(/###TOOL_CALL:([^#]+)###\n({[\s\S]*?})\n###TOOL_END###/);
+            if (toolMatch) {
+              const toolName = toolMatch[1].trim();
+              try {
+                const toolParams = JSON.parse(toolMatch[2]);
+                const result = await executeTool(toolName, toolParams);
+                controller.enqueue(
+                  encoder.encode(`data: ${JSON.stringify({ type: "tool_result", tool: toolName, result })}\n\n`)
+                );
+              } catch (toolErr: any) {
+                controller.enqueue(
+                  encoder.encode(`data: ${JSON.stringify({ type: "tool_error", tool: toolName, error: toolErr?.message })}\n\n`)
+                );
+              }
+              buffer = buffer.replace(toolMatch[0], "");
+              continue;
+            }
+
+            // ─── Check for continuation marker ──────────────────────────────
+            if (buffer.includes("###CONTINUE###")) {
+              controller.enqueue(
+                encoder.encode(`data: ${JSON.stringify({ content: buffer.replace("###CONTINUE###", ""), model: usedModel, key: usedKey, needsContinuation: true })}\n\n`)
+              );
+              buffer = "";
+              outputLength = 0;
+              continue;
+            }
+
+            // ─── Stream content ───────────────────────────────────────────
+            controller.enqueue(
+              encoder.encode(`data: ${JSON.stringify({ content, model: usedModel, key: usedKey })}\n\n`)
+            );
+          }
+        }
+
+        // ─── Flush remaining buffer ───────────────────────────────────────
+        if (buffer.trim()) {
+          controller.enqueue(
+            encoder.encode(`data: ${JSON.stringify({ content: buffer, model: usedModel, key: usedKey })}\n\n`)
+          );
+        }
+
+        controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+        controller.close();
+      } catch (err: any) {
+        controller.enqueue(
+          encoder.encode(`data: ${JSON.stringify({ error: err?.message || "Stream error" })}\n\n`)
+        );
+        controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+        controller.close();
+      } finally {
+        clearTimeout(streamTimeout);
+      }
+    },
+  });
+
+  return new NextResponse(readable, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache, no-store, must-revalidate",
+      "Connection": "keep-alive",
+      "X-Content-Type-Options": "nosniff",
+      "X-Frame-Options": "DENY",
+    },
+  });
 }
