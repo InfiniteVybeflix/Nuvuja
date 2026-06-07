@@ -650,7 +650,7 @@ async function tryGroqRequest(
     temperature: 0.15,
     max_completion_tokens: 8192,
     tools: tools || TOOLS,
-    tool_choice: "auto" as const,
+    tool_choice: "auto" as any,
     top_p: 0.95,
     frequency_penalty: 0.1,
     presence_penalty: 0.1,
