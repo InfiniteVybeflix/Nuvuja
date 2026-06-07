@@ -373,7 +373,7 @@ async function executeTool(toolName: string, params: any): Promise<any> {
         });
         const html = await res.text();
         const results: any[] = [];
-        const resultRegex = /<a class="result__a" href="([^"]+)">([^<]+)<\/a>.*?<a class="result__snippet"[^>]*>([^<]*)<\/a>/gs;
+        const resultRegex = /<a class="result__a" href="([^"]+)">([^<]+)<\/a>[\s\S]*?<a class="result__snippet"[^>]*>([^<]*)<\/a>/g;
         let match;
         while ((match = resultRegex.exec(html)) !== null && results.length < num_results) {
           results.push({ title: match[2].trim(), url: match[1], snippet: match[3].trim() });
