@@ -117,8 +117,12 @@ export function ConsolePanel({ entries, isOpen, onToggle, onClear }: ConsolePane
             ? "bg-slate-800 text-slate-300 border border-slate-700"
             : "bg-slate-900/90 text-slate-400 border border-slate-800 hover:text-slate-200"
         )}
-        style={{ left: "50%", bottom: isOpen ? "280px" : "12px", transform: "translateX(-50%)" }}
-      >
+        style={{ 
+            left: "50%", 
+            bottom: isOpen ? "calc(280px + env(safe-area-inset-bottom))" : "calc(12px + env(safe-area-inset-bottom))", 
+            transform: "translateX(-50%)" 
+         }}
+       >
         <Terminal size={14} />
         <span className="text-xs font-medium">Console</span>
         {entries.length > 0 && (
