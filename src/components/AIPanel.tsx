@@ -798,11 +798,14 @@ export function AIPanel({
         exit={{ scale: 0.8, opacity: 0, y: 20 }}
         whileHover={{ scale: 1.08, boxShadow: "0 0 40px rgba(168, 85, 247, 0.4)" }}
         whileTap={{ scale: 0.95 }}
-        onClick={onToggle}
-        className="fixed z-[60] flex items-center gap-2.5 px-5 py-3.5 rounded-2xl shadow-2xl bg-gradient-to-r from-sky-500 via-purple-500 to-purple-600 text-white shadow-purple-500/30 backdrop-blur-sm border border-white/10 pointer-events-auto"
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggle();
+        }}
+        className="fixed z-[9999] flex items-center gap-2.5 px-5 py-3.5 rounded-2xl shadow-2xl bg-gradient-to-r from-sky-500 via-purple-500 to-purple-600 text-white shadow-purple-500/30 backdrop-blur-sm border border-white/10 pointer-events-auto cursor-pointer"
         style={{
-          right: "max(16px, env(safe-area-inset-right))",
-          bottom: "calc(40px + env(safe-area-inset-bottom))",
+          right: "max(20px, env(safe-area-inset-right))",
+          bottom: "calc(80px + env(safe-area-inset-bottom))",
         }}
       >
           <motion.div
@@ -833,11 +836,17 @@ export function AIPanel({
   return (
     <AnimatePresence>
       <motion.div
-        initial={{ x: panelWidth, opacity: 0 }}
+        initial={{ x: "100%", opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
-        exit={{ x: panelWidth, opacity: 0 }}
+        exit={{ x: "100%", opacity: 0 }}
         transition={{ type: "spring", damping: 25, stiffness: 200 }}
-        style={{ top: panelTop, right: 0, width: panelWidth, height: panelHeight }}
+        style={{ 
+          top: panelTop, 
+          right: 0, 
+          width: "100%", 
+          maxWidth: panelWidth,
+          height: panelHeight 
+        }}
         className={cn("fixed z-50 flex flex-row shadow-2xl shadow-black/50 overflow-hidden", isResizing && "select-none")}
       >
         {/* Holographic background — particles FIRST so they show through */}
