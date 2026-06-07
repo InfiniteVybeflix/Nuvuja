@@ -253,7 +253,7 @@ function ThinkingAnimation() {
       <div className="flex flex-col gap-1">
         <span className="text-xs font-medium text-purple-300">ᓄᕙᔭ is thinking...</span>
         <div className="flex gap-1">
-          {[0, 1, 2].map((i) => (
+          {[0, 1, 2].map((i: number) => (
             <motion.div
               key={i}
               className="w-1.5 h-1.5 rounded-full bg-purple-400"
