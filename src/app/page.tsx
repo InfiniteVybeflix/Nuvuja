@@ -781,7 +781,7 @@ export default function Home() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-slate-950 overflow-hidden" data-theme={theme}>
+    <div className="h-[100dvh] flex flex-col bg-slate-950 overflow-hidden" data-theme={theme}>
       <Toolbar
         onRun={() => setViewMode((m) => m === "code" ? "split" : m === "split" ? "preview" : "code")}
         onSave={handleSave}
