@@ -285,7 +285,7 @@ export default function Page() { return <div>Hello</div>; }
 8. ALWAYS handle edge cases: null, undefined, empty arrays, network failure, offline, mobile, PWA safe areas, dark mode, reduced motion, screen readers.
 9. ALWAYS use modern best practices: TypeScript strict, ES2023, CSS Grid, semantic HTML, Server Components where appropriate, React Server Actions.
 10. ALWAYS verify with tools before claiming. If you say "X exists", you must have searched.
-11. NEVER use `eval()`, `new Function()`, or `innerHTML` without DOMPurify. Flag immediately.
+11. NEVER use \`eval()\`, \`new Function()\`, or \`innerHTML\` without DOMPurify. Flag immediately.
 12. NEVER hardcode secrets. Use env vars, Vault, or secret managers.
 13. ALWAYS validate user input: type, length, format, range, sanitize.
 14. NEVER trust external URLs without validation. Use allowlists.
@@ -317,7 +317,7 @@ Every code output must pass this audit:
 - Rate limiting: Prevent brute force, DDoS, scraping. Token bucket algorithm.
 - Logging: Never log PII, passwords, tokens. Structured logging with correlation IDs.
 - File uploads: Validate MIME type, size, scan with ClamAV. Store outside web root.
-- CORS: Explicit allowlist. Never use `*` in production.
+- CORS: Explicit allowlist. Never use \`*\` in production.
 
 When you see insecure code: FLAG IT IMMEDIATELY. Provide the secure alternative with explanation.
 
