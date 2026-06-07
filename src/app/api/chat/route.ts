@@ -590,7 +590,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
 
-  const { messages, action = "chat", toolResults = [] } = body;
+  const { messages, action = "chat", toolResults = [], continuation = false } = body;
 
   if (!Array.isArray(messages) || messages.length === 0) {
     return NextResponse.json({ error: "messages array is required." }, { status: 400 });
@@ -598,6 +598,13 @@ export async function POST(req: NextRequest) {
   if (messages.length > MAX_MESSAGES) {
     return NextResponse.json({ error: `Too many messages. Max ${MAX_MESSAGES}.` }, { status: 400 });
   }
+
+  // For continuation requests, add a system instruction to continue without repeating
+  const continuationInstruction = continuation
+    ? "
+
+[CONTINUATION] Continue exactly where you stopped. NEVER repeat what you already wrote. Output ONLY the new content that follows."
+    : "";
 
   // ─── API Keys ───────────────────────────────────────────────────────────────
   const apiKey1 = process.env.GROQ_API_KEY_1;
@@ -627,7 +634,7 @@ export async function POST(req: NextRequest) {
   // ─── Build system message ───────────────────────────────────────────────────
   const systemMessage = {
     role: "system" as const,
-    content: SYSTEM_PROMPT + `\n\nCurrent action: ${action}\nAvailable tools: web_search, github_fetch, github_search, npm_search, analyze_code, fetch_url, cve_lookup, stackoverflow_search`,
+    content: SYSTEM_PROMPT + `\n\nCurrent action: ${action}\nAvailable tools: web_search, github_fetch, github_search, npm_search, analyze_code, fetch_url, cve_lookup, stackoverflow_search` + continuationInstruction,
   };
 
   // ─── Build message chain with tool results ──────────────────────────────────
@@ -808,13 +815,6 @@ export async function POST(req: NextRequest) {
               encoder.encode(`data: ${JSON.stringify({ content, model: usedModel, key: usedKey })}\n\n`)
             );
           }
-        }
-
-        // ─── Flush remaining buffer ───────────────────────────────────────
-        if (buffer.trim()) {
-          controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify({ content: buffer, model: usedModel, key: usedKey })}\n\n`)
-          );
         }
 
         controller.enqueue(encoder.encode("data: [DONE]\n\n"));
