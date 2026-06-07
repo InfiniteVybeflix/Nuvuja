@@ -1,5 +1,10 @@
 const CACHE_NAME = 'nuvuja-v1';
-const urlsToCache = ['/', '/manifest.json'];
+const urlsToCache = [
+  '/',
+  '/manifest.json',
+  '/icon-192.png',
+  '/icon-512.png'
+];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
