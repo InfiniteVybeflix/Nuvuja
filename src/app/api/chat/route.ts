@@ -648,13 +648,13 @@ async function tryGroqRequest(
     model,
     stream: true,
     temperature: 0.15,
-    max_completion_tokens: 8192,
+    max_tokens: 8192,
     tools: tools || TOOLS,
-    tool_choice: "auto" as any,
+    tool_choice: "auto",
     top_p: 0.95,
     frequency_penalty: 0.1,
     presence_penalty: 0.1,
-  }) as unknown as AsyncIterable<Groq.Chat.Completions.ChatCompletionChunk>;
+  } as any);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
