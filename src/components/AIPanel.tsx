@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { motion, AnimatePresence, useAnimation } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Send,
   Bot,
@@ -77,8 +77,6 @@ import {
   Fingerprint,
   Scan,
   Radar,
-  Radio,
-  Satellite,
   Rocket,
   Atom,
   Orbit,
@@ -109,6 +107,38 @@ import {
 } from "lucide-react";
 import { AIConversation, ChatSession } from "@/types";
 import { cn } from "@/lib/utils";
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MOBILE DETECTION HOOK
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function useIsMobile(breakpoint = 768) {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < breakpoint);
+    check();
+    window.addEventListener("resize", check);
+    window.addEventListener("orientationchange", () => setTimeout(check, 100));
+    return () => {
+      window.removeEventListener("resize", check);
+      window.removeEventListener("orientationchange", check);
+    };
+  }, [breakpoint]);
+
+  return isMobile;
+}
+
+function useIsSmallPhone(breakpoint = 380) {
+  const [isSmall, setIsSmall] = useState(false);
+  useEffect(() => {
+    const check = () => setIsSmall(window.innerWidth < breakpoint);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, [breakpoint]);
+  return isSmall;
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -166,25 +196,33 @@ function HolographicCard({ children, className, glowColor = "purple" }: { childr
 
 function ParticleBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const isMobile = useIsMobile();
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    // Respect reduced motion preference
+    const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReduced) return;
+
     let animationId: number;
+    const particleCount = isMobile ? 12 : 25;
     const particles: Array<{ x: number; y: number; vx: number; vy: number; size: number; alpha: number; color: string }> = [];
 
     const resize = () => {
-      canvas.width = canvas.offsetWidth * window.devicePixelRatio;
-      canvas.height = canvas.offsetHeight * window.devicePixelRatio;
-      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+      const dpr = Math.min(window.devicePixelRatio, 2);
+      canvas.width = canvas.offsetWidth * dpr;
+      canvas.height = canvas.offsetHeight * dpr;
+      ctx.scale(dpr, dpr);
     };
     resize();
     window.addEventListener("resize", resize);
 
     const colors = ["#a78bfa", "#38bdf8", "#4ade80", "#fbbf24", "#f472b6"];
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < particleCount; i++) {
       particles.push({
         x: Math.random() * canvas.offsetWidth,
         y: Math.random() * canvas.offsetHeight,
@@ -196,7 +234,15 @@ function ParticleBackground() {
       });
     }
 
+    let frameCount = 0;
     const animate = () => {
+      frameCount++;
+      // Skip frames on mobile for performance (30fps instead of 60fps)
+      if (isMobile && frameCount % 2 !== 0) {
+        animationId = requestAnimationFrame(animate);
+        return;
+      }
+
       ctx.clearRect(0, 0, canvas.offsetWidth, canvas.offsetHeight);
 
       particles.forEach((p, i) => {
@@ -211,21 +257,23 @@ function ParticleBackground() {
         ctx.globalAlpha = p.alpha;
         ctx.fill();
 
-        // Connect nearby particles
-        particles.slice(i + 1).forEach((p2) => {
-          const dx = p.x - p2.x;
-          const dy = p.y - p2.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < 100) {
-            ctx.beginPath();
-            ctx.moveTo(p.x, p.y);
-            ctx.lineTo(p2.x, p2.y);
-            ctx.strokeStyle = p.color;
-            ctx.globalAlpha = (1 - dist / 100) * 0.1;
-            ctx.lineWidth = 0.5;
-            ctx.stroke();
-          }
-        });
+        // Only connect on desktop - too expensive on mobile
+        if (!isMobile) {
+          particles.slice(i + 1).forEach((p2) => {
+            const dx = p.x - p2.x;
+            const dy = p.y - p2.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < 100) {
+              ctx.beginPath();
+              ctx.moveTo(p.x, p.y);
+              ctx.lineTo(p2.x, p2.y);
+              ctx.strokeStyle = p.color;
+              ctx.globalAlpha = (1 - dist / 100) * 0.1;
+              ctx.lineWidth = 0.5;
+              ctx.stroke();
+            }
+          });
+        }
       });
 
       ctx.globalAlpha = 1;
@@ -237,7 +285,7 @@ function ParticleBackground() {
       cancelAnimationFrame(animationId);
       window.removeEventListener("resize", resize);
     };
-  }, []);
+  }, [isMobile]);
 
   return <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none" style={{ opacity: 0.6 }} />;
 }
@@ -396,7 +444,7 @@ function CodeBlock({ code, language, onApply }: { code: string; language: string
   const shouldCollapse = lineCount > 20;
 
   return (
-    <div className="my-2 rounded-xl overflow-hidden border border-slate-700/30 bg-slate-950/90 backdrop-blur-sm group">
+    <div className="my-2 rounded-xl overflow-hidden border border-slate-700/30 bg-slate-950/90 backdrop-blur-sm group relative">
       <div className="flex items-center justify-between px-3 py-2 bg-gradient-to-r from-slate-900/90 to-slate-800/50 border-b border-slate-700/30">
         <div className="flex items-center gap-2">
           <FileCode size={12} className="text-sky-400" />
@@ -602,6 +650,9 @@ export function AIPanel({
   onDeleteChat,
   hasConsoleErrors,
 }: AIPanelProps) {
+  const isMobile = useIsMobile();
+  const isSmallPhone = useIsSmallPhone();
+
   const [input, setInput] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(true);
   const [attachCode, setAttachCode] = useState(false);
@@ -610,10 +661,10 @@ export function AIPanel({
   const [zoom, setZoom] = useState(1);
   const [panelWidth, setPanelWidth] = useState(420);
   const [panelHeight, setPanelHeight] = useState(0);
-  const [panelTop, setPanelTop] = useState(() => {
-    const safeTop = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--safe-top") || "0", 10);
-    return Math.max(44, 44 + safeTop);
-  });
+
+  // FIX: Safe panelTop calculation - never NaN
+  const [panelTop, setPanelTop] = useState(44);
+
   const [isResizing, setIsResizing] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [securityLevel, setSecurityLevel] = useState<"secure" | "warning" | "critical" | "unknown">("unknown");
@@ -628,13 +679,31 @@ export function AIPanel({
   const startWidthRef = useRef(420);
   const startHeightRef = useRef(0);
   const startTopRef = useRef(44);
+  const touchStartXRef = useRef(0);
+  const touchStartYRef = useRef(0);
 
-  // Panel height calculation with visualViewport
+  // Safe panelTop initialization in useEffect (after DOM is ready)
+  useEffect(() => {
+    const updateTop = () => {
+      const safeTopVal = getComputedStyle(document.documentElement).getPropertyValue("--safe-top").trim();
+      // Handle cases: "0px", "34px", "", "0"
+      const numeric = parseInt(safeTopVal || "0", 10);
+      const safeTop = isNaN(numeric) ? 0 : numeric;
+      const top = Math.max(44, 44 + safeTop);
+      setPanelTop(top);
+      startTopRef.current = top;
+    };
+    updateTop();
+    window.addEventListener("orientationchange", () => setTimeout(updateTop, 300));
+    return () => window.removeEventListener("orientationchange", updateTop);
+  }, []);
+
+  // Panel height calculation with visualViewport - SAFE
   useEffect(() => {
     const update = () => {
       const vv = window.visualViewport;
       const visibleHeight = vv ? vv.height : window.innerHeight;
-      const h = visibleHeight - panelTop;
+      const h = Math.max(200, visibleHeight - panelTop);
       setPanelHeight(h);
       startHeightRef.current = h;
     };
@@ -678,20 +747,43 @@ export function AIPanel({
     }
   }, [currentCode]);
 
-  // Resize handlers
+  // Keyboard shortcut: Escape to close
   useEffect(() => {
-    const handleMove = (e: MouseEvent) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isOpen) {
+        onToggle();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onToggle]);
+
+  // MOUSE + TOUCH Resize handlers
+  useEffect(() => {
+    const handleMove = (e: MouseEvent | TouchEvent) => {
       if (!isResizingRef.current || !resizeDirRef.current) return;
-      const dx = e.clientX - startXRef.current;
-      const dy = e.clientY - startYRef.current;
+
+      let clientX: number, clientY: number;
+      if ("touches" in e) {
+        if (e.touches.length === 0) return;
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+      } else {
+        clientX = e.clientX;
+        clientY = e.clientY;
+      }
+
+      const dx = clientX - startXRef.current;
+      const dy = clientY - startYRef.current;
       const dir = resizeDirRef.current;
       let newW = startWidthRef.current;
       let newH = startHeightRef.current;
       let newT = startTopRef.current;
+
       if (dir.includes("w")) newW = Math.max(320, Math.min(900, startWidthRef.current - dx));
       if (dir.includes("e")) newW = Math.max(320, Math.min(900, startWidthRef.current + dx));
       if (dir.includes("n")) {
-        const safeTop = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--safe-top") || "0", 10);
+        const safeTop = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--safe-top") || "0", 10) || 0;
         newT = Math.max(safeTop, Math.min(window.innerHeight - 200, startTopRef.current + dy));
         newH = Math.max(200, startHeightRef.current - dy);
       }
@@ -702,17 +794,38 @@ export function AIPanel({
       setPanelHeight(newH);
       setPanelTop(newT);
     };
-    const handleUp = () => { isResizingRef.current = false; resizeDirRef.current = null; setIsResizing(false); };
-    window.addEventListener("mousemove", handleMove);
+
+    const handleUp = () => { 
+      isResizingRef.current = false; 
+      resizeDirRef.current = null; 
+      setIsResizing(false); 
+    };
+
+    window.addEventListener("mousemove", handleMove as any);
     window.addEventListener("mouseup", handleUp);
-    return () => { window.removeEventListener("mousemove", handleMove); window.removeEventListener("mouseup", handleUp); };
+    window.addEventListener("touchmove", handleMove as any, { passive: false });
+    window.addEventListener("touchend", handleUp);
+
+    return () => { 
+      window.removeEventListener("mousemove", handleMove as any); 
+      window.removeEventListener("mouseup", handleUp); 
+      window.removeEventListener("touchmove", handleMove as any);
+      window.removeEventListener("touchend", handleUp);
+    };
   }, [panelTop]);
 
-  const startResize = useCallback((dir: string) => (e: React.MouseEvent) => {
+  const startResize = useCallback((dir: string) => (e: React.MouseEvent | React.TouchEvent) => {
     isResizingRef.current = true;
     resizeDirRef.current = dir;
-    startXRef.current = e.clientX;
-    startYRef.current = e.clientY;
+
+    if ("touches" in e.nativeEvent) {
+      startXRef.current = e.nativeEvent.touches[0].clientX;
+      startYRef.current = e.nativeEvent.touches[0].clientY;
+    } else {
+      startXRef.current = e.nativeEvent.clientX;
+      startYRef.current = e.nativeEvent.clientY;
+    }
+
     startWidthRef.current = panelWidth;
     startHeightRef.current = panelHeight;
     startTopRef.current = panelTop;
@@ -755,7 +868,7 @@ export function AIPanel({
     else if (message.startsWith("/generate")) action = "generate";
 
     if (attachCode && currentCode) {
-      message += `\n\nCurrent file (${currentLanguage}):\n\`\`\`${currentLanguage}\n${currentCode}\n\`\`\``;
+      message += `\n\nCurrent file (${currentLanguage}):\n\` + "`" + "`" + "`" + `${currentLanguage}\n${currentCode}\n` + "`" + "`" + "`";
     }
     onSendMessage(message, action);
     setInput("");
@@ -789,114 +902,134 @@ export function AIPanel({
     setToolResults(newToolResults);
   }, [conversations]);
 
-  if (!isOpen) {
-    return (
-      <motion.button
-        key="nuvuja-toggle"
-        initial={{ scale: 0.8, opacity: 0, y: 20 }}
-        animate={{ scale: 1, opacity: 1, y: 0 }}
-        exit={{ scale: 0.8, opacity: 0, y: 20 }}
-        whileHover={{ scale: 1.08, boxShadow: "0 0 40px rgba(168, 85, 247, 0.4)" }}
-        whileTap={{ scale: 0.95 }}
-        onClick={(e) => {
-          e.stopPropagation();
-          onToggle();
-        }}
-        className="fixed z-[9999] flex items-center gap-2.5 px-5 py-3.5 rounded-2xl shadow-2xl bg-gradient-to-r from-sky-500 via-purple-500 to-purple-600 text-white shadow-purple-500/30 backdrop-blur-sm border border-white/10 pointer-events-auto cursor-pointer"
-        style={{
-          right: "max(20px, env(safe-area-inset-right))",
-          bottom: "calc(80px + env(safe-area-inset-bottom))",
-        }}
-      >
-          <motion.div
-            animate={{ rotate: [0, 360] }}
-            transition={{ duration: 20, repeat: Infinity, ease: "linear" } as any}
-          >
-            <Orbit size={20} />
-          </motion.div>
-          <span className="text-sm font-semibold tracking-wide">ᓄᕙᔭ</span>
-          {hasConsoleErrors && (
-            <motion.span
-              animate={{ scale: [1, 1.3, 1] }}
-              transition={{ duration: 1.5, repeat: Infinity } as any}
-              className="w-2.5 h-2.5 rounded-full bg-red-400 shadow-lg shadow-red-400/50"
-            />
-          )}
-          {!hasConsoleErrors && conversations.length > 0 && (
-            <motion.span
-              animate={{ opacity: [0.5, 1, 0.5] }}
-              transition={{ duration: 2, repeat: Infinity } as any}
-              className="w-2 h-2 rounded-full bg-white"
-            />
-          )}
-        </motion.button>
-    );
-  }
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // RENDER: TOGGLE BUTTON (when closed)
+  // ═══════════════════════════════════════════════════════════════════════════════
 
-  return (
-    <AnimatePresence>
+  const toggleButton = (
+    <motion.button
+      key="nuvuja-toggle"
+      initial={false}
+      animate={{ scale: 1, opacity: 1, y: 0 }}
+      exit={{ scale: 0.8, opacity: 0, y: 20 }}
+      whileHover={{ scale: 1.08, boxShadow: "0 0 40px rgba(168, 85, 247, 0.4)" }}
+      whileTap={{ scale: 0.95 }}
+      onClick={(e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        onToggle();
+      }}
+      className="fixed flex items-center gap-2.5 px-5 py-3.5 rounded-2xl shadow-2xl text-white backdrop-blur-sm border border-white/10 pointer-events-auto cursor-pointer ai-toggle-btn"
+      style={{ zIndex: 99999 }}
+    >
       <motion.div
-        initial={{ x: "100%", opacity: 0 }}
-        animate={{ x: 0, opacity: 1 }}
-        exit={{ x: "100%", opacity: 0 }}
-        transition={{ type: "spring", damping: 25, stiffness: 200 }}
-        style={{ 
-          top: panelTop, 
-          right: 0, 
-          width: "100%", 
-          maxWidth: panelWidth,
-          height: panelHeight 
-        }}
-        className={cn("fixed z-50 flex flex-row shadow-2xl shadow-black/50 overflow-hidden", isResizing && "select-none")}
+        animate={{ rotate: [0, 360] }}
+        transition={{ duration: 20, repeat: Infinity, ease: "linear" } as any}
       >
-        {/* Holographic background — particles FIRST so they show through */}
-        <div className="absolute inset-0 z-0">
-          <ParticleBackground />
+        <Orbit size={20} />
+      </motion.div>
+      <span className="text-sm font-semibold tracking-wide">ᓄᕙᔭ</span>
+      {hasConsoleErrors && (
+        <motion.span
+          animate={{ scale: [1, 1.3, 1] }}
+          transition={{ duration: 1.5, repeat: Infinity } as any}
+          className="w-2.5 h-2.5 rounded-full bg-red-400 shadow-lg shadow-red-400/50"
+        />
+      )}
+      {!hasConsoleErrors && conversations.length > 0 && (
+        <motion.span
+          animate={{ opacity: [0.5, 1, 0.5] }}
+          transition={{ duration: 2, repeat: Infinity } as any}
+          className="w-2 h-2 rounded-full bg-white"
+        />
+      )}
+    </motion.button>
+  );
+
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // RENDER: MAIN PANEL (when open)
+  // ═══════════════════════════════════════════════════════════════════════════════
+
+  const panelContent = (
+    <motion.div
+      key="ai-panel"
+      initial={{ x: "100%", opacity: 0 }}
+      animate={{ x: 0, opacity: 1 }}
+      exit={{ x: "100%", opacity: 0 }}
+      transition={{ type: "spring", damping: 25, stiffness: 200 }}
+      style={{ 
+        top: panelTop, 
+        right: 0, 
+        width: isMobile ? "100%" : "100%", 
+        maxWidth: isMobile ? "100vw" : panelWidth,
+        height: panelHeight 
+      }}
+      className={cn("fixed flex flex-row shadow-2xl shadow-black/50 overflow-hidden ai-panel-container", isResizing && "select-none")}
+    >
+      {/* Holographic background */}
+      <div className="absolute inset-0 z-0">
+        <ParticleBackground />
+      </div>
+      <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-2xl z-[1]" />
+      <div className="absolute inset-0 bg-gradient-to-br from-purple-900/10 via-slate-950/50 to-sky-900/10 z-[1]" />
+
+      {/* Border glow */}
+      <div className="absolute inset-0 rounded-l-2xl border border-purple-500/10 pointer-events-none" />
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-purple-500/30 to-transparent" />
+
+      {isResizing && <div className="fixed inset-0 z-[9999] cursor-none" />}
+
+      {/* Resize overlay */}
+      <div className={cn("absolute inset-0 pointer-events-none z-[100] border-2 border-dashed transition-opacity duration-200 rounded-l-2xl", isResizing ? "border-purple-500/60 opacity-100" : "border-purple-500/0 opacity-0")}>
+        <div className="absolute top-2 left-2 bg-purple-500/90 text-white text-[10px] px-2 py-0.5 rounded font-mono backdrop-blur-sm">
+          {Math.round(panelWidth)}×{Math.round(panelHeight)} @ {Math.round(panelTop)}px
         </div>
-        <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-2xl z-[1]" />
-        <div className="absolute inset-0 bg-gradient-to-br from-purple-900/10 via-slate-950/50 to-sky-900/10 z-[1]" />
+      </div>
 
-        {/* Border glow */}
-        <div className="absolute inset-0 rounded-l-2xl border border-purple-500/10 pointer-events-none" />
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-purple-500/30 to-transparent" />
-
-        {isResizing && <div className="fixed inset-0 z-[9999] cursor-none" />}
-
-        {/* Resize overlay */}
-        <div className={cn("absolute inset-0 pointer-events-none z-[100] border-2 border-dashed transition-opacity duration-200 rounded-l-2xl", isResizing ? "border-purple-500/60 opacity-100" : "border-purple-500/0 opacity-0")}>
-          <div className="absolute top-2 left-2 bg-purple-500/90 text-white text-[10px] px-2 py-0.5 rounded font-mono backdrop-blur-sm">
-            {Math.round(panelWidth)}×{Math.round(panelHeight)} @ {Math.round(panelTop)}px
+      {/* Resize handles - hidden on mobile */}
+      {!isMobile && (
+        <>
+          <div onMouseDown={startResize("w")} onTouchStart={startResize("w")} className="absolute top-8 bottom-8 left-0 w-3 cursor-ew-resize z-50 group flex items-center justify-center">
+            <div className={cn("w-0.5 h-12 rounded-full transition-all", isResizing && resizeDirRef.current?.includes("w") ? "bg-purple-400 w-1" : "bg-slate-600/0 group-hover:bg-slate-400/40")} />
           </div>
-        </div>
+          <div onMouseDown={startResize("n")} onTouchStart={startResize("n")} className="absolute top-0 left-8 right-8 h-3 cursor-ns-resize z-50 group flex items-center justify-center">
+            <div className={cn("h-0.5 w-12 rounded-full transition-all", isResizing && resizeDirRef.current === "n" ? "bg-purple-400 h-1" : "bg-slate-600/0 group-hover:bg-slate-400/40")} />
+          </div>
+          <div onMouseDown={startResize("s")} onTouchStart={startResize("s")} className="absolute bottom-0 left-8 right-8 h-3 cursor-ns-resize z-50 group flex items-center justify-center">
+            <div className={cn("h-0.5 w-12 rounded-full transition-all", isResizing && resizeDirRef.current === "s" ? "bg-purple-400 h-1" : "bg-slate-600/0 group-hover:bg-slate-400/40")} />
+          </div>
+          <div onMouseDown={startResize("nw")} onTouchStart={startResize("nw")} className="absolute top-0 left-0 w-6 h-6 cursor-nwse-resize z-50" />
+          <div onMouseDown={startResize("sw")} onTouchStart={startResize("sw")} className="absolute bottom-0 left-0 w-6 h-6 cursor-nesw-resize z-50" />
+        </>
+      )}
 
-        {/* Resize handles */}
-        <div onMouseDown={startResize("w")} className="absolute top-8 bottom-8 left-0 w-3 cursor-ew-resize z-50 group flex items-center justify-center">
-          <div className={cn("w-0.5 h-12 rounded-full transition-all", isResizing && resizeDirRef.current?.includes("w") ? "bg-purple-400 w-1" : "bg-slate-600/0 group-hover:bg-slate-400/40")} />
-        </div>
-        <div onMouseDown={startResize("n")} className="absolute top-0 left-8 right-8 h-3 cursor-ns-resize z-50 group flex items-center justify-center">
-          <div className={cn("h-0.5 w-12 rounded-full transition-all", isResizing && resizeDirRef.current === "n" ? "bg-purple-400 h-1" : "bg-slate-600/0 group-hover:bg-slate-400/40")} />
-        </div>
-        <div onMouseDown={startResize("s")} className="absolute bottom-0 left-8 right-8 h-3 cursor-ns-resize z-50 group flex items-center justify-center">
-          <div className={cn("h-0.5 w-12 rounded-full transition-all", isResizing && resizeDirRef.current === "s" ? "bg-purple-400 h-1" : "bg-slate-600/0 group-hover:bg-slate-400/40")} />
-        </div>
-        <div onMouseDown={startResize("nw")} className="absolute top-0 left-0 w-6 h-6 cursor-nwse-resize z-50" />
-        <div onMouseDown={startResize("sw")} className="absolute bottom-0 left-0 w-6 h-6 cursor-nesw-resize z-50" />
-
-        {/* Chat List Sidebar */}
-        <AnimatePresence>
-          {showChatList && (
-            <motion.div
-              initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 220, opacity: 1 }}
-              exit={{ width: 0, opacity: 0 }}
-              transition={{ duration: 0.25, ease: "easeInOut" }}
-              className="border-r border-white/5 bg-slate-950/80 backdrop-blur-xl flex flex-col overflow-hidden shrink-0 relative z-10"
-            >
-              <div className="flex items-center justify-between px-4 py-4 border-b border-white/5">
-                <div className="flex items-center gap-2">
-                  <History size={13} className="text-purple-400" />
-                  <span className="text-xs font-semibold text-slate-400 tracking-wider uppercase">Conversations</span>
-                </div>
+      {/* Chat List Sidebar - MOBILE: overlay modal, DESKTOP: inline */}
+      <AnimatePresence>
+        {showChatList && (
+          <motion.div
+            initial={isMobile ? { x: -50, opacity: 0 } : { width: 0, opacity: 0 }}
+            animate={isMobile ? { x: 0, opacity: 1 } : { width: 220, opacity: 1 }}
+            exit={isMobile ? { x: -50, opacity: 0 } : { width: 0, opacity: 0 }}
+            transition={{ duration: 0.25, ease: "easeInOut" }}
+            className={cn(
+              "border-r border-white/5 bg-slate-950/80 backdrop-blur-xl flex flex-col overflow-hidden shrink-0 relative z-10",
+              isMobile && "absolute inset-y-0 left-0 z-50 w-[280px] shadow-2xl shadow-black/80"
+            )}
+          >
+            <div className="flex items-center justify-between px-4 py-4 border-b border-white/5">
+              <div className="flex items-center gap-2">
+                <History size={13} className="text-purple-400" />
+                <span className="text-xs font-semibold text-slate-400 tracking-wider uppercase">Conversations</span>
+              </div>
+              <div className="flex items-center gap-1">
+                {isMobile && (
+                  <button 
+                    onClick={onToggleChatList}
+                    className="p-1.5 rounded-lg hover:bg-white/10 text-slate-500 hover:text-slate-300 transition-colors mr-1"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
                 <motion.button
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
@@ -907,52 +1040,54 @@ export function AIPanel({
                   <Plus size={14} />
                 </motion.button>
               </div>
-              <div className="flex-1 overflow-y-auto p-2 space-y-1 scrollbar-thin">
-                {sortedChats.map((chat) => (
-                  <ChatListItem
-                    key={chat.id}
-                    chat={chat}
-                    isActive={chat.id === activeChatId}
-                    onSwitch={() => onSwitchChat(chat.id)}
-                    onRename={(title: string) => onRenameChat(chat.id, title)}
-                    onPin={() => onPinChat(chat.id)}
-                    onDelete={() => onDeleteChat(chat.id)}
-                  />
-                ))}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            </div>
+            <div className="flex-1 overflow-y-auto p-2 space-y-1 scrollbar-thin">
+              {sortedChats.map((chat) => (
+                <ChatListItem
+                  key={chat.id}
+                  chat={chat}
+                  isActive={chat.id === activeChatId}
+                  onSwitch={() => onSwitchChat(chat.id)}
+                  onRename={(title: string) => onRenameChat(chat.id, title)}
+                  onPin={() => onPinChat(chat.id)}
+                  onDelete={() => onDeleteChat(chat.id)}
+                />
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-        {/* Main Chat Area */}
-        <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative z-10">
-          {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3.5 border-b border-white/5 shrink-0 bg-slate-950/50 backdrop-blur-sm">
-            <div className="flex items-center gap-3">
-              <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={onToggleChatList}
-                className={cn("p-2 rounded-xl transition-all", showChatList ? "bg-purple-500/20 text-purple-400" : "hover:bg-white/5 text-slate-500 hover:text-slate-300")}
-              >
-                <MessageSquare size={14} />
-              </motion.button>
+      {/* Main Chat Area */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative z-10">
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3.5 border-b border-white/5 shrink-0 bg-slate-950/50 backdrop-blur-sm">
+          <div className="flex items-center gap-3">
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={onToggleChatList}
+              className={cn("p-2 rounded-xl transition-all", showChatList ? "bg-purple-500/20 text-purple-400" : "hover:bg-white/5 text-slate-500 hover:text-slate-300")}
+            >
+              <MessageSquare size={14} />
+            </motion.button>
 
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-500/20 via-purple-500/20 to-purple-600/20 flex items-center justify-center border border-purple-500/20 shadow-lg shadow-purple-500/10">
-                <Bot size={16} className="text-purple-400" />
-              </div>
-
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-bold text-slate-200">ᓄᕙᔭ AI</span>
-                  <SecurityBadge level={securityLevel} />
-                </div>
-                <span className="text-[10px] text-slate-600">Nuvuja Godmode v4.0</span>
-              </div>
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-500/20 via-purple-500/20 to-purple-600/20 flex items-center justify-center border border-purple-500/20 shadow-lg shadow-purple-500/10">
+              <Bot size={16} className="text-purple-400" />
             </div>
 
-            <div className="flex items-center gap-1">
-              {/* Zoom controls */}
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-slate-200">ᓄᕙᔭ AI</span>
+                <SecurityBadge level={securityLevel} />
+              </div>
+              <span className="text-[10px] text-slate-600">Nuvuja Godmode v4.0</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1">
+            {/* Zoom controls - hidden on small phones */}
+            {!isSmallPhone && (
               <div className="flex items-center gap-0.5 mr-2 bg-white/5 rounded-xl p-0.5 border border-white/5">
                 <button onClick={() => setZoom((z) => Math.max(0.5, z - 0.1))} className="p-1.5 rounded-lg hover:bg-white/10 text-slate-500 hover:text-slate-300 transition-colors" title="Zoom out">
                   <ZoomOut size={11} />
@@ -962,201 +1097,216 @@ export function AIPanel({
                   <ZoomIn size={11} />
                 </button>
               </div>
-
-              <button onClick={() => setShowSettings(!showSettings)} className="p-2 rounded-xl hover:bg-white/5 text-slate-500 hover:text-slate-300 transition-colors" title="Settings">
-                <Settings size={13} />
-              </button>
-              <button onClick={onClearChat} className="p-2 rounded-xl hover:bg-rose-500/10 text-slate-500 hover:text-rose-400 transition-colors" title="Clear chat">
-                <Trash2 size={13} />
-              </button>
-              <button onClick={onToggle} className="p-2 rounded-xl hover:bg-white/5 text-slate-500 hover:text-slate-300 transition-colors" title="Close panel">
-                <X size={14} />
-              </button>
-            </div>
-          </div>
-
-          {/* Messages */}
-          <div
-            ref={scrollRef}
-            className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4 min-h-0 scrollbar-thin"
-          >
-            <div style={{ transform: `scale(${zoom})`, transformOrigin: "top left", width: `${100 / zoom}%`, minHeight: "100%" }}>
-
-              {/* Welcome state */}
-              {conversations.length === 0 && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="text-center py-16"
-                >
-                  <motion.div
-                    animate={{ rotate: [0, 360] }}
-                    transition={{ duration: 30, repeat: Infinity, ease: "linear" } as any}
-                    className="w-20 h-20 mx-auto mb-6 rounded-3xl bg-gradient-to-br from-purple-500/20 via-sky-500/20 to-purple-600/20 flex items-center justify-center border border-purple-500/20 shadow-2xl shadow-purple-500/20"
-                  >
-                    <Atom size={36} className="text-purple-400" />
-                  </motion.div>
-                  <h2 className="text-lg font-bold text-slate-200 mb-2">ᓄᕙᔭ is online</h2>
-                  <p className="text-sm text-slate-500 mb-1">Autonomous software engineering intelligence</p>
-                  <p className="text-xs text-slate-600">Web search · GitHub access · Security audit · Unlimited output</p>
-                </motion.div>
-              )}
-
-              {/* Suggestions */}
-              {showSuggestions && conversations.length === 0 && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.3 }}
-                  className="space-y-2 mt-6"
-                >
-                  {suggestions.map((s, i) => (
-                    <motion.button
-                      key={s.text}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.4 + i * 0.1 }}
-                      whileHover={{ scale: 1.02, x: 4 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => { setInput(s.text.split(" — ")[0]); setShowSuggestions(false); }}
-                      className={cn("w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs text-left transition-all group border", s.bg, s.border, "hover:bg-white/5")}
-                    >
-                      <s.icon size={16} className={cn(s.color, "shrink-0")} />
-                      <div>
-                        <span className="text-slate-300 font-medium">{s.text}</span>
-                      </div>
-                      <ChevronRight size={12} className="ml-auto text-slate-600 group-hover:text-slate-400 transition-colors" />
-                    </motion.button>
-                  ))}
-                </motion.div>
-              )}
-
-              {/* Tool results */}
-              {toolResults.length > 0 && (
-                <div className="space-y-2 mb-4">
-                  <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1">
-                    <Zap size={10} /> Tool Results
-                  </p>
-                  {toolResults.slice(-3).map((result, i) => (
-                    <ToolResultCard key={`${result.tool}-${i}`} result={result} />
-                  ))}
-                </div>
-              )}
-
-              {/* Messages */}
-              {conversations.map((conv, i) => (
-                <motion.div
-                  key={conv.id}
-                  initial={{ opacity: 0, y: 12, scale: 0.98 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  transition={{ delay: i * 0.03, type: "spring", stiffness: 300, damping: 25 }}
-                  className={cn("flex gap-3", conv.role === "user" ? "flex-row-reverse" : "flex-row")}
-                >
-                  <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5 shadow-lg", conv.role === "user" ? "bg-sky-500/20 shadow-sky-500/10" : "bg-purple-500/20 shadow-purple-500/10")}>
-                    {conv.role === "user" ? <User size={13} className="text-sky-400" /> : <Bot size={13} className="text-purple-400" />}
-                  </div>
-                  <div className={cn("flex-1 max-w-[88%]", conv.role === "user" && "text-right")}>
-                    {conv.role === "assistant" && conv.metadata?.action === "review" && conv.content.includes("###REVIEW_START###") ? (
-                      <ReviewCard review={(() => {
-                        try {
-                          const match = conv.content.match(/###REVIEW_START###([\s\S]*?)###REVIEW_END###/);
-                          return match ? JSON.parse(match[1].trim()) : null;
-                        } catch { return null; }
-                      })()} />
-                    ) : (
-                      <div className={cn("inline-block px-4 py-3 rounded-2xl text-left shadow-sm", conv.role === "user" ? "bg-sky-500/10 border border-sky-500/20" : "bg-white/5 border border-white/5 backdrop-blur-sm")}>
-                        <MessageContent content={conv.content} language={currentLanguage} onApplyCode={conv.role === "assistant" ? onApplyCode : undefined} />
-                      </div>
-                    )}
-                    <p className="text-[9px] text-slate-600 mt-1.5 flex items-center gap-1.5">
-                      <Clock size={8} />
-                      {new Date(conv.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                      {conv.metadata?.model && <span className="text-slate-700">· {conv.metadata.model}</span>}
-                      {conv.metadata?.key && <span className="text-slate-700">· {conv.metadata.key}</span>}
-                    </p>
-                  </div>
-                </motion.div>
-              ))}
-
-              {/* Thinking animation */}
-              {isLoading && <ThinkingAnimation />}
-            </div>
-          </div>
-
-          {/* Input */}
-          <div className="p-3 border-t border-white/5 bg-slate-950/80 backdrop-blur-xl shrink-0">
-            {currentCode && (
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => setAttachCode(!attachCode)}
-                className={cn("flex items-center gap-2 mb-2.5 px-3 py-1.5 rounded-lg text-[11px] transition-all border", attachCode ? "bg-purple-500/20 text-purple-400 border-purple-500/30" : "text-slate-600 hover:text-slate-400 hover:bg-white/5 border-transparent")}
-              >
-                <Paperclip size={10} />
-                {attachCode ? "Code attached · Click to detach" : "Attach current file"}
-                {attachCode && <span className="text-[9px] text-slate-500">{currentLanguage}</span>}
-              </motion.button>
             )}
 
-            <div className="flex gap-2">
-              <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={toggleVoice}
-                className={cn("p-2.5 rounded-xl transition-all shrink-0", isListening ? "bg-rose-500/20 text-rose-400 animate-pulse" : "bg-white/5 text-slate-500 hover:text-slate-300 hover:bg-white/10")}
-                title={isListening ? "Stop listening" : "Voice input"}
-              >
-                {isListening ? <Satellite size={15} className="animate-pulse" /> : <Radio size={15} />}
-              </motion.button>
+            <button onClick={() => setShowSettings(!showSettings)} className="p-2 rounded-xl hover:bg-white/5 text-slate-500 hover:text-slate-300 transition-colors" title="Settings">
+              <Settings size={13} />
+            </button>
+            <button onClick={onClearChat} className="p-2 rounded-xl hover:bg-rose-500/10 text-slate-500 hover:text-rose-400 transition-colors" title="Clear chat">
+              <Trash2 size={13} />
+            </button>
+            <button onClick={onToggle} className="p-2 rounded-xl hover:bg-white/5 text-slate-500 hover:text-slate-300 transition-colors" title="Close panel">
+              <X size={14} />
+            </button>
+          </div>
+        </div>
 
-              <div className="flex-1 relative z-10">
-                <input
-                  ref={inputRef}
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
-                  placeholder="Ask ᓄᕙᔭ anything..."
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-200 placeholder-slate-600 outline-none focus:border-purple-500/40 focus:ring-1 focus:ring-purple-500/20 transition-all backdrop-blur-sm pointer-events-auto"
-                />
-                {isListening && (
-                  <motion.div
-                    animate={{ opacity: [0.3, 1, 0.3] }}
-                    transition={{ duration: 1, repeat: Infinity } as any}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-rose-400"
-                  />
-                )}
+        {/* Messages */}
+        <div
+          ref={scrollRef}
+          className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4 min-h-0 scrollbar-thin"
+        >
+          <div style={{ transform: `scale(${zoom})`, transformOrigin: "top left", width: `${100 / zoom}%`, minHeight: "100%" }}>
+
+            {/* Welcome state */}
+            {conversations.length === 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-center py-16"
+              >
+                <motion.div
+                  animate={{ rotate: [0, 360] }}
+                  transition={{ duration: 30, repeat: Infinity, ease: "linear" } as any}
+                  className="w-20 h-20 mx-auto mb-6 rounded-3xl bg-gradient-to-br from-purple-500/20 via-sky-500/20 to-purple-600/20 flex items-center justify-center border border-purple-500/20 shadow-2xl shadow-purple-500/20"
+                >
+                  <Atom size={36} className="text-purple-400" />
+                </motion.div>
+                <h2 className="text-lg font-bold text-slate-200 mb-2">ᓄᕙᔭ is online</h2>
+                <p className="text-sm text-slate-500 mb-1">Autonomous software engineering intelligence</p>
+                <p className="text-xs text-slate-600">Web search · GitHub access · Security audit · Unlimited output</p>
+              </motion.div>
+            )}
+
+            {/* Suggestions */}
+            {showSuggestions && conversations.length === 0 && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.3 }}
+                className="space-y-2 mt-6"
+              >
+                {suggestions.map((s, i) => (
+                  <motion.button
+                    key={s.text}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.4 + i * 0.1 }}
+                    whileHover={{ scale: 1.02, x: 4 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => { setInput(s.text.split(" — ")[0]); setShowSuggestions(false); }}
+                    className={cn("w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs text-left transition-all group border", s.bg, s.border, "hover:bg-white/5")}
+                  >
+                    <s.icon size={16} className={cn(s.color, "shrink-0")} />
+                    <div>
+                      <span className="text-slate-300 font-medium">{s.text}</span>
+                    </div>
+                    <ChevronRight size={12} className="ml-auto text-slate-600 group-hover:text-slate-400 transition-colors" />
+                  </motion.button>
+                ))}
+              </motion.div>
+            )}
+
+            {/* Tool results */}
+            {toolResults.length > 0 && (
+              <div className="space-y-2 mb-4">
+                <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                  <Zap size={10} /> Tool Results
+                </p>
+                {toolResults.slice(-3).map((result, i) => (
+                  <ToolResultCard key={`${result.tool}-${i}`} result={result} />
+                ))}
               </div>
+            )}
 
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handleSend}
-                disabled={!input.trim() || isLoading}
-                className={cn("px-5 py-2.5 rounded-xl transition-all flex items-center justify-center shadow-lg", input.trim() && !isLoading ? "bg-gradient-to-r from-sky-500 to-purple-500 text-white hover:opacity-90 shadow-purple-500/25" : "bg-white/5 text-slate-600 cursor-not-allowed")}
+            {/* Messages */}
+            {conversations.map((conv, i) => (
+              <motion.div
+                key={conv.id}
+                initial={{ opacity: 0, y: 12, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ delay: i * 0.03, type: "spring", stiffness: 300, damping: 25 }}
+                className={cn("flex gap-3", conv.role === "user" ? "flex-row-reverse" : "flex-row")}
               >
-                <Send size={14} />
-              </motion.button>
+                <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5 shadow-lg", conv.role === "user" ? "bg-sky-500/20 shadow-sky-500/10" : "bg-purple-500/20 shadow-purple-500/10")}>
+                  {conv.role === "user" ? <User size={13} className="text-sky-400" /> : <Bot size={13} className="text-purple-400" />}
+                </div>
+                <div className={cn("flex-1 max-w-[88%]", conv.role === "user" && "text-right")}>
+                  {conv.role === "assistant" && conv.metadata?.action === "review" && conv.content.includes("###REVIEW_START###") ? (
+                    <ReviewCard review={(() => {
+                      try {
+                        const match = conv.content.match(/###REVIEW_START###([\s\S]*?)###REVIEW_END###/);
+                        return match ? JSON.parse(match[1].trim()) : null;
+                      } catch { return null; }
+                    })()} />
+                  ) : (
+                    <div className={cn("inline-block px-4 py-3 rounded-2xl text-left shadow-sm", conv.role === "user" ? "bg-sky-500/10 border border-sky-500/20" : "bg-white/5 border border-white/5 backdrop-blur-sm")}>
+                      <MessageContent content={conv.content} language={currentLanguage} onApplyCode={conv.role === "assistant" ? onApplyCode : undefined} />
+                    </div>
+                  )}
+                  <p className="text-[9px] text-slate-600 mt-1.5 flex items-center gap-1.5">
+                    <Clock size={8} />
+                    {new Date(conv.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    {conv.metadata?.model && <span className="text-slate-700">· {conv.metadata.model}</span>}
+                    {conv.metadata?.key && <span className="text-slate-700">· {conv.metadata.key}</span>}
+                  </p>
+                </div>
+              </motion.div>
+            ))}
+
+            {/* Thinking animation */}
+            {isLoading && <ThinkingAnimation />}
+          </div>
+        </div>
+
+        {/* Input */}
+        <div className="p-3 border-t border-white/5 bg-slate-950/80 backdrop-blur-xl shrink-0">
+          {currentCode && (
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setAttachCode(!attachCode)}
+              className={cn("flex items-center gap-2 mb-2.5 px-3 py-1.5 rounded-lg text-[11px] transition-all border", attachCode ? "bg-purple-500/20 text-purple-400 border-purple-500/30" : "text-slate-600 hover:text-slate-400 hover:bg-white/5 border-transparent")}
+            >
+              <Paperclip size={10} />
+              {attachCode ? "Code attached · Click to detach" : "Attach current file"}
+              {attachCode && <span className="text-[9px] text-slate-500">{currentLanguage}</span>}
+            </motion.button>
+          )}
+
+          <div className="flex gap-2">
+            {/* MIC BUTTON - now with proper Mic icon */}
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={toggleVoice}
+              className={cn("p-2.5 rounded-xl transition-all shrink-0", isListening ? "bg-rose-500/20 text-rose-400 animate-pulse" : "bg-white/5 text-slate-500 hover:text-slate-300 hover:bg-white/10")}
+              title={isListening ? "Stop listening" : "Voice input"}
+            >
+              {isListening ? <MicOff size={15} className="animate-pulse" /> : <Mic size={15} />}
+            </motion.button>
+
+            <div className="flex-1 relative z-10">
+              <input
+                ref={inputRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
+                placeholder="Ask ᓄᕙᔭ anything..."
+                enterKeyHint="send"
+                autoCapitalize="off"
+                autoCorrect="off"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-200 placeholder-slate-600 outline-none focus:border-purple-500/40 focus:ring-1 focus:ring-purple-500/20 transition-all backdrop-blur-sm pointer-events-auto"
+              />
+              {isListening && (
+                <motion.div
+                  animate={{ opacity: [0.3, 1, 0.3] }}
+                  transition={{ duration: 1, repeat: Infinity } as any}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-rose-400"
+                />
+              )}
             </div>
 
-            <div className="flex items-center justify-between mt-2">
-              <p className="text-[9px] text-slate-700 flex items-center gap-3">
-                <span className="flex items-center gap-1"><Zap size={8} /> /review</span>
-                <span className="flex items-center gap-1"><Wand2 size={8} /> /fix</span>
-                <span className="flex items-center gap-1"><Brain size={8} /> /explain</span>
-                <span className="flex items-center gap-1"><Rocket size={8} /> /generate</span>
-              </p>
-              <div className="flex items-center gap-2">
-                {isLoading && (
-                  <span className="text-[9px] text-purple-400 flex items-center gap-1">
-                    <Loader2 size={8} className="animate-spin" /> Processing
-                  </span>
-                )}
-                <span className="text-[9px] text-slate-700">{input.length} chars</span>
-              </div>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleSend}
+              disabled={!input.trim() || isLoading}
+              className={cn("px-5 py-2.5 rounded-xl transition-all flex items-center justify-center shadow-lg", input.trim() && !isLoading ? "bg-gradient-to-r from-sky-500 to-purple-500 text-white hover:opacity-90 shadow-purple-500/25" : "bg-white/5 text-slate-600 cursor-not-allowed")}
+            >
+              <Send size={14} />
+            </motion.button>
+          </div>
+
+          <div className="flex items-center justify-between mt-2">
+            <p className="text-[9px] text-slate-700 flex items-center gap-3">
+              <span className="flex items-center gap-1"><Zap size={8} /> /review</span>
+              <span className="flex items-center gap-1"><Wand2 size={8} /> /fix</span>
+              <span className="flex items-center gap-1"><Brain size={8} /> /explain</span>
+              <span className="flex items-center gap-1"><Rocket size={8} /> /generate</span>
+            </p>
+            <div className="flex items-center gap-2">
+              {isLoading && (
+                <span className="text-[9px] text-purple-400 flex items-center gap-1">
+                  <Loader2 size={8} className="animate-spin" /> Processing
+                </span>
+              )}
+              <span className="text-[9px] text-slate-700">{input.length} chars</span>
             </div>
           </div>
         </div>
-      </motion.div>
-    </AnimatePresence>
+      </div>
+    </motion.div>
+  );
+
+  return (
+    <>
+      <AnimatePresence>
+        {!isOpen && toggleButton}
+      </AnimatePresence>
+      <AnimatePresence>
+        {isOpen && panelContent}
+      </AnimatePresence>
+    </>
   );
 }
