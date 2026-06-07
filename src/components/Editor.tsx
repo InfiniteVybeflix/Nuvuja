@@ -525,38 +525,63 @@ export function EditorPanel({
   const orbitStartRef = useRef({ x: 0, rotation: 0 });
 
   // Floating toggle button position
-  const [togglePos, setTogglePos] = useState({ x: 16, y: -80 }); // Higher up from bottom
+  const [togglePos, setTogglePos] = useState({ x: 0, y: 0 });
   const hasAutoPositioned = useRef(false);
 
-  // ─── SAFE INITIAL POSITION — works on Web, PWA, all screen sizes ─────
+  // ─── PWA-SAFE POSITIONING ───────────────────────────────────────────
   useEffect(() => {
     if (hasAutoPositioned.current) return;
-    hasAutoPositioned.current = true;
 
-    const position = () => {
-      const vw = window.innerWidth;
-      const vh = window.innerHeight;
-      const isMobile = vw < 768;
-
-      // Center horizontally (always safe)
-      const x = vw / 2;
-
-      // Bottom: 120px on mobile (clears URL bar + home indicator), 80px on desktop
-      const bottomOffset = isMobile ? 120 : 80;
-      const y = -bottomOffset;
-
-      setTogglePos({ x, y });
+    const getViewport = () => {
+      const vv = window.visualViewport;
+      return {
+        w: vv ? vv.width : window.innerWidth,
+        h: vv ? vv.height : window.innerHeight,
+      };
     };
 
-    // Delay slightly to let PWA viewport settle
-    const timer = setTimeout(position, 100);
+    const position = () => {
+      const { w, h } = getViewport();
+      const isMobile = w < 768;
+
+      // Center horizontally
+      const x = w / 2;
+
+      // Bottom offset: 100px mobile, 80px desktop
+      // Add safe area for PWA home indicator
+      const baseOffset = isMobile ? 100 : 80;
+      const safeBottom = parseInt(
+        getComputedStyle(document.documentElement).getPropertyValue("--safe-bottom") || "0",
+        10
+      );
+      const bottomOffset = baseOffset + safeBottom;
+
+      setTogglePos({ x, y: -bottomOffset });
+      hasAutoPositioned.current = true;
+    };
+
+    // 300ms delay for PWA viewport to fully settle
+    const timer = setTimeout(position, 300);
+
+    const vv = window.visualViewport;
+    if (vv) {
+      vv.addEventListener("resize", position);
+      vv.addEventListener("scroll", position);
+    }
     window.addEventListener("resize", position);
+    window.addEventListener("orientationchange", () => setTimeout(position, 300));
 
     return () => {
       clearTimeout(timer);
+      if (vv) {
+        vv.removeEventListener("resize", position);
+        vv.removeEventListener("scroll", position);
+      }
       window.removeEventListener("resize", position);
+      window.removeEventListener("orientationchange", position);
     };
   }, []);
+
 
   const [isDraggingToggle, setIsDraggingToggle] = useState(false);
   const dragStartRef = useRef({ x: 0, y: 0, startX: 0, startY: 0 });
@@ -1501,12 +1526,13 @@ export function EditorPanel({
           style={{
             left: togglePos.x,
             bottom: togglePos.y < 0 ? Math.abs(togglePos.y) : togglePos.y,
-            width: 280,
-            height: 280,
-            marginLeft: -140,
-            marginBottom: -140,
+            width: Math.min(280, typeof window !== "undefined" ? window.innerWidth * 0.8 : 280),
+            height: Math.min(280, typeof window !== "undefined" ? window.innerHeight * 0.4 : 280),
+            marginLeft: -Math.min(140, typeof window !== "undefined" ? window.innerWidth * 0.4 : 140),
+            marginBottom: -Math.min(140, typeof window !== "undefined" ? window.innerHeight * 0.2 : 140),
           }}
         >
+          
           {/* ─── ORIGIN POINT (0,0) — All orbital math centers here ─── */}
           <div className="relative w-full h-full">
 
