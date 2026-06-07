@@ -777,7 +777,7 @@ export function AIPanel({
     const newToolResults: ToolResult[] = [];
     conversations.forEach((conv) => {
       if (conv.role === "assistant" && conv.content.includes("###TOOL_RESULT###")) {
-        const matches = conv.content.matchAll(/###TOOL_RESULT###\n({[\s\S]*?})\n###TOOL_END###/g);
+        const matches = Array.from(conv.content.matchAll(/###TOOL_RESULT###\n({[\s\S]*?})\n###TOOL_END###/g));
         for (const match of matches) {
           try {
             const result = JSON.parse(match[1]);
