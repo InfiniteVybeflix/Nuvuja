@@ -917,7 +917,7 @@ export default function Home() {
                     const input = document.querySelector('input[placeholder*="Ask ᓄᕙᔭ"]') as HTMLInputElement;
                     if (input) {
                       const prefix = action.includes("fix") ? "/fix" : action.includes("explain") ? "/explain" : "";
-                      input.value = `${prefix} ${action}:\n\n\` + "`" + "`" + "`" + `\n${code.slice(0, 800)}\n` + "`" + "`" + "`";
+                      input.value = `${prefix} ${action}:\n\n\`\`\`\n${code.slice(0, 800)}\n\`\`\``;
                       input.focus();
                     }
                   }, 100);
