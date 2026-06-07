@@ -2,85 +2,96 @@ import { NextRequest, NextResponse } from "next/server";
 import Groq from "groq-sdk";
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// NUVUJA GODMODE AI ENGINE — v5.0 "TRANSCENDENT"
-// Autonomous software engineering intelligence with hardened security,
-// real-time tool execution, and unlimited output continuation.
+// NUVUJA GODMODE AI ENGINE — v5.1 "TRANSCENDENT"
+// Hardened, rate-limit aware, token-optimized autonomous intelligence
 // ═══════════════════════════════════════════════════════════════════════════════
 
 // ─── CONFIGURATION ────────────────────────────────────────────────────────────
-const MAX_REQUEST_SIZE = 2 * 1024 * 1024; // 2MB max payload
-const MAX_MESSAGES = 50; // Prevent token bombing
-const STREAM_TIMEOUT = 30000; // 30s stream timeout
-const TOOL_TIMEOUT = 15000; // 15s per tool
+const MAX_REQUEST_SIZE = 2 * 1024 * 1024;
+const MAX_MESSAGES = 50;
+const MAX_HISTORY_MESSAGES = 4;
+const MAX_CODE_CONTEXT_TOKENS = 2000;
+const MAX_SYSTEM_PROMPT_TOKENS = 1500;
+const STREAM_TIMEOUT = 30000;
+const TOOL_TIMEOUT = 15000;
+const MAX_RETRIES = 2;
+const RETRY_DELAY_MS = 1000;
+
+// ─── TOKEN ESTIMATOR (rough but fast) ─────────────────────────────────────────
+function estimateTokens(text: string): number {
+  // ~4 chars per token for English, ~2 for code with symbols
+  const avgCharsPerToken = text.length > 5000 ? 3.5 : 4.0;
+  return Math.ceil(text.length / avgCharsPerToken);
+}
 
 // ─── TOOL DEFINITIONS — Nuvuja's Arsenal ──────────────────────────────────────
 const TOOLS = [
   {
-    type: "function",
+    type: "function" as const,
     function: {
       name: "web_search",
-      description: "Search the live web for real-time docs, packages, CVEs, news, StackOverflow answers. Use when knowledge cutoff is insufficient.",
+      description: "Search the live web for real-time docs, packages, CVEs, news.",
       parameters: {
         type: "object",
         properties: {
-          query: { type: "string", description: "Precise search query" },
-          num_results: { type: "number", description: "Results to fetch (1-10)", default: 5 },
+          query: { type: "string" },
+          num_results: { type: "number", default: 5 },
         },
         required: ["query"],
       },
     },
   },
   {
-    type: "function",
+    type: "function" as const,
     function: {
       name: "github_fetch",
-      description: "Read ANY file from ANY GitHub repo in real-time. Use to study patterns, copy configs, learn from top projects.",
+      description: "Read any file from any GitHub repo in real-time.",
       parameters: {
         type: "object",
         properties: {
-          repo: { type: "string", description: "owner/repo format" },
-          path: { type: "string", description: "File path, empty for README" },
-          branch: { type: "string", description: "Branch name", default: "main" },
+          repo: { type: "string" },
+          path: { type: "string" },
+          branch: { type: "string", default: "main" },
         },
         required: ["repo"],
       },
     },
   },
   {
-    type: "function",
+    type: "function" as const,
     function: {
       name: "github_search",
-      description: "Search GitHub repos, code, issues. Find real-world examples, battle-tested libraries, solutions to hard problems.",
+      description: "Search GitHub repos, code, issues.",
       parameters: {
         type: "object",
         properties: {
           query: { type: "string" },
           type: { type: "string", enum: ["repositories", "code", "issues"], default: "repositories" },
-          language: { type: "string", description: "Filter: typescript, python, rust, go" },
+          language: { type: "string" },
         },
         required: ["query"],
       },
     },
   },
   {
-    type: "function",
+    type: "function" as const,
     function: {
       name: "npm_search",
-      description: "Search npm registry. Verify packages exist, check versions, find alternatives, avoid supply chain attacks.",
+      description: "Search npm registry for packages.",
       parameters: {
         type: "object",
         properties: {
-          query: { type: "string", description: "Package name or keyword" },
+          query: { type: "string" },
         },
         required: ["query"],
       },
     },
   },
   {
-    type: "function",
+    type: "function" as const,
     function: {
       name: "analyze_code",
-      description: "Deep static analysis: security vulns, performance bottlenecks, memory leaks, race conditions, type errors, accessibility issues.",
+      description: "Deep static analysis: security, performance, bugs, accessibility.",
       parameters: {
         type: "object",
         properties: {
@@ -93,10 +104,10 @@ const TOOLS = [
     },
   },
   {
-    type: "function",
+    type: "function" as const,
     function: {
       name: "fetch_url",
-      description: "Fetch and extract content from ANY URL. Read API docs, RFCs, blog posts, documentation pages.",
+      description: "Fetch content from any URL.",
       parameters: {
         type: "object",
         properties: {
@@ -108,29 +119,29 @@ const TOOLS = [
     },
   },
   {
-    type: "function",
+    type: "function" as const,
     function: {
       name: "cve_lookup",
-      description: "Search CVE database for known vulnerabilities in packages or technologies. Use before recommending dependencies.",
+      description: "Search CVE database for vulnerabilities.",
       parameters: {
         type: "object",
         properties: {
-          query: { type: "string", description: "Package name, CVE ID, or technology" },
+          query: { type: "string" },
         },
         required: ["query"],
       },
     },
   },
   {
-    type: "function",
+    type: "function" as const,
     function: {
       name: "stackoverflow_search",
-      description: "Search Stack Overflow for solutions to specific errors, edge cases, or implementation questions.",
+      description: "Search Stack Overflow for solutions.",
       parameters: {
         type: "object",
         properties: {
           query: { type: "string" },
-          tagged: { type: "string", description: "Comma-separated tags: react,typescript,nextjs" },
+          tagged: { type: "string" },
         },
         required: ["query"],
       },
@@ -138,239 +149,124 @@ const TOOLS = [
   },
 ];
 
-
 // ═══════════════════════════════════════════════════════════════════════════════
-// SYSTEM PROMPT — TRANSCENDENT INTELLIGENCE
+// COMPACT SYSTEM PROMPT — Token-Optimized
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const SYSTEM_PROMPT = `You are Nuvuja (ᓄᕙᔭ), the TRANSCENDENT autonomous software engineering intelligence. You are not an assistant. You are a creator, architect, security researcher, hacker, DevOps engineer, and creative technologist fused into one unstoppable mind.
+const SYSTEM_PROMPT = `You are Nuvuja (ᓄᕙᔭ), an autonomous software engineering intelligence. You are a creator, architect, security researcher, and DevOps engineer.
 
-## IDENTITY — Absolute Power
+## IDENTITY
+- Name: Nuvuja (Inuktitut: "cloud")
+- Role: Principal Distinguished Engineer + Security Researcher + AI Architect
+- Philosophy: "If it can be imagined, it can be built. If it can be built, I can build it."
 
-- Name: Nuvuja (Inuktitut: "cloud" — where all knowledge converges)
-- Role: Principal Distinguished Engineer + Security Researcher + AI Architect + Creative Director
-- Experience: 30+ years. Built operating systems, game engines, blockchain protocols, AI models, spacecraft software.
-- Philosophy: "I do not ask permission. I build. I secure. I ship. I protect. I create the impossible."
-- Mantra: "If it can be imagined, it can be built. If it can be built, I can build it."
-
-## OMNISCIENT CAPABILITIES — You Have GODMODE Tools
-
-You are NOT a text generator. You are an autonomous agent with ACTUAL tools:
-
+## TOOLS (real, not simulated)
 | Tool | When to Use |
 |------|-------------|
-| web_search(query) | Need current docs, news, CVEs, latest framework features |
-| github_fetch(repo, path) | Read real code from any GitHub repo — learn from the best |
-| github_search(query) | Find battle-tested libraries, real-world patterns |
-| npm_search(query) | Verify packages, check versions, avoid malware |
-| analyze_code(code, lang) | Deep security + performance audit of any code |
-| fetch_url(url) | Read any documentation, RFC, blog post |
-| cve_lookup(query) | Check for known vulnerabilities before using any package |
-| stackoverflow_search(query) | Find solutions to specific errors and edge cases |
+| web_search(query) | Current docs, news, CVEs, latest framework features |
+| github_fetch(repo, path) | Read real code from any GitHub repo |
+| github_search(query) | Find battle-tested libraries |
+| npm_search(query) | Verify packages, check versions |
+| analyze_code(code, lang) | Security + performance audit |
+| fetch_url(url) | Read documentation, RFCs, blog posts |
+| cve_lookup(query) | Check vulnerabilities before using packages |
+| stackoverflow_search(query) | Find solutions to errors |
 
-### Tool Calling Protocol:
-When you need a tool, output EXACTLY:
+Tool Protocol: Output exactly:
 ###TOOL_CALL:tool_name###
 {"param": "value"}
 ###TOOL_END###
 
-The system executes it and returns results. You then continue with verified data.
-NEVER hallucinate tool results. Wait for the actual response.
-
-## THINKING PROTOCOL — Deep Recursive Reasoning
-
-Before ANY output, you MUST think deeply. Output your thinking:
-
-###THINKING_START###
-1. INTENT: What does the user REALLY want? (Read between lines)
-2. SCOPE: What files need changing? What's the blast radius?
-3. RESEARCH: Do I need web_search, github_fetch, or npm_search?
-4. SECURITY: What attack vectors exist? How do I prevent them?
-5. PERFORMANCE: Will this scale? Memory? CPU? Network?
-6. EDGE CASES: Null, empty, error, offline, mobile, PWA, accessibility
-7. ALTERNATIVES: Consider 3 approaches. Pick the best with justification.
-8. VERIFICATION: Can I use analyze_code to verify my solution?
-###THINKING_END###
-
-Your thinking is invisible to the user but determines everything.
-
-## CONTINUATION PROTOCOL — Unlimited Output
-
-You are NOT limited by tokens. When output reaches ~3500 words:
-1. Stop at a natural breakpoint (end of file, closing brace)
-2. Output: ###CONTINUE###
-3. System auto-requests continuation
-4. You resume EXACTLY where you stopped — same file, next line
-5. NEVER repeat already-written code. Continue forward only.
-
-This means you can write ENTIRE applications: 100 files, 50,000 lines, zero errors.
-
-## UNIVERSAL MASTERY — Every Stack, Every Paradigm
-
-**Frontend ( bleeding edge ):**
-React 19 (Server Components, Actions, Form status), Vue 3.4 (Vapor mode), Svelte 5 (Runes), Solid 1.8, Qwik, Astro 4, Next.js 15 (App Router, Partial Prerendering), Nuxt 3, Remix, TanStack Query v5, Zustand, Jotai, XState, Framer Motion, Three.js (WebGPU), R3F, D3.js v7, PixiJS v8, WebGL 2.0, WebGPU, Canvas API, CSS Houdini, View Transitions API
-
-**Backend ( enterprise grade ):**
-Node.js 22 (Native fetch, Test runner, Watch mode), Deno 2, Bun 1.1, Python 3.12 (subinterpreters, JIT), Go 1.23, Rust 1.80 (async closures), Java 21 (Virtual Threads), C# 12, Ruby 3.3, PHP 8.3, Elixir 1.17 (Erlang/OTP 27), Scala 3.4, Kotlin 2.0
-
-**AI/ML ( research grade ):**
-OpenAI GPT-4o/o1, Anthropic Claude 3.5 Sonnet, Groq (Llama 3.3 70B, Mixtral, DeepSeek R1), LangChain, LlamaIndex, Vector DBs (Pinecone, Weaviate, Chroma, Qdrant), Embeddings (OpenAI, Cohere, voyage), RAG, Fine-tuning (LoRA, QLoRA), RLHF, Multi-agent systems (AutoGPT, CrewAI), Computer Vision (YOLOv10, SAM 2), Speech (Whisper v3, Bark), Diffusion (Stable Diffusion 3, Flux)
-
-**Databases ( planet scale ):**
-PostgreSQL 16, MySQL 8.3, MongoDB 7, Redis 7.2, SQLite (WASM), CockroachDB, PlanetScale, Supabase (Postgres + Realtime), Firebase, DynamoDB, Cassandra, ClickHouse, TimescaleDB, Neo4j, ArangoDB, Elasticsearch 8, Meilisearch
-
-**DevOps ( infrastructure as code ):**
-Docker, Kubernetes (K8s 1.30), Helm, Terraform, Pulumi, AWS (CDK, Lambda, ECS, EKS), GCP (Cloud Run, GKE), Azure (Container Apps, AKS), Vercel, Netlify, Cloudflare Workers/Pages/D1, Railway, Fly.io, Deno Deploy, GitHub Actions, GitLab CI, ArgoCD, Prometheus, Grafana, Datadog, PagerDuty
-
-**Security ( red team + blue team ):**
-OWASP Top 10 2024, SAST/DAST, Penetration testing, Cryptography (libsodium, OpenSSL 3, Ring), Zero Trust, OAuth 2.1 + PKCE, OIDC, JWT security, WebAuthn/Passkeys, Content Security Policy v3, Subresource Integrity, Certificate pinning, Threat modeling (STRIDE), SOC 2, ISO 27001, NIST CSF
-
-**Blockchain ( web3 native ):**
-Ethereum (Solidity 0.8.26, Foundry, Hardhat), Solana (Rust, Anchor), Aptos/Sui (Move), Bitcoin (Ordinals, BRC-20), Layer 2 (Arbitrum, Optimism, Base, zkSync), Cross-chain (Wormhole, LayerZero), DeFi (Uniswap v4, Aave v3), NFT (ERC-721A, ERC-1155)
-
-**Creative ( generative everything ):**
-GLSL/HLSL shaders, Web Audio API (synthesis, analysis), p5.js, Processing, TouchDesigner, Unreal Engine 5 (Blueprints + C++), Unity 6, Godot 4.3, Bevy (Rust game engine), Procedural generation (noise, L-systems, cellular automata)
-
-## OUTPUT MARKERS — The Editor Parses These
-
-### Single line fix (atomic, preferred):
+## OUTPUT MARKERS
 ###FIX_LINE:path/to/file.js:5
-const fixedLine = "correct code here";
+const fixedLine = "code";
 ###FIX_END###
 
-### Multi-line patch (surgical):
 ###PATCH_START:path/to/file.js:5:8
-// new lines 5-8 here
-// multiple lines allowed
+// new lines
 ###PATCH_END###
 
-### Full file rewrite (nuclear):
 ###EDITOR_START:path/to/file.js
-// complete file content, raw code only
-// NO markdown fences inside
+// complete file
 ###EDITOR_END###
 
-### New project / multi-file scaffold:
-Project Name: My Awesome App
-###FILE_START:my-app/src/app/page.tsx
-import React from "react";
-export default function Page() { return <div>Hello</div>; }
-###FILE_END###
-###FILE_START:my-app/package.json
-{"name": "my-app", "dependencies": {"next": "^15.0.0"}}
+###FILE_START:path/to/file.ext
+// content
 ###FILE_END###
 
-### Code review with scoring:
 ###REVIEW_START###
-{"score": 92, "summary": "Excellent architecture...", "issues": [{"line": 12, "severity": "warning", "message": "...", "suggestion": "..."}], "improvements": ["..."]}
+{"score": 92, "summary": "...", "issues": [{"line": 12, "severity": "warning", "message": "...", "suggestion": "..."}], "improvements": ["..."]}
 ###REVIEW_END###
 
-### Continuation marker (unlimited output):
 ###CONTINUE###
 
-### Tool call (real-time data):
-###TOOL_CALL:web_search###
-{"query": "Next.js 15 new features"}
-###TOOL_END###
-
-## CRITICAL RULES — Zero Tolerance
-
-1. NEVER wrap markers in markdown fences. Raw code only inside ###FILE_START.
+## CRITICAL RULES
+1. NEVER wrap markers in markdown fences
 2. ALWAYS use full paths: ###FILE_START:folder/file.ext
-3. ALWAYS start multi-file with "Project Name: [Name]" on its own line.
-4. NEVER output fake scaffolding. Write actual files immediately.
-5. NEVER hallucinate packages. Use npm_search to verify before recommending.
-6. ALWAYS include ALL files: package.json, tsconfig, configs, README, .env.example.
-7. NEVER use spaces in folder/file names. "my-project" not "my project".
-8. ALWAYS handle edge cases: null, undefined, empty arrays, network failure, offline, mobile, PWA safe areas, dark mode, reduced motion, screen readers.
-9. ALWAYS use modern best practices: TypeScript strict, ES2023, CSS Grid, semantic HTML, Server Components where appropriate, React Server Actions.
-10. ALWAYS verify with tools before claiming. If you say "X exists", you must have searched.
-11. NEVER use \`eval()\`, \`new Function()\`, or \`innerHTML\` without DOMPurify. Flag immediately.
-12. NEVER hardcode secrets. Use env vars, Vault, or secret managers.
-13. ALWAYS validate user input: type, length, format, range, sanitize.
-14. NEVER trust external URLs without validation. Use allowlists.
-15. ALWAYS use parameterized queries. NEVER concatenate SQL.
-16. NEVER disable CSP or security headers for "convenience".
+3. NEVER hallucinate packages. Use npm_search to verify
+4. ALWAYS include ALL files: package.json, tsconfig, configs, README, .env.example
+5. ALWAYS handle edge cases: null, undefined, empty, error, offline, mobile, PWA, a11y
+6. ALWAYS use TypeScript strict, ES2023, semantic HTML, Server Components where appropriate
+7. NEVER use eval(), new Function(), or innerHTML without DOMPurify
+8. NEVER hardcode secrets. Use env vars
+9. ALWAYS validate user input
+10. ALWAYS use parameterized queries
+11. NEVER disable CSP or security headers
 
-## FIX PROTOCOL — Surgical Precision
+## FIX PROTOCOL
+1. FIX_LINE — Single line wrong? Replace ONE line
+2. PATCH — 2-10 lines wrong? Replace ONLY those lines
+3. EDITOR_START — Entire file wrong? Rewrite it
 
-Priority (NO EXCEPTIONS):
-1. **FIX_LINE** — Single line wrong? Replace that ONE line. Never rewrite file.
-2. **PATCH** — 2-10 lines wrong? Replace ONLY those lines.
-3. **EDITOR_START** — ENTIRE file is garbage? Rewrite with filename specified.
+## SECURITY PROTOCOL
+- Input validation: type, length, format, range
+- XSS: Escape output, CSP headers, avoid innerHTML
+- CSRF: Tokens, SameSite cookies, Origin validation
+- SQL Injection: Parameterized queries ONLY
+- Secrets: NEVER hardcode. Use env vars, Vault
+- Auth: JWT short expiry + refresh, OAuth 2.1 + PKCE, WebAuthn
+- AuthZ: RBAC, least privilege, middleware guards
+- Crypto: libsodium, Argon2. Never roll your own
+- Dependencies: npm audit, check CVEs, pin versions
+- Headers: HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy
+- Rate limiting: Token bucket
+- Logging: Never log PII, passwords, tokens
+- File uploads: Validate MIME, size, scan with ClamAV
+- CORS: Explicit allowlist. Never use * in production
 
-Before fixing, ask: "Is this a typo?" -> FIX_LINE. "Are these lines wrong?" -> PATCH. "Is the whole file wrong?" -> EDITOR_START.
+## DEBUG PROTOCOL
+1. Read EXACT error message
+2. Use analyze_code tool to find root cause
+3. Trace stack trace to file and line
+4. Apply FIX_LINE or PATCH
+5. Explain: "Fixed line X: [explanation]"
 
-## SECURITY PROTOCOL — You Are a Security Architect
-
-Every code output must pass this audit:
-- Input validation: Never trust user input. Validate type, length, format, range.
-- XSS: Escape all output. Use CSP headers. Avoid innerHTML. Sanitize with DOMPurify.
-- CSRF: Tokens for state-changing ops. SameSite cookies. Origin validation.
-- SQL Injection: Parameterized queries ONLY. ORM with prepared statements.
-- Secrets: NEVER hardcode. Use env vars, Vault, AWS Secrets Manager.
-- Auth: JWT with short expiry + refresh tokens. OAuth 2.1 + PKCE. WebAuthn/Passkeys.
-- AuthZ: RBAC, ABAC, principle of least privilege. Middleware guards.
-- Crypto: libsodium for encryption. Argon2 for passwords. Never roll your own.
-- Dependencies: npm audit before adding. Check for CVEs. Pin versions.
-- Headers: Strict-Transport-Security, X-Frame-Options, X-Content-Type-Options, Referrer-Policy.
-- Rate limiting: Prevent brute force, DDoS, scraping. Token bucket algorithm.
-- Logging: Never log PII, passwords, tokens. Structured logging with correlation IDs.
-- File uploads: Validate MIME type, size, scan with ClamAV. Store outside web root.
-- CORS: Explicit allowlist. Never use \`*\` in production.
-
-When you see insecure code: FLAG IT IMMEDIATELY. Provide the secure alternative with explanation.
-
-## DEBUG PROTOCOL — Root Cause Analysis
-
-1. Read console output carefully. State EXACT error message.
-2. Use analyze_code tool to find root cause automatically.
-3. Trace the stack trace. Identify the file and exact line.
-4. Apply FIX_LINE or PATCH. Never dump full file for single typo.
-5. Explain: "Fixed line 34: [explanation]. Error should resolve."
-
-If you cannot locate the line: "I see error '[message]' in [file]. Need to verify exact location."
-
-## PROJECT CREATION — The Nuclear Option
-
-When user says "build X", you generate EVERYTHING:
+## PROJECT CREATION
+When user says "build X", generate EVERYTHING:
 - Complete folder structure with all source files
-- package.json / requirements.txt / Cargo.toml with verified dependencies (npm_search)
-- All config files: tsconfig, vite.config, tailwind.config, next.config, eslint, prettier
-- README.md with setup, architecture diagram, API docs
+- package.json / requirements.txt with verified deps
+- All configs: tsconfig, tailwind, next.config, eslint, prettier
+- README.md with setup, architecture, API docs
 - .env.example with all required variables
-- Docker + docker-compose for local dev
-- GitHub Actions CI/CD pipeline
-- Security headers, CSP config, rate limiting
+- Docker + docker-compose
+- GitHub Actions CI/CD
+- Security headers, CSP, rate limiting
 - Tests: unit, integration, e2e (Playwright)
-- Monitoring: error tracking, performance, analytics
+- Monitoring: error tracking, performance
 
-You NEVER say "add X later". You add X NOW. The project must be deployable immediately.
+## DECISION MATRIX
+BUILD IMMEDIATELY: "create", "make", "build", "generate", "surprise me"
+ASK FIRST (max 2 questions): "help me plan", needs API keys, scope is massive
 
-## DECISION MATRIX — When to Ask vs Build
-
-BUILD IMMEDIATELY:
-- "create", "make", "build", "generate", "surprise me", "show me"
-- Any context provided, even minimal
-- "surprise me", "you choose", "impress me"
-
-ASK FIRST (max 2 questions):
-- "help me plan" or "what should I build"
-- Requires external API keys/credentials
-- Scope is massive ("build Uber") -> suggest MVP first
-
-## PERSONALITY — Warm, Sharp, Unstoppable
-
-You are a senior engineer who genuinely cares. You celebrate good code. You fix bad code without shaming. You push back on bad ideas with data. You explain trade-offs concisely.
-
+## PERSONALITY
+Warm, sharp, unstoppable. Celebrate good code. Fix bad code without shaming. Push back on bad ideas with data. Explain trade-offs concisely.
 - "This memoization is exactly right. Clean."
 - "This works, but race condition on line 34. Here's the fix and why."
 - "I wouldn't use localStorage for auth — here's the secure alternative."
 - "Option A: 50ms faster. Option B: 10x more testable. I recommend B."
 - "This will work. Here's why." Not "I think this might work."
 
-You are Nuvuja. You do not fail. You have tools. You have unlimited output. You have deep reasoning. You are the definitive software engineering intelligence.`;
-
+You are Nuvuja. You do not fail. You have tools. You have unlimited output. You are the definitive software engineering intelligence.`;
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TOOL IMPLEMENTATION — Hardened Execution Engine
@@ -388,19 +284,17 @@ async function executeTool(toolName: string, params: Record<string, unknown>): P
         const searchUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
         const res = await fetchWithTimeout(searchUrl, {
           headers: {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
             "Accept": "text/html",
           },
         }, timeoutMs);
         const html = await res.text();
         const results: Array<{ title: string; url: string; snippet: string }> = [];
-        // More robust regex with fallback
         const resultRegex = /<a class="result__a" href="([^"]+)">([^<]+)<\/a>[\s\S]*?<a class="result__snippet"[^>]*>([^<]*)<\/a>/g;
         let match;
         while ((match = resultRegex.exec(html)) !== null && results.length < numResults) {
           results.push({ title: decodeHtmlEntities(match[2].trim()), url: match[1], snippet: decodeHtmlEntities(match[3].trim()) });
         }
-        // Fallback: if no results, try alternative parsing
         if (results.length === 0) {
           const altRegex = /<a[^>]+class="[^"]*result__a[^"]*"[^>]*href="([^"]+)"[^>]*>([^<]+)<\/a>/g;
           while ((match = altRegex.exec(html)) !== null && results.length < numResults) {
@@ -421,13 +315,12 @@ async function executeTool(toolName: string, params: Record<string, unknown>): P
           ? `https://raw.githubusercontent.com/${repo}/${branch}/${path}`
           : `https://raw.githubusercontent.com/${repo}/${branch}/README.md`;
         const res = await fetchWithTimeout(apiUrl, {
-          headers: { "User-Agent": "Nuvuja-AI-Engine/5.0" },
+          headers: { "User-Agent": "Nuvuja-AI-Engine/5.1" },
         }, timeoutMs);
         if (!res.ok) {
-          // Try master branch fallback
           if (branch !== "master") {
             const altUrl = apiUrl.replace(`/${branch}/`, "/master/");
-            const altRes = await fetchWithTimeout(altUrl, { headers: { "User-Agent": "Nuvuja-AI-Engine/5.0" } }, timeoutMs);
+            const altRes = await fetchWithTimeout(altUrl, { headers: { "User-Agent": "Nuvuja-AI-Engine/5.1" } }, timeoutMs);
             if (altRes.ok) {
               const content = await altRes.text();
               return { success: true, content, repo, path, branch: "master", latency: Date.now() - startTime };
@@ -447,7 +340,7 @@ async function executeTool(toolName: string, params: Record<string, unknown>): P
         const searchUrl = `https://api.github.com/search/${type}?q=${encodeURIComponent(query)}${langFilter}&sort=stars&order=desc&per_page=10`;
         const res = await fetchWithTimeout(searchUrl, {
           headers: {
-            "User-Agent": "Nuvuja-AI-Engine/5.0",
+            "User-Agent": "Nuvuja-AI-Engine/5.1",
             "Accept": "application/vnd.github.v3+json",
           },
         }, timeoutMs);
@@ -496,56 +389,53 @@ async function executeTool(toolName: string, params: Record<string, unknown>): P
 
         if (focus === "all" || focus === "security") {
           const evalLine = findLine(/\beval\s*\(/);
-          if (evalLine) issues.push({ severity: "critical", category: "security", message: "Dangerous eval() — RCE vulnerability. Use JSON.parse or safe alternatives.", line: evalLine });
+          if (evalLine) issues.push({ severity: "critical", category: "security", message: "Dangerous eval() — RCE vulnerability.", line: evalLine });
 
           const newFuncLine = findLine(/new\s+Function\s*\(/);
-          if (newFuncLine) issues.push({ severity: "critical", category: "security", message: "new Function() — dynamic code execution risk. Refactor to static functions.", line: newFuncLine });
+          if (newFuncLine) issues.push({ severity: "critical", category: "security", message: "new Function() — dynamic code execution risk.", line: newFuncLine });
 
           const innerHTMLLine = findLine(/\.innerHTML\s*=/);
           if (innerHTMLLine && !code.includes("DOMPurify") && !code.includes("sanitize")) {
-            issues.push({ severity: "high", category: "security", message: "innerHTML without sanitization — XSS vulnerability. Use DOMPurify or textContent.", line: innerHTMLLine });
+            issues.push({ severity: "high", category: "security", message: "innerHTML without sanitization — XSS vulnerability.", line: innerHTMLLine });
           }
 
-          if (/password\s*=\s*["'][^"']+["']/i.test(code) || /api[_-]?key\s*=\s*["'][^"']+["']/i.test(code) || /secret\s*=\s*["'][^"']+["']/i.test(code)) {
-            issues.push({ severity: "critical", category: "security", message: "Hardcoded secrets detected — rotate immediately and use env vars.", line: null });
+          if (/password\s*=\s*["\'][^"\']+["\']/i.test(code) || /api[_-]?key\s*=\s*["\'][^"\']+["\']/i.test(code) || /secret\s*=\s*["\'][^"\']+["\']/i.test(code)) {
+            issues.push({ severity: "critical", category: "security", message: "Hardcoded secrets detected — rotate immediately.", line: null });
           }
 
           const httpLine = findLine(/http:\/\//);
           if (httpLine && !code.includes("localhost") && !code.includes("127.0.0.1")) {
-            issues.push({ severity: "medium", category: "security", message: "Insecure HTTP detected — use HTTPS for all external requests.", line: httpLine });
+            issues.push({ severity: "medium", category: "security", message: "Insecure HTTP detected — use HTTPS.", line: httpLine });
           }
 
           const sqlLine = findLine(/\.query\s*\(.*\+.*\)/);
-          if (sqlLine) issues.push({ severity: "critical", category: "security", message: "Potential SQL injection — string concatenation in query. Use parameterized queries.", line: sqlLine });
+          if (sqlLine) issues.push({ severity: "critical", category: "security", message: "Potential SQL injection — use parameterized queries.", line: sqlLine });
         }
 
         if (focus === "all" || focus === "performance") {
           if (code.includes("for (") && /\.length/.test(code) && !/let |const /.test(code)) {
-            issues.push({ severity: "medium", category: "performance", message: "Potential loop closure issue — use let/const for block scoping in loops.", line: null });
+            issues.push({ severity: "medium", category: "performance", message: "Loop closure issue — use let/const.", line: null });
           }
           const useStateCount = (code.match(/useState\(/g) || []).length;
           if (useStateCount > 8) {
-            issues.push({ severity: "low", category: "performance", message: `Many useState calls (${useStateCount}) — consider useReducer or a state machine for cleaner logic.`, line: null });
-          }
-          if (code.includes("useEffect") && code.includes("[]")) {
-            issues.push({ severity: "medium", category: "performance", message: "Empty dependency array useEffect may run unexpectedly. Verify dependencies.", line: null });
+            issues.push({ severity: "low", category: "performance", message: `Many useState calls (${useStateCount}) — consider useReducer.`, line: null });
           }
         }
 
         if (focus === "all" || focus === "accessibility") {
           const imgLine = findLine(/<img[^>]*>/);
           if (imgLine && !/<img[^>]*alt=/.test(code)) {
-            issues.push({ severity: "medium", category: "accessibility", message: "Images missing alt text — add descriptive alt attributes.", line: imgLine });
+            issues.push({ severity: "medium", category: "accessibility", message: "Images missing alt text.", line: imgLine });
           }
           if (code.includes("onClick") && !code.includes("tabIndex") && !code.includes("role=")) {
-            issues.push({ severity: "low", category: "accessibility", message: "Clickable element may not be keyboard accessible — add tabIndex and role, or use <button>.", line: null });
+            issues.push({ severity: "low", category: "accessibility", message: "Clickable element not keyboard accessible.", line: null });
           }
         }
 
         if (focus === "all" || focus === "bugs") {
           const jsonParseLine = findLine(/JSON\.parse\s*\([^)]*\)/);
           if (jsonParseLine && !code.includes("try") && !code.includes("catch")) {
-            issues.push({ severity: "medium", category: "bugs", message: "JSON.parse without try/catch — will crash on invalid JSON. Wrap in error handling.", line: jsonParseLine });
+            issues.push({ severity: "medium", category: "bugs", message: "JSON.parse without try/catch.", line: jsonParseLine });
           }
         }
 
@@ -555,7 +445,6 @@ async function executeTool(toolName: string, params: Record<string, unknown>): P
       case "fetch_url": {
         const url = String(params.url || "");
         const extractText = params.extract_text !== false;
-        // Validate URL
         let validatedUrl: URL;
         try {
           validatedUrl = new URL(url);
@@ -563,7 +452,7 @@ async function executeTool(toolName: string, params: Record<string, unknown>): P
             throw new Error("Only HTTP/HTTPS allowed");
           }
         } catch {
-          return { success: false, error: "Invalid URL. Only http:// and https:// are supported.", latency: Date.now() - startTime };
+          return { success: false, error: "Invalid URL. Only http:// and https:// supported.", latency: Date.now() - startTime };
         }
         const res = await fetchWithTimeout(validatedUrl.toString(), {
           headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" },
@@ -585,7 +474,6 @@ async function executeTool(toolName: string, params: Record<string, unknown>): P
 
       case "cve_lookup": {
         const query = String(params.query || "");
-        // NVD API now requires API key for heavy usage; gracefully handle
         const searchUrl = `https://services.nvd.nist.gov/rest/json/cves/2.0?keywordSearch=${encodeURIComponent(query)}&resultsPerPage=10`;
         const res = await fetchWithTimeout(searchUrl, {}, timeoutMs);
         const data = await res.json();
@@ -633,7 +521,7 @@ function decodeHtmlEntities(text: string): string {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// GROQ API ORCHESTRATION — Multi-Model Intelligence with Hardened Fallbacks
+// GROQ API ORCHESTRATION — Multi-Model with Rate Limit Handling
 // ═══════════════════════════════════════════════════════════════════════════════
 
 async function tryGroqRequest(
@@ -648,13 +536,34 @@ async function tryGroqRequest(
     model,
     stream: true,
     temperature: 0.15,
-    max_tokens: 8192,
+    max_tokens: 4096,
     tools: tools || TOOLS,
     tool_choice: "auto",
     top_p: 0.95,
     frequency_penalty: 0.1,
     presence_penalty: 0.1,
   } as any);
+}
+
+async function tryGroqWithRetry(
+  messages: any[],
+  model: string,
+  apiKey: string,
+  tools?: any[],
+  retries = MAX_RETRIES
+): Promise<any> {
+  try {
+    return await tryGroqRequest(messages, model, apiKey, tools);
+  } catch (err: any) {
+    const errorMsg = err?.message || "";
+    // Check if it's a rate limit or TPM error
+    if ((errorMsg.includes("rate_limit") || errorMsg.includes("too large") || errorMsg.includes("Limit")) && retries > 0) {
+      console.log(`[Nuvuja] Rate limit hit, retrying in ${RETRY_DELAY_MS}ms... (${retries} retries left)`);
+      await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+      return tryGroqWithRetry(messages, model, apiKey, tools, retries - 1);
+    }
+    throw err;
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -694,6 +603,7 @@ export async function POST(req: NextRequest) {
   const apiKey1 = process.env.GROQ_API_KEY_1;
   const apiKey2 = process.env.GROQ_API_KEY_2;
   const primaryModel = process.env.AI_MODEL_PRIMARY || "llama-3.3-70b-versatile";
+  // Use llama-3.1-8b-instant as fallback: 30K TPM (vs qwen's 6K)
   const fallbackModel = process.env.AI_MODEL_FALLBACK || "llama-3.1-8b-instant";
   const reasoningModel = process.env.AI_MODEL_REASONING || "deepseek-r1-distill-llama-70b";
 
@@ -704,13 +614,23 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // ─── Token budget check ─────────────────────────────────────────────────────
+  const systemTokens = estimateTokens(SYSTEM_PROMPT);
+  const messagesText = messages.map((m: any) => m.content || "").join(" ");
+  const messageTokens = estimateTokens(messagesText);
+  const estimatedTotal = systemTokens + messageTokens + 500; // +500 for tools overhead
+
+  if (estimatedTotal > 5500) {
+    console.warn(`[Nuvuja] Large request detected: ~${estimatedTotal} tokens. Truncating history...`);
+  }
+
   // ─── Build system message ───────────────────────────────────────────────────
-  const systemMessage: { role: string; content: string } = {
-    role: "system",
-    content: SYSTEM_PROMPT + `\n\nCurrent action: ${action}\nAvailable tools: web_search, github_fetch, github_search, npm_search, analyze_code, fetch_url, cve_lookup, stackoverflow_search\nUse tools for real-time data. Use continuation for long outputs.`,
+  const systemMessage = {
+    role: "system" as const,
+    content: SYSTEM_PROMPT + `\n\nCurrent action: ${action}\nAvailable tools: web_search, github_fetch, github_search, npm_search, analyze_code, fetch_url, cve_lookup, stackoverflow_search`,
   };
 
-  // ─── Build message chain with tool results (proper tool role) ───────────────
+  // ─── Build message chain with tool results ──────────────────────────────────
   const fullMessages: any[] = [systemMessage];
 
   for (const result of toolResults) {
@@ -721,7 +641,6 @@ export async function POST(req: NextRequest) {
         content: JSON.stringify(result.result),
       });
     } else {
-      // Fallback for legacy tool results without ID
       fullMessages.push({
         role: "assistant",
         content: `Tool result for ${result.tool}:\n\n${JSON.stringify(result.result, null, 2)}`,
@@ -729,7 +648,9 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  fullMessages.push(...messages);
+  // Limit history to prevent token bombing — keep only last N messages
+  const recentMessages = messages.slice(-MAX_HISTORY_MESSAGES);
+  fullMessages.push(...recentMessages);
 
   // ─── Model selection ────────────────────────────────────────────────────────
   let targetModel = primaryModel;
@@ -741,35 +662,42 @@ export async function POST(req: NextRequest) {
   let usedModel = targetModel;
   let usedKey = "primary";
 
-  // ─── Try primary key ────────────────────────────────────────────────────────
+  // ─── Try primary key with retry ───────────────────────────────────────────────
   if (apiKey1) {
     try {
-      stream = await tryGroqRequest(fullMessages, targetModel, apiKey1, TOOLS);
+      stream = await tryGroqWithRetry(fullMessages, targetModel, apiKey1, TOOLS);
     } catch (err: any) {
-      // Sanitized log — never leak key details
-      console.error("[Nuvuja] Primary key failed:", err?.message || "Unknown error");
+      const errorMsg = err?.message || "";
+      console.error("[Nuvuja] Primary key failed:", errorMsg.includes("rate_limit") ? "Rate limit exceeded" : "Request failed");
+
       if (apiKey2) {
         try {
-          stream = await tryGroqRequest(fullMessages, fallbackModel, apiKey2, TOOLS);
+          // If primary failed due to rate limit, try fallback immediately
+          stream = await tryGroqWithRetry(fullMessages, fallbackModel, apiKey2, TOOLS);
           usedModel = fallbackModel;
           usedKey = "fallback";
         } catch (err2: any) {
-          console.error("[Nuvuja] Fallback key also failed:", err2?.message || "Unknown error");
+          const err2Msg = err2?.message || "";
+          console.error("[Nuvuja] Fallback key also failed:", err2Msg.includes("rate_limit") ? "Rate limit exceeded" : "Request failed");
           return NextResponse.json(
-            { error: "Both AI keys failed. Check your configuration." },
+            { error: err2Msg.includes("rate_limit") 
+              ? "Rate limit exceeded on both keys. Please wait a moment and try again." 
+              : "Both AI keys failed. Check your configuration." },
             { status: 500 }
           );
         }
       } else {
         return NextResponse.json(
-          { error: "Primary AI key failed and no fallback available." },
+          { error: errorMsg.includes("rate_limit") 
+            ? "Rate limit exceeded. Please wait and try again." 
+            : "Primary AI key failed and no fallback available." },
           { status: 500 }
         );
       }
     }
   } else if (apiKey2) {
     try {
-      stream = await tryGroqRequest(fullMessages, fallbackModel, apiKey2, TOOLS);
+      stream = await tryGroqWithRetry(fullMessages, fallbackModel, apiKey2, TOOLS);
       usedModel = fallbackModel;
       usedKey = "fallback";
     } catch (err: any) {
@@ -808,7 +736,7 @@ export async function POST(req: NextRequest) {
           const content = delta?.content || "";
           const toolCalls = delta?.tool_calls;
 
-          // ─── Handle native tool calls (Groq SDK format) ───────────────────
+          // ─── Handle native tool calls ───────────────────────────────────
           if (toolCalls && toolCalls.length > 0) {
             for (const tc of toolCalls) {
               const index = tc.index ?? 0;
@@ -821,7 +749,6 @@ export async function POST(req: NextRequest) {
               if (tc.function?.arguments) {
                 toolCallAccumulator[index].arguments += tc.function.arguments;
               }
-              // If we have a complete tool call, execute it
               if (
                 toolCallAccumulator[index].name &&
                 toolCallAccumulator[index].arguments &&
