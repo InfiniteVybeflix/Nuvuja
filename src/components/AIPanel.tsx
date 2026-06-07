@@ -868,7 +868,7 @@ export function AIPanel({
     else if (message.startsWith("/generate")) action = "generate";
 
     if (attachCode && currentCode) {
-      message += `\n\nCurrent file (${currentLanguage}):\n\` + "`" + "`" + "`" + `${currentLanguage}\n${currentCode}\n` + "`" + "`" + "`";
+      message += `\n\nCurrent file (${currentLanguage}):\n\`\`\`${currentLanguage}\n${currentCode}\n\`\`\``;
     }
     onSendMessage(message, action);
     setInput("");
