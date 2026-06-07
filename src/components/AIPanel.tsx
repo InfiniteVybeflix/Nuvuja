@@ -48,6 +48,8 @@ import {
   VolumeX,
   Mic,
   MicOff,
+  Radio,
+  Satellite,
   Maximize2,
   Minimize2,
   Settings,
@@ -841,10 +843,12 @@ export function AIPanel({
         style={{ top: panelTop, right: 0, width: panelWidth, height: panelHeight }}
         className={cn("fixed z-50 flex flex-row shadow-2xl shadow-black/50 overflow-hidden", isResizing && "select-none")}
       >
-        {/* Holographic background */}
-        <div className="absolute inset-0 bg-slate-950/95 backdrop-blur-2xl" />
-        <div className="absolute inset-0 bg-gradient-to-br from-purple-900/10 via-slate-950/50 to-sky-900/10" />
-        <ParticleBackground />
+        {/* Holographic background — particles FIRST so they show through */}
+        <div className="absolute inset-0 z-0">
+          <ParticleBackground />
+        </div>
+        <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-2xl z-[1]" />
+        <div className="absolute inset-0 bg-gradient-to-br from-purple-900/10 via-slate-950/50 to-sky-900/10 z-[1]" />
 
         {/* Border glow */}
         <div className="absolute inset-0 rounded-l-2xl border border-purple-500/10 pointer-events-none" />
@@ -1096,17 +1100,17 @@ export function AIPanel({
                 className={cn("p-2.5 rounded-xl transition-all shrink-0", isListening ? "bg-rose-500/20 text-rose-400 animate-pulse" : "bg-white/5 text-slate-500 hover:text-slate-300 hover:bg-white/10")}
                 title={isListening ? "Stop listening" : "Voice input"}
               >
-                {isListening ? <Mic size={15} /> : <MicOff size={15} />}
+                {isListening ? <Satellite size={15} className="animate-pulse" /> : <Radio size={15} />}
               </motion.button>
 
-              <div className="flex-1 relative">
+              <div className="flex-1 relative z-10">
                 <input
                   ref={inputRef}
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
                   placeholder="Ask ᓄᕙᔭ anything..."
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-200 placeholder-slate-600 outline-none focus:border-purple-500/40 focus:ring-1 focus:ring-purple-500/20 transition-all backdrop-blur-sm"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-200 placeholder-slate-600 outline-none focus:border-purple-500/40 focus:ring-1 focus:ring-purple-500/20 transition-all backdrop-blur-sm pointer-events-auto"
                 />
                 {isListening && (
                   <motion.div
