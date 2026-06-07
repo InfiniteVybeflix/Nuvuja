@@ -274,7 +274,13 @@ export function AIPanel({
 
   const [panelWidth, setPanelWidth] = useState(384);
   const [panelHeight, setPanelHeight] = useState(0);
-  const [panelTop, setPanelTop] = useState(44);
+  const [panelTop, setPanelTop] = useState(() => {
+    const safeTop = parseInt(
+      getComputedStyle(document.documentElement).getPropertyValue("--safe-top") || "0",
+      10
+    );
+    return Math.max(44, 44 + safeTop);
+  });
 
   const [isResizing, setIsResizing] = useState(false);
   const [resizeDir, setResizeDir] = useState<string | null>(null);
@@ -289,13 +295,30 @@ export function AIPanel({
 
   useEffect(() => {
     const update = () => {
-      const h = window.innerHeight - 44;
+      const vv = window.visualViewport;
+      const visibleHeight = vv ? vv.height : window.innerHeight;
+      const h = visibleHeight - 44;
       setPanelHeight(h);
       startHeightRef.current = h;
     };
     update();
+
+    const vv = window.visualViewport;
+    if (vv) {
+      vv.addEventListener("resize", update);
+      vv.addEventListener("scroll", update);
+    }
     window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
+    window.addEventListener("orientationchange", () => setTimeout(update, 300));
+
+    return () => {
+      if (vv) {
+        vv.removeEventListener("resize", update);
+        vv.removeEventListener("scroll", update);
+      }
+      window.removeEventListener("resize", update);
+      window.removeEventListener("orientationchange", update);
+    };
   }, []);
 
   useEffect(() => {
@@ -316,7 +339,11 @@ export function AIPanel({
       if (dir.includes("w")) newW = Math.max(280, Math.min(800, startWidthRef.current - dx));
       if (dir.includes("e")) newW = Math.max(280, Math.min(800, startWidthRef.current + dx));
       if (dir.includes("n")) {
-        newT = Math.max(0, Math.min(window.innerHeight - 200, startTopRef.current + dy));
+        const safeTop = parseInt(
+          getComputedStyle(document.documentElement).getPropertyValue("--safe-top") || "0",
+          10
+        );
+        newT = Math.max(safeTop, Math.min(window.innerHeight - 200, startTopRef.current + dy));
         newH = Math.max(200, startHeightRef.current - dy);
       }
       if (dir.includes("s")) {
@@ -354,7 +381,11 @@ export function AIPanel({
       if (dir.includes("w")) newW = Math.max(280, Math.min(800, startWidthRef.current - dx));
       if (dir.includes("e")) newW = Math.max(280, Math.min(800, startWidthRef.current + dx));
       if (dir.includes("n")) {
-        newT = Math.max(0, Math.min(window.innerHeight - 200, startTopRef.current + dy));
+        const safeTop = parseInt(
+          getComputedStyle(document.documentElement).getPropertyValue("--safe-top") || "0",
+          10
+        );
+        newT = Math.max(safeTop, Math.min(window.innerHeight - 200, startTopRef.current + dy));
         newH = Math.max(200, startHeightRef.current - dy);
       }
       if (dir.includes("s")) {
@@ -461,7 +492,11 @@ export function AIPanel({
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={onToggle}
-            className="fixed z-[60] flex items-center gap-2 px-4 py-3 rounded-xl shadow-2xl transition-all bg-gradient-to-r from-sky-500 via-purple-500 to-purple-600 text-white shadow-purple-500/30 right-4 bottom-10"
+            className="fixed z-[60] flex items-center gap-2 px-4 py-3 rounded-xl shadow-2xl transition-all bg-gradient-to-r from-sky-500 via-purple-500 to-purple-600 text-white shadow-purple-500/30"
+            style={{
+              right: "max(16px, env(safe-area-inset-right))",
+              bottom: "calc(40px + env(safe-area-inset-bottom))",
+            }}
           >
             <span>ᓄᕙᔭ</span>
             {hasConsoleErrors && (
