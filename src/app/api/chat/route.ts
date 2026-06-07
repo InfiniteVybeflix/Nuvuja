@@ -441,16 +441,16 @@ async function executeTool(toolName: string, params: any): Promise<any> {
 
         if (focus === "all" || focus === "security") {
           if (code.includes("eval(") || code.includes("new Function(")) {
-            issues.push({ severity: "critical", category: "security", message: "Dangerous eval() or new Function() — RCE vulnerability", line: lines.findIndex(l => l.includes("eval(")) + 1 });
+            issues.push({ severity: "critical", category: "security", message: "Dangerous eval() or new Function() — RCE vulnerability", line: lines.findIndex((l: string) => l.includes("eval(")) + 1 });
           }
           if (code.includes("innerHTML") && !code.includes("DOMPurify") && !code.includes("sanitize")) {
-            issues.push({ severity: "high", category: "security", message: "innerHTML without sanitization — XSS vulnerability", line: lines.findIndex(l => l.includes("innerHTML")) + 1 });
+            issues.push({ severity: "high", category: "security", message: "innerHTML without sanitization — XSS vulnerability", line: lines.findIndex((l: string) => l.includes("innerHTML")) + 1 });
           }
           if (code.match(/password\s*=\s*["'][^"']+["']/i) || code.match(/api[_-]?key\s*=\s*["'][^"']+["']/i) || code.match(/secret\s*=\s*["'][^"']+["']/i)) {
             issues.push({ severity: "critical", category: "security", message: "Hardcoded secrets detected — immediate rotation required", line: null });
           }
           if (code.includes("http://") && !code.includes("localhost")) {
-            issues.push({ severity: "medium", category: "security", message: "Insecure HTTP detected — use HTTPS", line: lines.findIndex(l => l.includes("http://")) + 1 });
+            issues.push({ severity: "medium", category: "security", message: "Insecure HTTP detected — use HTTPS", line: lines.findIndex((l: string) => l.includes("http://")) + 1 });
           }
         }
 
@@ -465,7 +465,7 @@ async function executeTool(toolName: string, params: any): Promise<any> {
 
         if (focus === "all" || focus === "accessibility") {
           if (code.includes("<img") && !code.includes("alt=")) {
-            issues.push({ severity: "medium", category: "accessibility", message: "Images missing alt text", line: lines.findIndex(l => l.includes("<img")) + 1 });
+            issues.push({ severity: "medium", category: "accessibility", message: "Images missing alt text", line: lines.findIndex((l: string) => l.includes("<img")) + 1 });
           }
           if (code.includes("onClick") && !code.includes("tabIndex") && !code.includes("role=")) {
             issues.push({ severity: "low", category: "accessibility", message: "Clickable element may not be keyboard accessible", line: null });
