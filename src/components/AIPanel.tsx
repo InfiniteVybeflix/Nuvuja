@@ -917,8 +917,7 @@ function CodeBlock({ code, language, onApply }: { code: string; language: string
     setTimeout(() => setCopied(false), 2000);
   }, [cleanCode]);
 
-  const lineCount = useMemo(() => cleanCode.split("
-").length, [cleanCode]);
+  const lineCount = useMemo(() => cleanCode.split("\n").length, [cleanCode]);
   const shouldCollapse = lineCount > 20;
 
   return (
