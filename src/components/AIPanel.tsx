@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import {
+  useState, useRef, useEffect, useCallback, useMemo, useId,
+} from "react";
+import { motion, AnimatePresence, useAnimation, useMotionValue, useTransform } from "framer-motion";
 import {
   Send, Bot, User, Sparkles, Loader2, Code2, Wand2, AlertTriangle,
   CheckCircle, Copy, Check, Trash2, Paperclip, X, ZoomIn, ZoomOut,
@@ -17,13 +19,76 @@ import {
   Layers, Box, Boxes, Container, Cuboid, Hexagon, Octagon,
   Pentagon, Triangle, CircleDot, Square, Diamond, Crown, Trophy,
   Medal, Award, BadgeCheck, BadgeAlert, BadgeInfo, BadgeX,
+  Command, Wand, Play, Pause, FastForward, Rewind, SkipForward,
+  MousePointerClick, MousePointer, GripVertical, MoreHorizontal,
+  MoreVertical, GripHorizontal, AlignLeft, AlignCenter, AlignRight,
+  Layout, LayoutGrid, LayoutList, PanelLeft, PanelRight, Sidebar,
+  Split, Columns, Rows, Maximize, Minimize, ArrowUp, ArrowDown,
+  ArrowLeft, ArrowRight, ArrowUpRight, ArrowDownRight, Move,
+  RotateCcw, Redo, Undo, Save, Folder, FolderOpen, FileText,
+  FileJson, FileType, FileCode2, FilePlus, FolderPlus, FolderMinus,
+  Trash, Edit3, Scissors, Clipboard, ClipboardCopy, ClipboardList,
+  List, ListOrdered, ListChecks, CheckSquare, ToggleLeft, ToggleRight,
+  Sliders, SlidersHorizontal, Filter, SortAsc, SortDesc, BarChart3,
+  PieChart, Activity, TrendingUp, TrendingDown, Minus, PlusCircle,
+  MinusCircle, XCircle, CheckCircle2, AlertCircle, Info, HelpCircle,
+  Question, Bell, BellRing, BellOff, Mail, MessageCircle, MessagesSquare,
+  Share2, Link, Unlink, Bookmark, Heart, ThumbsUp, ThumbsDown,
+  Flag, Tag, Tags, FolderTree, GitCommit, GitPullRequest, GitMerge,
+  GitFork, Watch, Bolt, Flashlight, Sun, Moon, Monitor, Smartphone,
+  Tablet, Laptop, Desktop, Cast, Airplay, Bluetooth, Signal, Battery,
+  BatteryCharging, BatteryFull, BatteryMedium, BatteryLow, Plug, PlugZap,
+  Power, PowerOff, RefreshCcw, RotateCw, Repeat, Shuffle, SkipBack,
+  PlayCircle, PauseCircle, StopCircle, Volume, Volume1, Volume2,
+  Headphones, Speaker, Mic2, Video, Camera, Image as ImageIcon, Images,
+  Film as FilmIcon, Music as MusicIcon, Radio as RadioIcon, Tv,
+  MonitorPlay, Gamepad2, Joystick, Dices as DicesIcon, Puzzle as PuzzleIcon,
+  ToyBrick, Blocks, Shapes, Palette, Paintbrush, PaintBucket, PenTool,
+  Pencil as PencilIcon, Eraser, Ruler, Compass, DraftingCompass,
+  Triangle as TriangleIcon, Hexagon as HexagonIcon, Octagon as OctagonIcon,
+  Pentagon as PentagonIcon, Circle as CircleIcon, Square as SquareIcon,
+  Diamond as DiamondIcon, Star as StarIcon2, Heart as HeartIcon,
+  Crown as CrownIcon, Trophy as TrophyIcon, Medal as MedalIcon,
+  Award as AwardIcon, BadgeCheck as BadgeCheckIcon, BadgeAlert as BadgeAlertIcon,
+  Shield as ShieldIcon, ShieldCheck as ShieldCheckIcon, ShieldAlert as ShieldAlertIcon,
+  Lock as LockIcon, Unlock as UnlockIcon, Key as KeyIcon, Fingerprint as FingerprintIcon,
+  Scan as ScanIcon, ScanLine, ScanFace, Radar as RadarIcon, Target, Crosshair,
+  Focus, Aperture, Camera as CameraIcon, Video as VideoIcon, Clapperboard,
+  Popcorn, Ticket, Music2, Headphones as HeadphonesIcon, Speaker as SpeakerIcon,
+  VolumeX as VolumeXIcon, Mic as MicIcon, MicOff as MicOffIcon, Play as PlayIcon,
+  Pause as PauseIcon, Square as SquareIcon2, SkipForward as SkipForwardIcon2,
+  SkipBack as SkipBackIcon, Rewind as RewindIcon, FastForward as FastForwardIcon,
+  Repeat as RepeatIcon, Shuffle as ShuffleIcon, Volume as VolumeIcon,
+  Volume1 as Volume1Icon, Volume2 as Volume2Icon,
+  FileDiff, GitCompare, GitGraph, Network, Workflow, Braces,
+  Brackets, Parentheses, Quote, Strikethrough, Underline, Italic,
+  Bold, Heading, ListIcon, ListOrderedIcon, ListChecksIcon,
+  Table, Table2, TableProperties, SeparatorHorizontal,
+  Text, TextSelect, TextCursor, TypeIcon, WrapText, Space,
+  Indent, Outdent, AlignJustify, Baseline, Subscript, Superscript,
+  RemoveFormatting, Highlighter, PenLine, Pen, PencilRuler,
+  NotepadText, StickyNote, Notebook, NotebookPen, NotebookTabs,
+  BookOpen as BookOpenIcon, BookMarked, BookText, BookType, BookCopy, BookX,
+  Library, GraduationCap, School, University,
+  Sparkle, Sparkles as SparklesIcon, Magic, Wand as WandIcon, Wand2 as Wand2Icon,
+  Flame as FlameIcon, FlameKindling, Zap as ZapIcon2, ZapOff, BatteryWarning,
+  Battery as BatteryIcon, Plug as PlugIcon, PlugZap as PlugZapIcon, Power as PowerIcon,
+  PowerOff as PowerOffIcon, Sun as SunIcon, SunDim, Moon as MoonIcon, MoonStar,
+  Sunrise, Sunset, Cloudy, CloudRain, CloudSnow, CloudLightning, CloudFog,
+  Wind, Droplets, Thermometer, Snowflake, CloudSun, CloudMoon, CloudDrizzle,
+  Tornado, Hurricane, Earthquake, Volcano, Mountain, MountainSnow,
+  Tent, TreePine, TreeDeciduous, Palmtree, Flower, Flower2, Leaf,
+  Sprout, Seedling, Vegan, Carrot, Apple, Cherry, Citrus, Grape,
+  Wheat, Beef, Fish, Egg, Milk, Cookie, Pizza, Hamburger, Sandwich,
+  Soup, IceCream, Cake, CupSoda, Coffee, Tea, Beer, Wine, GlassWater,
+  Utensils, UtensilsCrossed, ForkKnife, CookingPot, ChefHat, Croissant,
 } from "lucide-react";
 
 import { AIConversation, ChatSession } from "@/types";
 import { cn } from "@/lib/utils";
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SPEECH RECOGNITION TYPES
+// TYPE DEFINITIONS
 // ═══════════════════════════════════════════════════════════════════════════════
 
 interface SpeechRecognitionAlternative {
@@ -77,40 +142,6 @@ declare global {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// MOBILE DETECTION HOOKS
-// ═══════════════════════════════════════════════════════════════════════════════
-
-function useIsMobile(breakpoint = 768) {
-  const [isMobile, setIsMobile] = useState(false);
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < breakpoint);
-    check();
-    window.addEventListener("resize", check);
-    window.addEventListener("orientationchange", () => setTimeout(check, 100));
-    return () => {
-      window.removeEventListener("resize", check);
-      window.removeEventListener("orientationchange", check);
-    };
-  }, [breakpoint]);
-  return isMobile;
-}
-
-function useIsSmallPhone(breakpoint = 380) {
-  const [isSmall, setIsSmall] = useState(false);
-  useEffect(() => {
-    const check = () => setIsSmall(window.innerWidth < breakpoint);
-    check();
-    window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
-  }, [breakpoint]);
-  return isSmall;
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TYPES
-// ═══════════════════════════════════════════════════════════════════════════════
-
 interface ToolResultItem {
   title?: string;
   name?: string;
@@ -158,6 +189,22 @@ interface ReviewData {
   improvements: string[];
 }
 
+interface FileContext {
+  path: string;
+  language: string;
+  content: string;
+  isActive: boolean;
+}
+
+interface ModelInfo {
+  id: string;
+  name: string;
+  provider: string;
+  speed: string;
+  capabilities: string[];
+  color: string;
+}
+
 interface AIPanelProps {
   conversations: AIConversation[];
   onSendMessage: (message: string, action?: "chat" | "review" | "fix" | "explain" | "generate") => void;
@@ -178,6 +225,23 @@ interface AIPanelProps {
   onPinChat: (id: string) => void;
   onDeleteChat: (id: string) => void;
   hasConsoleErrors?: boolean;
+  openFiles?: FileContext[];
+  activeFilePath?: string;
+  onSwitchFile?: (path: string) => void;
+  availableModels?: ModelInfo[];
+  activeModel?: string;
+  onSwitchModel?: (modelId: string) => void;
+  tokenCount?: { used: number; limit: number };
+  onRegenerateMessage?: (messageId: string) => void;
+  onEditMessage?: (messageId: string, newContent: string) => void;
+  onDeleteMessage?: (messageId: string) => void;
+  onExportChat?: () => void;
+  onShareChat?: () => void;
+  onSearchInChat?: (query: string) => void;
+  projectContext?: string;
+  gitStatus?: { branch: string; changes: number; ahead: number; behind: number };
+  terminalOutput?: string;
+  onRunTerminal?: (command: string) => void;
 }
 
 interface ChatListItemProps {
@@ -190,35 +254,83 @@ interface ChatListItemProps {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// UTILITY COMPONENTS
+// MOBILE DETECTION HOOKS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function HolographicCard({ children, className, glowColor = "purple" }: { children: React.ReactNode; className?: string; glowColor?: "purple" | "sky" | "emerald" | "amber" | "rose" | "cyan" }) {
+function useIsMobile(breakpoint = 768) {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < breakpoint);
+    check();
+    window.addEventListener("resize", check);
+    window.addEventListener("orientationchange", () => setTimeout(check, 100));
+    return () => {
+      window.removeEventListener("resize", check);
+      window.removeEventListener("orientationchange", check);
+    };
+  }, [breakpoint]);
+  return isMobile;
+}
+
+function useIsSmallPhone(breakpoint = 380) {
+  const [isSmall, setIsSmall] = useState(false);
+  useEffect(() => {
+    const check = () => setIsSmall(window.innerWidth < breakpoint);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, [breakpoint]);
+  return isSmall;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// LIQUID GLASS CARD
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function LiquidGlassCard({ children, className, glowColor = "purple", intensity = "medium" }: { 
+  children: React.ReactNode; 
+  className?: string; 
+  glowColor?: "purple" | "sky" | "emerald" | "amber" | "rose" | "cyan" | "indigo";
+  intensity?: "low" | "medium" | "high";
+}) {
   const glowMap = {
-    purple: "from-purple-500/20 via-purple-500/5 to-transparent",
-    sky: "from-sky-500/20 via-sky-500/5 to-transparent",
-    emerald: "from-emerald-500/20 via-emerald-500/5 to-transparent",
-    amber: "from-amber-500/20 via-amber-500/5 to-transparent",
-    rose: "from-rose-500/20 via-rose-500/5 to-transparent",
-    cyan: "from-cyan-500/20 via-cyan-500/5 to-transparent",
+    purple: "from-purple-500/30 via-purple-500/10 to-transparent",
+    sky: "from-sky-500/30 via-sky-500/10 to-transparent",
+    emerald: "from-emerald-500/30 via-emerald-500/10 to-transparent",
+    amber: "from-amber-500/30 via-amber-500/10 to-transparent",
+    rose: "from-rose-500/30 via-rose-500/10 to-transparent",
+    cyan: "from-cyan-500/30 via-cyan-500/10 to-transparent",
+    indigo: "from-indigo-500/30 via-indigo-500/10 to-transparent",
   };
+
+  const intensityMap = {
+    low: { border: "border-white/5", bg: "bg-slate-950/40", blur: "backdrop-blur-xl" },
+    medium: { border: "border-white/10", bg: "bg-slate-950/50", blur: "backdrop-blur-2xl" },
+    high: { border: "border-white/15", bg: "bg-slate-950/60", blur: "backdrop-blur-3xl" },
+  };
+
+  const i = intensityMap[intensity];
+
   return (
-    <div className={cn("relative overflow-hidden rounded-xl border border-white/5 backdrop-blur-xl", className)}>
-      <div className={cn("absolute inset-0 bg-gradient-to-br opacity-50", glowMap[glowColor])} />
-      <div className="absolute inset-0 bg-slate-950/60" />
+    <div className={cn("relative overflow-hidden rounded-2xl", i.border, i.blur, className)}>
+      <div className={cn("absolute inset-0 bg-gradient-to-br opacity-60", glowMap[glowColor])} />
+      <div className={cn("absolute inset-0", i.bg)} />
+      <div className="absolute inset-0 rounded-2xl border border-white/5" />
+      <div className="absolute top-0 left-4 right-4 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
       <div className="relative z-10">{children}</div>
     </div>
   );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// PARTICLE BACKGROUND - Only renders when panel is open
+// PARTICLE BACKGROUND — Optimized deep space starfield
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function ParticleBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isMobile = useIsMobile();
   const animationRef = useRef<number>(0);
+  const isActiveRef = useRef(true);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -231,31 +343,42 @@ function ParticleBackground() {
 
     let frameCount = 0;
     const particleCount = isMobile ? 12 : 25;
-    const particles: Array<{ x: number; y: number; vx: number; vy: number; size: number; alpha: number; color: string }> = [];
+    const particles: Array<{ 
+      x: number; y: number; vx: number; vy: number; 
+      size: number; alpha: number; color: string;
+      pulseSpeed: number; pulseOffset: number;
+    }> = [];
 
     const resize = () => {
       const dpr = Math.min(window.devicePixelRatio, 2);
-      canvas.width = canvas.offsetWidth * dpr;
-      canvas.height = canvas.offsetHeight * dpr;
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
       ctx.scale(dpr, dpr);
     };
     resize();
     window.addEventListener("resize", resize);
 
-    const colors = ["#a78bfa", "#38bdf8", "#4ade80", "#fbbf24", "#f472b6"];
+    const colors = ["#a78bfa", "#38bdf8", "#4ade80", "#fbbf24", "#f472b6", "#c084fc", "#7dd3fc"];
     for (let i = 0; i < particleCount; i++) {
       particles.push({
         x: Math.random() * canvas.offsetWidth,
         y: Math.random() * canvas.offsetHeight,
-        vx: (Math.random() - 0.5) * 0.3,
-        vy: (Math.random() - 0.5) * 0.3,
+        vx: (Math.random() - 0.5) * 0.2,
+        vy: (Math.random() - 0.5) * 0.2,
         size: Math.random() * 2 + 0.5,
         alpha: Math.random() * 0.5 + 0.1,
         color: colors[Math.floor(Math.random() * colors.length)],
+        pulseSpeed: Math.random() * 0.02 + 0.005,
+        pulseOffset: Math.random() * Math.PI * 2,
       });
     }
 
     const animate = () => {
+      if (!isActiveRef.current) {
+        animationRef.current = requestAnimationFrame(animate);
+        return;
+      }
       frameCount++;
       if (isMobile && frameCount % 2 !== 0) {
         animationRef.current = requestAnimationFrame(animate);
@@ -263,43 +386,57 @@ function ParticleBackground() {
       }
 
       ctx.clearRect(0, 0, canvas.offsetWidth, canvas.offsetHeight);
+      ctx.save();
 
-      particles.forEach((p, i) => {
+      if (!isMobile) {
+        for (let i = 0; i < particles.length; i++) {
+          for (let j = i + 1; j < particles.length; j++) {
+            const dx = particles[i].x - particles[j].x;
+            const dy = particles[i].y - particles[j].y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < 120) {
+              const lineAlpha = (1 - dist / 120) * 0.06;
+              ctx.beginPath();
+              ctx.moveTo(particles[i].x, particles[i].y);
+              ctx.lineTo(particles[j].x, particles[j].y);
+              ctx.strokeStyle = `rgba(167,139,250,${lineAlpha})`;
+              ctx.lineWidth = 0.5;
+              ctx.stroke();
+            }
+          }
+        }
+      }
+
+      particles.forEach((p) => {
         p.x += p.vx;
         p.y += p.vy;
         if (p.x < 0 || p.x > canvas.offsetWidth) p.vx *= -1;
         if (p.y < 0 || p.y > canvas.offsetHeight) p.vy *= -1;
 
+        const pulse = Math.sin(frameCount * p.pulseSpeed + p.pulseOffset);
+        const currentAlpha = p.alpha * (0.6 + 0.4 * pulse);
+        const currentSize = p.size * (0.8 + 0.2 * pulse);
+
         ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.arc(p.x, p.y, currentSize * 4, 0, Math.PI * 2);
         ctx.fillStyle = p.color;
-        ctx.globalAlpha = p.alpha;
+        ctx.globalAlpha = currentAlpha * 0.1;
         ctx.fill();
 
-        if (!isMobile) {
-          particles.slice(i + 1).forEach((p2) => {
-            const dx = p.x - p2.x;
-            const dy = p.y - p2.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist < 100) {
-              ctx.beginPath();
-              ctx.moveTo(p.x, p.y);
-              ctx.lineTo(p2.x, p2.y);
-              ctx.strokeStyle = p.color;
-              ctx.globalAlpha = (1 - dist / 100) * 0.1;
-              ctx.lineWidth = 0.5;
-              ctx.stroke();
-            }
-          });
-        }
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, currentSize, 0, Math.PI * 2);
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = currentAlpha;
+        ctx.fill();
       });
 
-      ctx.globalAlpha = 1;
+      ctx.restore();
       animationRef.current = requestAnimationFrame(animate);
     };
     animate();
 
     return () => {
+      isActiveRef.current = false;
       cancelAnimationFrame(animationRef.current);
       window.removeEventListener("resize", resize);
     };
@@ -309,39 +446,262 @@ function ParticleBackground() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// THINKING ANIMATION WITH STAR FIELD
+// ✦ STAR FIELD THINKING ✦ — Beautiful particle animation when AI processes
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function ThinkingAnimation() {
-  return (
-    <div className="flex items-center gap-3 px-4 py-3 relative overflow-hidden">
-      {/* Star field background */}
-      <div className="absolute inset-0 ai-thinking-stars pointer-events-none" />
+function StarFieldThinking() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const animRef = useRef<number>(0);
+  const isActiveRef = useRef(true);
 
-      <div className="relative">
-        <div className="w-8 h-8 rounded-full border-2 border-purple-500/30 animate-pulse" />
-        <div
-          className="absolute inset-0 w-8 h-8 rounded-full border-t-2 border-purple-400"
-          style={{ animation: "spin 1.5s linear infinite" }}
-        />
-        <Brain size={14} className="absolute inset-0 m-auto text-purple-400" />
-      </div>
-      <div className="flex flex-col gap-1 relative z-10">
-        <span className="text-xs font-medium text-purple-300">ᓄᕙᔭ is thinking...</span>
-        <div className="flex gap-1">
-          {[0, 1, 2].map((idx) => (
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReduced) return;
+
+    let frame = 0;
+    const dpr = Math.min(window.devicePixelRatio, 2);
+    const W = 320;
+    const H = 100;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    ctx.scale(dpr, dpr);
+
+    interface Star {
+      x: number; y: number; size: number;
+      alpha: number; twinkleSpeed: number; twinkleOffset: number;
+      color: string; layer: number;
+    }
+
+    const stars: Star[] = [];
+    const starCount = 40;
+    const colors = [
+      "#a78bfa", "#c4b5fd", "#e9d5ff", "#ddd6fe",
+      "#38bdf8", "#7dd3fc", "#bae6fd",
+      "#fbbf24", "#fde68a", "#fef3c7",
+      "#f472b6", "#fbcfe8", "#fce7f3",
+      "#34d399", "#6ee7b7", "#a7f3d0",
+    ];
+
+    for (let i = 0; i < starCount; i++) {
+      stars.push({
+        x: Math.random() * W,
+        y: Math.random() * H,
+        size: Math.random() * 2 + 0.3,
+        alpha: Math.random() * 0.9 + 0.1,
+        twinkleSpeed: Math.random() * 0.04 + 0.008,
+        twinkleOffset: Math.random() * Math.PI * 2,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        layer: Math.floor(Math.random() * 3),
+      });
+    }
+
+    interface ShootingStar {
+      x: number; y: number; vx: number; vy: number;
+      life: number; maxLife: number; brightness: number;
+    }
+    let shootingStars: ShootingStar[] = [];
+
+    const draw = () => {
+      if (!isActiveRef.current) {
+        animRef.current = requestAnimationFrame(draw);
+        return;
+      }
+      frame++;
+      ctx.clearRect(0, 0, W, H);
+      ctx.save();
+
+      const gradient = ctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, W);
+      gradient.addColorStop(0, "rgba(139,92,246,0.06)");
+      gradient.addColorStop(0.5, "rgba(56,189,248,0.03)");
+      gradient.addColorStop(1, "rgba(15,23,42,0)");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, W, H);
+
+      for (let i = 0; i < stars.length; i++) {
+        for (let j = i + 1; j < stars.length; j++) {
+          const dx = stars[i].x - stars[j].x;
+          const dy = stars[i].y - stars[j].y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 70) {
+            const lineAlpha = (1 - dist / 70) * 0.1 * (stars[i].layer === stars[j].layer ? 1 : 0.5);
+            ctx.beginPath();
+            ctx.moveTo(stars[i].x, stars[i].y);
+            ctx.lineTo(stars[j].x, stars[j].y);
+            ctx.strokeStyle = `rgba(167,139,250,${lineAlpha})`;
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+          }
+        }
+      }
+
+      stars.forEach((star) => {
+        const twinkle = Math.sin(frame * star.twinkleSpeed + star.twinkleOffset);
+        const alpha = star.alpha * (0.4 + 0.6 * twinkle);
+        const size = star.size * (0.7 + 0.3 * twinkle);
+
+        const glowSize = size * (3 + star.layer * 2);
+        ctx.beginPath();
+        ctx.arc(star.x, star.y, glowSize, 0, Math.PI * 2);
+        ctx.fillStyle = star.color;
+        ctx.globalAlpha = alpha * 0.08;
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(star.x, star.y, size * 2, 0, Math.PI * 2);
+        ctx.fillStyle = star.color;
+        ctx.globalAlpha = alpha * 0.2;
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(star.x, star.y, size, 0, Math.PI * 2);
+        ctx.fillStyle = star.color;
+        ctx.globalAlpha = alpha;
+        ctx.fill();
+
+        if (size > 1.2 && alpha > 0.5) {
+          ctx.globalAlpha = alpha * 0.3;
+          ctx.strokeStyle = star.color;
+          ctx.lineWidth = 0.5;
+          const sparkleLen = size * 3;
+          ctx.beginPath();
+          ctx.moveTo(star.x - sparkleLen, star.y);
+          ctx.lineTo(star.x + sparkleLen, star.y);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(star.x, star.y - sparkleLen);
+          ctx.lineTo(star.x, star.y + sparkleLen);
+          ctx.stroke();
+        }
+      });
+
+      ctx.globalAlpha = 1;
+
+      if (Math.random() < 0.006) {
+        shootingStars.push({
+          x: Math.random() * W * 0.3,
+          y: Math.random() * H * 0.4,
+          vx: 2.5 + Math.random() * 2,
+          vy: 0.8 + Math.random() * 0.8,
+          life: 0,
+          maxLife: 25 + Math.random() * 20,
+          brightness: 0.8 + Math.random() * 0.2,
+        });
+      }
+
+      shootingStars = shootingStars.filter((ss) => {
+        ss.x += ss.vx;
+        ss.y += ss.vy;
+        ss.life++;
+
+        const progress = ss.life / ss.maxLife;
+        const alpha = (1 - progress) * ss.brightness;
+
+        if (alpha <= 0 || ss.x > W + 50) return false;
+
+        const trailLen = 15;
+        const gradient = ctx.createLinearGradient(
+          ss.x, ss.y,
+          ss.x - ss.vx * trailLen, ss.y - ss.vy * trailLen
+        );
+        gradient.addColorStop(0, `rgba(255,255,255,${alpha})`);
+        gradient.addColorStop(0.3, `rgba(167,139,250,${alpha * 0.6})`);
+        gradient.addColorStop(1, "rgba(167,139,250,0)");
+
+        ctx.beginPath();
+        ctx.moveTo(ss.x, ss.y);
+        ctx.lineTo(ss.x - ss.vx * trailLen, ss.y - ss.vy * trailLen);
+        ctx.strokeStyle = gradient;
+        ctx.lineWidth = 1.5;
+        ctx.lineCap = "round";
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(ss.x, ss.y, 2, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+        ctx.shadowColor = "rgba(167,139,250,0.8)";
+        ctx.shadowBlur = 8;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        return true;
+      });
+
+      ctx.restore();
+      animRef.current = requestAnimationFrame(draw);
+    };
+
+    draw();
+
+    return () => {
+      isActiveRef.current = false;
+      cancelAnimationFrame(animRef.current);
+    };
+  }, []);
+
+  return (
+    <div className="flex items-center gap-3 px-4 py-3.5 relative overflow-hidden rounded-2xl border border-purple-500/20 bg-slate-950/80">
+      <canvas
+        ref={canvasRef}
+        className="absolute inset-0 w-full h-full pointer-events-none rounded-2xl"
+        style={{ opacity: 0.95 }}
+      />
+      <div className="relative z-10 flex items-center gap-3">
+        <div className="relative">
+          <motion.div
+            className="absolute inset-0 rounded-full border border-purple-400/30"
+            animate={{ scale: [1, 1.4, 1], opacity: [0.5, 0, 0.5] }}
+            transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY, ease: "easeOut" }}
+          />
+          <motion.div
+            className="absolute inset-0 rounded-full border border-sky-400/20"
+            animate={{ scale: [1, 1.8, 1], opacity: [0.3, 0, 0.3] }}
+            transition={{ duration: 2.5, repeat: Number.POSITIVE_INFINITY, ease: "easeOut", delay: 0.3 }}
+          />
+          <div className="w-9 h-9 rounded-full border-2 border-purple-400/40 flex items-center justify-center relative bg-slate-950/50 backdrop-blur-sm">
             <motion.div
-              key={idx}
-              className="w-1.5 h-1.5 rounded-full bg-purple-400"
-              animate={{ opacity: [0.3, 1, 0.3], scale: [0.8, 1.2, 0.8] }}
-              transition={{
-                duration: 1.2,
-                repeat: Number.POSITIVE_INFINITY,
-                repeatType: "loop",
-                delay: idx * 0.2
-              }}
-            />
-          ))}
+              animate={{ rotate: 360 }}
+              transition={{ duration: 8, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
+            >
+              <Brain size={16} className="text-purple-300 drop-shadow-[0_0_8px_rgba(168,85,247,0.8)]" />
+            </motion.div>
+          </div>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <span className="text-xs font-semibold text-purple-200 drop-shadow-[0_0_10px_rgba(168,85,247,0.5)] tracking-wide">
+            ✦ ᓄᕙᔭ is thinking ✦
+          </span>
+          <div className="flex gap-2 items-center">
+            {[0, 1, 2].map((idx) => (
+              <motion.div
+                key={idx}
+                className="rounded-full"
+                style={{
+                  width: idx === 1 ? 6 : 4,
+                  height: idx === 1 ? 6 : 4,
+                  backgroundColor: idx === 0 ? "#a78bfa" : idx === 1 ? "#38bdf8" : "#f472b6",
+                  boxShadow: `0 0 ${idx === 1 ? 10 : 6}px ${idx === 0 ? "rgba(167,139,250,0.6)" : idx === 1 ? "rgba(56,189,248,0.6)" : "rgba(244,114,182,0.6)"}`,
+                }}
+                animate={{ 
+                  opacity: [0.3, 1, 0.3], 
+                  scale: [0.6, 1.4, 0.6],
+                  y: [0, -4, 0],
+                }}
+                transition={{
+                  duration: 1.4,
+                  repeat: Number.POSITIVE_INFINITY,
+                  repeatType: "loop",
+                  delay: idx * 0.25,
+                  ease: "easeInOut",
+                }}
+              />
+            ))}
+            <span className="text-[10px] text-purple-400/70 ml-1 font-mono">processing...</span>
+          </div>
         </div>
       </div>
     </div>
@@ -364,76 +724,115 @@ function ToolResultCard({ result }: { result: ToolResult }) {
     stackoverflow_search: Terminal,
   };
 
-  const toolColors: Record<string, string> = {
-    web_search: "text-sky-400 bg-sky-500/10 border-sky-500/20",
-    github_fetch: "text-slate-300 bg-slate-500/10 border-slate-500/20",
-    github_search: "text-purple-400 bg-purple-500/10 border-purple-500/20",
-    npm_search: "text-red-400 bg-red-500/10 border-red-500/20",
-    analyze_code: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
-    fetch_url: "text-cyan-400 bg-cyan-500/10 border-cyan-500/20",
-    cve_lookup: "text-rose-400 bg-rose-500/10 border-rose-500/20",
-    stackoverflow_search: "text-amber-400 bg-amber-500/10 border-amber-500/20",
+  const toolColors: Record<string, { bg: string; border: string; text: string; icon: string }> = {
+    web_search: { bg: "bg-sky-500/10", border: "border-sky-500/20", text: "text-sky-400", icon: "text-sky-400" },
+    github_fetch: { bg: "bg-slate-500/10", border: "border-slate-500/20", text: "text-slate-300", icon: "text-slate-300" },
+    github_search: { bg: "bg-purple-500/10", border: "border-purple-500/20", text: "text-purple-400", icon: "text-purple-400" },
+    npm_search: { bg: "bg-red-500/10", border: "border-red-500/20", text: "text-red-400", icon: "text-red-400" },
+    analyze_code: { bg: "bg-emerald-500/10", border: "border-emerald-500/20", text: "text-emerald-400", icon: "text-emerald-400" },
+    fetch_url: { bg: "bg-cyan-500/10", border: "border-cyan-500/20", text: "text-cyan-400", icon: "text-cyan-400" },
+    cve_lookup: { bg: "bg-rose-500/10", border: "border-rose-500/20", text: "text-rose-400", icon: "text-rose-400" },
+    stackoverflow_search: { bg: "bg-amber-500/10", border: "border-amber-500/20", text: "text-amber-400", icon: "text-amber-400" },
   };
 
   const Icon = toolIcons[result.tool] || Zap;
-  const colorClass = toolColors[result.tool] || "text-purple-400 bg-purple-500/10 border-purple-500/20";
+  const c = toolColors[result.tool] || { bg: "bg-purple-500/10", border: "border-purple-500/20", text: "text-purple-400", icon: "text-purple-400" };
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+      initial={{ opacity: 0, y: 10, scale: 0.96 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      className={cn("rounded-lg border p-3 mb-2", colorClass)}
+      transition={{ type: "spring", stiffness: 400, damping: 25 }}
+      className={cn("rounded-xl border p-3 mb-2", c.bg, c.border)}
     >
-      <div className="flex items-center gap-2 mb-2">
-        <Icon size={12} />
-        <span className="text-[10px] font-semibold uppercase tracking-wider">{result.tool.replace("_", " ")}</span>
+      <div className="flex items-center gap-2 mb-2.5">
+        <div className={cn("w-6 h-6 rounded-lg flex items-center justify-center", c.bg)}>
+          <Icon size={12} className={c.icon} />
+        </div>
+        <span className={cn("text-[10px] font-bold uppercase tracking-wider", c.text)}>
+          {result.tool.replace(/_/g, " ")}
+        </span>
         {result.result?.latency && (
-          <span className="text-[9px] text-slate-500 ml-auto">{result.result.latency}ms</span>
+          <span className="text-[9px] text-slate-600 ml-auto font-mono flex items-center gap-1">
+            <Zap size={8} className="text-amber-500/50" />
+            {result.result.latency}ms
+          </span>
         )}
       </div>
+
       {result.result?.success === false ? (
-        <div className="text-[11px] text-rose-400 flex items-center gap-1">
-          <AlertOctagon size={10} /> {result.result.error}
+        <div className="flex items-center gap-1.5 text-[11px] text-rose-400">
+          <AlertOctagon size={10} />
+          <span>{result.result.error}</span>
         </div>
       ) : (
-        <div className="text-[11px] text-slate-400 font-mono max-h-32 overflow-y-auto scrollbar-thin">
+        <div className="space-y-1.5">
           {result.result?.results && result.result.results.length > 0 && (
             <div className="space-y-1">
               {result.result.results.slice(0, 3).map((r, i) => (
-                <div key={i} className="truncate">
-                  {r.title && <span className="text-slate-300">{r.title}</span>}
-                  {r.name && <span className="text-slate-300">{r.name}</span>}
-                  {r.url && <span className="text-sky-500/60 ml-1">↗</span>}
-                </div>
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.05 }}
+                  className="flex items-center gap-2 text-[11px] group cursor-pointer"
+                >
+                  <div className="w-1 h-1 rounded-full bg-sky-400/50 shrink-0" />
+                  <span className="text-slate-300 truncate flex-1 group-hover:text-sky-300 transition-colors">
+                    {r.title || r.name}
+                  </span>
+                  {r.url && <ExternalLink size={9} className="text-sky-500/40 shrink-0 group-hover:text-sky-400 transition-colors" />}
+                </motion.div>
               ))}
               {result.result.results.length > 3 && (
-                <span className="text-slate-600">+{result.result.results.length - 3} more</span>
+                <span className="text-[9px] text-slate-600 pl-3">+{result.result.results.length - 3} more results</span>
               )}
             </div>
           )}
+
           {result.result?.packages && result.result.packages.length > 0 && (
             <div className="space-y-1">
               {result.result.packages.slice(0, 3).map((p, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <Package size={8} className="text-red-400" />
-                  <span className="text-slate-300">{p.name}</span>
-                  <span className="text-slate-600">@{p.version}</span>
-                </div>
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.05 }}
+                  className="flex items-center gap-2 text-[11px]"
+                >
+                  <Package size={9} className="text-red-400/70 shrink-0" />
+                  <span className="text-slate-300 font-mono">{p.name}</span>
+                  <span className="text-slate-600 font-mono">@{p.version}</span>
+                </motion.div>
               ))}
             </div>
           )}
+
           {result.result?.issues && result.result.issues.length > 0 && (
             <div className="space-y-1">
               {result.result.issues.map((issue, i) => (
-                <div key={i} className={cn("flex items-center gap-1", issue.severity === "critical" ? "text-rose-400" : issue.severity === "high" ? "text-amber-400" : "text-slate-400")}>
-                  {issue.severity === "critical" ? <ShieldAlert size={8} /> : <ShieldCheck size={8} />}
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.05 }}
+                  className={cn(
+                    "flex items-center gap-1.5 text-[11px]",
+                    issue.severity === "critical" ? "text-rose-400" :
+                    issue.severity === "high" ? "text-amber-400" : "text-slate-400"
+                  )}
+                >
+                  {issue.severity === "critical" ? <ShieldAlert size={9} /> : <ShieldCheck size={9} />}
                   <span>{issue.message}</span>
-                </div>
+                </motion.div>
               ))}
             </div>
           )}
+
           {result.result?.content && (
-            <div className="text-slate-500 truncate">{result.result.content.slice(0, 100)}...</div>
+            <div className="text-[11px] text-slate-500 truncate border-l-2 border-slate-700/50 pl-2">
+              {result.result.content.slice(0, 120)}...
+            </div>
           )}
         </div>
       )}
@@ -447,50 +846,101 @@ function ToolResultCard({ result }: { result: ToolResult }) {
 
 function SecurityBadge({ level }: { level: "secure" | "warning" | "critical" | "unknown" }) {
   const config = {
-    secure: { icon: ShieldCheck, color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20", label: "Secure" },
-    warning: { icon: ShieldAlert, color: "text-amber-400 bg-amber-500/10 border-amber-500/20", label: "Warning" },
-    critical: { icon: AlertOctagon, color: "text-rose-400 bg-rose-500/10 border-rose-500/20", label: "Critical" },
-    unknown: { icon: Shield, color: "text-slate-400 bg-slate-500/10 border-slate-500/20", label: "Unknown" },
+    secure: {
+      icon: ShieldCheck,
+      color: "text-emerald-400",
+      bg: "bg-emerald-500/10",
+      border: "border-emerald-500/20",
+      glow: "shadow-emerald-500/20",
+      label: "Secure",
+    },
+    warning: {
+      icon: ShieldAlert,
+      color: "text-amber-400",
+      bg: "bg-amber-500/10",
+      border: "border-amber-500/20",
+      glow: "shadow-amber-500/20",
+      label: "Warning",
+    },
+    critical: {
+      icon: AlertOctagon,
+      color: "text-rose-400",
+      bg: "bg-rose-500/10",
+      border: "border-rose-500/20",
+      glow: "shadow-rose-500/20",
+      label: "Critical",
+    },
+    unknown: {
+      icon: Shield,
+      color: "text-slate-400",
+      bg: "bg-slate-500/10",
+      border: "border-slate-500/20",
+      glow: "shadow-slate-500/10",
+      label: "Unknown",
+    },
   };
   const c = config[level];
   return (
-    <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border", c.color)}>
+    <motion.span
+      initial={{ scale: 0.8, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      className={cn(
+        "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold border shadow-sm",
+        c.color, c.bg, c.border, c.glow
+      )}
+    >
       <c.icon size={10} /> {c.label}
-    </span>
+    </motion.span>
   );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// CODE BLOCK COMPONENT
+// CODE BLOCK — Beautiful code display with diff support
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function CodeBlock({ code, language, onApply }: { code: string; language: string; onApply?: (code: string) => void }) {
   const [copied, setCopied] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
-  const cleanCode = code
-    .replace(/^```\w*\n/, "")
-    .replace(/^```\n/, "")
-    .replace(/\n```$/, "")
-    .replace(/^\s*```\w*\s*$/, "")
-    .trim();
+  const cleanCode = useMemo(() => {
+    return code
+      .replace(/^```\w*
+/, "")
+      .replace(/^```
+/, "")
+      .replace(/
+```$/, "")
+      .replace(/^\s*```\w*\s*$/, "")
+      .trim();
+  }, [code]);
 
-  const handleCopy = () => {
+  const handleCopy = useCallback(() => {
     navigator.clipboard.writeText(cleanCode);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-  };
+  }, [cleanCode]);
 
-  const lineCount = cleanCode.split("\n").length;
+  const lineCount = useMemo(() => cleanCode.split("
+").length, [cleanCode]);
   const shouldCollapse = lineCount > 20;
 
   return (
-    <div className="my-2 rounded-xl overflow-hidden border border-slate-700/30 bg-slate-950/90 backdrop-blur-sm group relative">
-      <div className="flex items-center justify-between px-3 py-2 bg-gradient-to-r from-slate-900/90 to-slate-800/50 border-b border-slate-700/30">
-        <div className="flex items-center gap-2">
-          <FileCode size={12} className="text-sky-400" />
-          <span className="text-[10px] text-slate-500 font-mono uppercase tracking-wider">{language}</span>
-          <span className="text-[9px] text-slate-600">{lineCount} lines</span>
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ type: "spring", stiffness: 300, damping: 25 }}
+      className="my-2.5 rounded-xl overflow-hidden border border-slate-700/40 bg-slate-950/95 group relative shadow-lg shadow-black/20"
+    >
+      <div className="flex items-center justify-between px-3.5 py-2.5 bg-gradient-to-r from-slate-900/95 via-slate-800/60 to-slate-900/95 border-b border-slate-700/30">
+        <div className="flex items-center gap-2.5">
+          <div className="flex gap-1.5">
+            <div className="w-2.5 h-2.5 rounded-full bg-rose-500/80" />
+            <div className="w-2.5 h-2.5 rounded-full bg-amber-500/80" />
+            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/80" />
+          </div>
+          <FileCode size={12} className="text-sky-400/80" />
+          <span className="text-[10px] text-slate-500 font-mono uppercase tracking-wider">{language || "code"}</span>
+          <span className="text-[9px] text-slate-600 font-mono">{lineCount} lines</span>
         </div>
         <div className="flex gap-1">
           {onApply && (
@@ -498,45 +948,73 @@ function CodeBlock({ code, language, onApply }: { code: string; language: string
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => onApply(cleanCode)}
-              className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors border border-purple-500/20"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] bg-purple-500/15 text-purple-400 hover:bg-purple-500/25 transition-all border border-purple-500/20 hover:border-purple-500/40"
             >
               <Wand2 size={9} /> Apply
             </motion.button>
           )}
           {shouldCollapse && (
-            <button onClick={() => setExpanded(!expanded)} className="p-1 rounded hover:bg-slate-800 text-slate-500 hover:text-slate-300 transition-colors">
+            <button
+              onClick={() => setExpanded(!expanded)}
+              className="p-1.5 rounded-lg hover:bg-slate-700/50 text-slate-500 hover:text-slate-300 transition-colors"
+            >
               {expanded ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
             </button>
           )}
-          <button onClick={handleCopy} className="p-1 rounded hover:bg-slate-800 text-slate-500 hover:text-slate-300 transition-colors">
+          <button
+            onClick={handleCopy}
+            className="p-1.5 rounded-lg hover:bg-slate-700/50 text-slate-500 hover:text-slate-300 transition-colors"
+          >
             {copied ? <Check size={10} className="text-emerald-400" /> : <Copy size={10} />}
           </button>
         </div>
       </div>
-      <pre className={cn("p-3 text-[11px] overflow-x-auto text-slate-300 font-mono leading-relaxed scrollbar-thin", !expanded && shouldCollapse && "max-h-64")}>
+
+      <pre className={cn(
+        "p-3.5 text-[11px] overflow-x-auto text-slate-300 font-mono leading-relaxed scrollbar-thin",
+        !expanded && shouldCollapse && "max-h-64"
+      )}>
         <code>{cleanCode}</code>
       </pre>
+
       {!expanded && shouldCollapse && (
-        <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-slate-950 to-transparent pointer-events-none" />
+        <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-slate-950 via-slate-950/80 to-transparent pointer-events-none flex items-end justify-center pb-2">
+          <span className="text-[10px] text-slate-600 font-mono">Click to expand</span>
+        </div>
       )}
-    </div>
+    </motion.div>
   );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// MESSAGE CONTENT - SAFE RENDERING
+// INLINE CODE
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function InlineCode({ code }: { code: string }) {
   return (
-    <code className="px-1.5 py-0.5 rounded-md bg-slate-800/80 text-sky-400 text-[11px] font-mono border border-slate-700/30">
+    <code className="px-1.5 py-0.5 rounded-md bg-slate-800/80 text-sky-400 text-[11px] font-mono border border-slate-700/40">
       {code}
     </code>
   );
 }
 
-function MessageContent({ content, language, onApplyCode }: { content: string; language: string; onApplyCode?: (code: string) => void }) {
-  const parts = content.split(/(```[\w]*\n?[\s\S]*?```)/g);
+// ═══════════════════════════════════════════════════════════════════════════════
+// MESSAGE CONTENT — Safe rendering with rich formatting (memoized)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const MessageContent = React.memo(function MessageContent({ 
+  content, 
+  language, 
+  onApplyCode 
+}: { 
+  content: string; 
+  language: string; 
+  onApplyCode?: (code: string) => void;
+}) {
+  const parts = useMemo(() => {
+    return content.split(/(```[\w]*\n?[\s\S]*?```)/g);
+  }, [content]);
+
   return (
     <div className="space-y-1">
       {parts.map((part, i) => {
@@ -550,12 +1028,10 @@ function MessageContent({ content, language, onApplyCode }: { content: string; l
         return lines.map((line, j) => {
           if (!line.trim()) return null;
 
-          // Handle inline code with backticks
           const inlineCodes: Array<{ text: string; isCode: boolean }> = [];
-          let remaining = line;
-          let match;
-          const inlineRegex = /`([^`]+)`/g;
           let lastIndex = 0;
+          const inlineRegex = /`([^`]+)`/g;
+          let match;
 
           while ((match = inlineRegex.exec(line)) !== null) {
             if (match.index > lastIndex) {
@@ -567,7 +1043,6 @@ function MessageContent({ content, language, onApplyCode }: { content: string; l
           if (lastIndex < line.length) {
             inlineCodes.push({ text: line.slice(lastIndex), isCode: false });
           }
-
           if (inlineCodes.length === 0) {
             inlineCodes.push({ text: line, isCode: false });
           }
@@ -585,119 +1060,494 @@ function MessageContent({ content, language, onApplyCode }: { content: string; l
       })}
     </div>
   );
-}
+});
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// REVIEW CARD
+// REVIEW CARD — Beautiful code review display
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function ReviewCard({ review }: { review: ReviewData | null }) {
   if (!review || !review.issues) return null;
+
+  const scoreColor = review.score >= 80 ? "emerald" : review.score >= 50 ? "amber" : "rose";
+  const scoreLabel = review.score >= 80 ? "Excellent" : review.score >= 50 ? "Needs Work" : "Critical";
+
   return (
-    <HolographicCard glowColor={review.score >= 80 ? "emerald" : review.score >= 50 ? "amber" : "rose"} className="my-2">
-      <div className="p-3">
+    <LiquidGlassCard glowColor={scoreColor} intensity="high" className="my-2.5">
+      <div className="p-3.5">
         <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <ShieldCheck size={14} className={review.score >= 80 ? "text-emerald-400" : review.score >= 50 ? "text-amber-400" : "text-rose-400"} />
-            <span className="text-xs font-semibold text-slate-300">Code Review</span>
+          <div className="flex items-center gap-2.5">
+            <div className={cn(
+              "w-8 h-8 rounded-xl flex items-center justify-center",
+              review.score >= 80 ? "bg-emerald-500/15" : review.score >= 50 ? "bg-amber-500/15" : "bg-rose-500/15"
+            )}>
+              <ShieldCheck size={15} className={
+                review.score >= 80 ? "text-emerald-400" : review.score >= 50 ? "text-amber-400" : "text-rose-400"
+              } />
+            </div>
+            <div>
+              <span className="text-xs font-bold text-slate-200">Code Review</span>
+              <span className="text-[10px] text-slate-500 ml-2">{scoreLabel}</span>
+            </div>
           </div>
-          <div className={cn("text-xs font-bold px-2 py-0.5 rounded-full", review.score >= 80 ? "bg-emerald-500/20 text-emerald-400" : review.score >= 50 ? "bg-amber-500/20 text-amber-400" : "bg-rose-500/20 text-rose-400")}>
-            {review.score}/100
+          <div className={cn(
+            "text-sm font-bold px-3 py-1 rounded-full border",
+            review.score >= 80 ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/20" :
+            review.score >= 50 ? "bg-amber-500/15 text-amber-400 border-amber-500/20" :
+            "bg-rose-500/15 text-rose-400 border-rose-500/20"
+          )}>
+            {review.score}<span className="text-[10px] text-slate-500">/100</span>
           </div>
         </div>
-        <p className="text-[11px] text-slate-400 mb-3">{review.summary}</p>
+
+        <p className="text-[12px] text-slate-400 mb-3 leading-relaxed">{review.summary}</p>
 
         {review.issues && review.issues.length > 0 && (
           <div className="space-y-1.5 mb-3">
-            <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1">
-              <Bug size={10} /> Issues ({review.issues.length})
-            </p>
+            <div className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
+              <Bug size={10} />
+              Issues ({review.issues.length})
+            </div>
             {review.issues.map((issue, i) => (
-              <div key={`issue-${i}`} className={cn("flex items-start gap-2 p-2 rounded-lg text-[11px] border", issue.severity === "error" ? "bg-rose-500/5 border-rose-500/20" : issue.severity === "warning" ? "bg-amber-500/5 border-amber-500/20" : "bg-sky-500/5 border-sky-500/20")}>
-                {issue.severity === "error" ? <AlertOctagon size={10} className="text-rose-400 shrink-0 mt-0.5" /> : issue.severity === "warning" ? <AlertTriangle size={10} className="text-amber-400 shrink-0 mt-0.5" /> : <CheckCircle size={10} className="text-sky-400 shrink-0 mt-0.5" />}
-                <div>
-                  <span className="text-slate-500">Line {issue.line}:</span> <span className="text-slate-300">{issue.message}</span>
-                  {issue.suggestion && <p className="text-slate-500 mt-1 italic text-[10px]">{issue.suggestion}</p>}
+              <motion.div
+                key={`issue-${i}`}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.05 }}
+                className={cn(
+                  "flex items-start gap-2 p-2.5 rounded-xl text-[11px] border",
+                  issue.severity === "error" ? "bg-rose-500/5 border-rose-500/15" :
+                  issue.severity === "warning" ? "bg-amber-500/5 border-amber-500/15" :
+                  "bg-sky-500/5 border-sky-500/15"
+                )}
+              >
+                {issue.severity === "error" ? (
+                  <AlertOctagon size={11} className="text-rose-400 shrink-0 mt-0.5" />
+                ) : issue.severity === "warning" ? (
+                  <AlertTriangle size={11} className="text-amber-400 shrink-0 mt-0.5" />
+                ) : (
+                  <CheckCircle size={11} className="text-sky-400 shrink-0 mt-0.5" />
+                )}
+                <div className="flex-1 min-w-0">
+                  <span className="text-slate-500 font-mono text-[10px]">L{issue.line}</span>
+                  <span className="text-slate-300 ml-1.5">{issue.message}</span>
+                  {issue.suggestion && (
+                    <p className="text-slate-500 mt-1.5 italic text-[10px] border-l-2 border-slate-700/50 pl-2">
+                      {issue.suggestion}
+                    </p>
+                  )}
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
         )}
 
         {review.improvements && review.improvements.length > 0 && (
           <div className="space-y-1">
-            <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1">
-              <Lightbulb size={10} /> Improvements
-            </p>
+            <div className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
+              <Lightbulb size={10} />
+              Improvements
+            </div>
             {review.improvements.map((imp, i) => (
-              <p key={`imp-${i}`} className="text-[11px] text-slate-400 flex items-start gap-1.5">
-                <Sparkles size={8} className="text-purple-400 shrink-0 mt-0.5" /> {imp}
-              </p>
+              <motion.p
+                key={`imp-${i}`}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.05 }}
+                className="text-[11px] text-slate-400 flex items-start gap-2"
+              >
+                <Sparkles size={9} className="text-purple-400 shrink-0 mt-0.5" />
+                {imp}
+              </motion.p>
             ))}
           </div>
         )}
       </div>
-    </HolographicCard>
+    </LiquidGlassCard>
   );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// CHAT LIST ITEM
+// CHAT LIST ITEM — Beautiful chat list with animations
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function ChatListItem({ chat, isActive, onSwitch, onRename, onPin, onDelete }: ChatListItemProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(chat.title);
 
-  const handleSave = () => {
+  const handleSave = useCallback(() => {
     if (editValue.trim()) onRename(editValue.trim());
     setIsEditing(false);
-  };
+  }, [editValue, onRename]);
 
   return (
     <motion.div
-      whileHover={{ x: 2 }}
+      layout
+      whileHover={{ x: 3 }}
+      whileTap={{ scale: 0.98 }}
       className={cn(
-        "group flex items-center gap-2 px-3 py-2.5 rounded-xl cursor-pointer transition-all border",
+        "group flex items-center gap-2.5 px-3 py-2.5 rounded-xl cursor-pointer transition-all border",
         isActive
-          ? "bg-purple-500/10 border-purple-500/20 shadow-lg shadow-purple-500/5"
-          : "hover:bg-slate-800/50 border-transparent hover:border-slate-700/30"
+          ? "bg-purple-500/10 border-purple-500/25 shadow-lg shadow-purple-500/5"
+          : "hover:bg-slate-800/40 border-transparent hover:border-slate-700/20"
       )}
       onClick={onSwitch}
     >
-      <Pin size={11} className={cn("shrink-0 transition-colors", chat.pinned ? "text-amber-400 fill-amber-400" : "text-slate-700")} />
+      <motion.div
+        animate={chat.pinned ? { rotate: [0, -15, 15, 0] } : {}}
+        transition={{ duration: 0.5 }}
+      >
+        <Pin size={11} className={cn(
+          "shrink-0 transition-colors",
+          chat.pinned ? "text-amber-400 fill-amber-400" : "text-slate-700"
+        )} />
+      </motion.div>
+
       {isEditing ? (
         <input
           autoFocus
           value={editValue}
           onChange={(e) => setEditValue(e.target.value)}
           onBlur={handleSave}
-          onKeyDown={(e) => { if (e.key === "Enter") handleSave(); if (e.key === "Escape") setIsEditing(false); }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") handleSave();
+            if (e.key === "Escape") setIsEditing(false);
+          }}
           onClick={(e) => e.stopPropagation()}
-          className="flex-1 bg-slate-900 text-slate-200 text-xs px-2 py-1 rounded-lg border border-purple-500/50 outline-none min-w-0"
+          className="flex-1 bg-slate-900 text-slate-200 text-xs px-2.5 py-1.5 rounded-lg border border-purple-500/40 outline-none min-w-0 focus:ring-2 focus:ring-purple-500/20"
         />
       ) : (
-        <span className={cn("flex-1 text-xs truncate", isActive ? "text-purple-300" : "text-slate-400")}>
-          {chat.title}
-        </span>
+        <div className="flex-1 min-w-0">
+          <span className={cn("text-xs truncate block", isActive ? "text-purple-300 font-medium" : "text-slate-400")}>
+            {chat.title}
+          </span>
+          {chat.messages.length > 0 && (
+            <span className="text-[9px] text-slate-600 truncate block">
+              {chat.messages[chat.messages.length - 1]?.content.slice(0, 40)}...
+            </span>
+          )}
+        </div>
       )}
+
       <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button onClick={(e) => { e.stopPropagation(); setIsEditing(true); setEditValue(chat.title); }} className="p-1 rounded hover:bg-slate-700 text-slate-500 hover:text-slate-300">
+        <motion.button
+          whileHover={{ scale: 1.15 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={(e) => { e.stopPropagation(); setIsEditing(true); setEditValue(chat.title); }}
+          className="p-1.5 rounded-lg hover:bg-slate-700/50 text-slate-500 hover:text-slate-300 transition-colors"
+        >
           <Pencil size={9} />
-        </button>
-        <button onClick={(e) => { e.stopPropagation(); onPin(); }} className="p-1 rounded hover:bg-slate-700 text-slate-500 hover:text-amber-400">
+        </motion.button>
+        <motion.button
+          whileHover={{ scale: 1.15 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={(e) => { e.stopPropagation(); onPin(); }}
+          className="p-1.5 rounded-lg hover:bg-slate-700/50 text-slate-500 hover:text-amber-400 transition-colors"
+        >
           <Pin size={9} />
-        </button>
-        <button onClick={(e) => { e.stopPropagation(); if (confirm("Delete this chat?")) onDelete(); }} className="p-1 rounded hover:bg-rose-500/20 text-slate-500 hover:text-rose-400">
+        </motion.button>
+        <motion.button
+          whileHover={{ scale: 1.15 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={(e) => { e.stopPropagation(); onDelete(); }}
+          className="p-1.5 rounded-lg hover:bg-rose-500/15 text-slate-500 hover:text-rose-400 transition-colors"
+        >
           <Trash2 size={9} />
-        </button>
+        </motion.button>
       </div>
     </motion.div>
   );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// MAIN AIPANEL COMPONENT
+// QUICK ACTION CHIP — Context-aware AI actions
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function QuickActionChip({
+  icon: Icon,
+  label,
+  color,
+  onClick,
+}: {
+  icon: React.ElementType;
+  label: string;
+  color: "purple" | "sky" | "emerald" | "amber" | "rose";
+  onClick: () => void;
+}) {
+  const colorMap = {
+    purple: "bg-purple-500/10 text-purple-400 border-purple-500/20 hover:bg-purple-500/20 hover:border-purple-500/30",
+    sky: "bg-sky-500/10 text-sky-400 border-sky-500/20 hover:bg-sky-500/20 hover:border-sky-500/30",
+    emerald: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20 hover:border-emerald-500/30",
+    amber: "bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20 hover:border-amber-500/30",
+    rose: "bg-rose-500/10 text-rose-400 border-rose-500/20 hover:bg-rose-500/20 hover:border-rose-500/30",
+  };
+
+  return (
+    <motion.button
+      whileHover={{ scale: 1.04, y: -1 }}
+      whileTap={{ scale: 0.96 }}
+      onClick={onClick}
+      className={cn(
+        "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium border transition-all",
+        colorMap[color]
+      )}
+    >
+      <Icon size={12} />
+      {label}
+    </motion.button>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MODEL SELECTOR — Beautiful model switching UI
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function ModelSelector({ 
+  models, 
+  activeModel, 
+  onSwitch 
+}: { 
+  models: ModelInfo[]; 
+  activeModel: string; 
+  onSwitch: (id: string) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const active = models.find(m => m.id === activeModel) || models[0];
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[10px] font-medium bg-white/5 border border-white/10 hover:bg-white/10 transition-all"
+      >
+        <Cpu size={10} className="text-purple-400" />
+        <span className="text-slate-300">{active?.name || "Model"}</span>
+        <ChevronDown size={10} className={cn("text-slate-500 transition-transform", isOpen && "rotate-180")} />
+      </button>
+
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -8, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -8, scale: 0.96 }}
+            transition={{ duration: 0.15 }}
+            className="absolute top-full left-0 mt-1 w-56 bg-slate-900/95 backdrop-blur-2xl border border-white/10 rounded-xl overflow-hidden shadow-2xl shadow-black/50 z-50"
+          >
+            {models.map((model) => (
+              <button
+                key={model.id}
+                onClick={() => { onSwitch(model.id); setIsOpen(false); }}
+                className={cn(
+                  "w-full flex items-center gap-2.5 px-3 py-2.5 text-left transition-all hover:bg-white/5",
+                  model.id === activeModel && "bg-purple-500/10"
+                )}
+              >
+                <div className={cn("w-2 h-2 rounded-full", model.color)} />
+                <div className="flex-1 min-w-0">
+                  <span className={cn("text-[11px] font-medium block", model.id === activeModel ? "text-purple-300" : "text-slate-300")}>
+                    {model.name}
+                  </span>
+                  <span className="text-[9px] text-slate-600">{model.provider} · {model.speed}</span>
+                </div>
+                {model.id === activeModel && <Check size={10} className="text-purple-400 shrink-0" />}
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FILE CONTEXT BAR — Shows open files in the editor
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function FileContextBar({ 
+  files, 
+  activeFile, 
+  onSwitchFile 
+}: { 
+  files: FileContext[]; 
+  activeFile: string; 
+  onSwitchFile: (path: string) => void;
+}) {
+  if (!files || files.length === 0) return null;
+
+  return (
+    <div className="flex items-center gap-1 px-3 py-2 border-b border-white/5 overflow-x-auto scrollbar-none">
+      <FileCode size={10} className="text-slate-600 shrink-0 mr-1" />
+      {files.map((file) => (
+        <button
+          key={file.path}
+          onClick={() => onSwitchFile(file.path)}
+          className={cn(
+            "flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] transition-all shrink-0 border",
+            file.path === activeFile
+              ? "bg-purple-500/10 text-purple-300 border-purple-500/20"
+              : "bg-white/5 text-slate-500 border-transparent hover:bg-white/10 hover:text-slate-300"
+          )}
+        >
+          <FileText size={9} />
+          <span className="truncate max-w-[120px]">{file.path.split("/").pop()}</span>
+          <span className="text-[8px] text-slate-600 uppercase">{file.language}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// GIT STATUS BAR — Shows git branch and changes
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function GitStatusBar({ status }: { status?: { branch: string; changes: number; ahead: number; behind: number } }) {
+  if (!status) return null;
+
+  return (
+    <div className="flex items-center gap-3 px-3 py-1.5 border-b border-white/5 bg-white/[0.02]">
+      <div className="flex items-center gap-1.5 text-[10px] text-slate-500">
+        <GitBranch size={10} className="text-purple-400" />
+        <span className="font-mono text-slate-400">{status.branch}</span>
+      </div>
+      {status.changes > 0 && (
+        <span className="text-[10px] text-amber-400 flex items-center gap-1">
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+          {status.changes} changes
+        </span>
+      )}
+      {status.ahead > 0 && (
+        <span className="text-[10px] text-emerald-400 flex items-center gap-1">
+          <ArrowUp size={9} />
+          {status.ahead}
+        </span>
+      )}
+      {status.behind > 0 && (
+        <span className="text-[10px] text-slate-500 flex items-center gap-1">
+          <ArrowDown size={9} />
+          {status.behind}
+        </span>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TOKEN USAGE BAR — Shows token consumption
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function TokenUsageBar({ used, limit }: { used: number; limit: number }) {
+  const percentage = Math.min((used / limit) * 100, 100);
+  const color = percentage > 90 ? "bg-rose-500" : percentage > 70 ? "bg-amber-500" : "bg-emerald-500";
+
+  return (
+    <div className="flex items-center gap-2 px-3 py-1">
+      <div className="flex-1 h-1 bg-slate-800 rounded-full overflow-hidden">
+        <motion.div
+          className={cn("h-full rounded-full", color)}
+          initial={{ width: 0 }}
+          animate={{ width: `${percentage}%` }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+        />
+      </div>
+      <span className="text-[9px] text-slate-600 font-mono">
+        {used.toLocaleString()}/{limit.toLocaleString()}
+      </span>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MESSAGE ACTIONS — Edit, regenerate, delete, copy for each message
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function MessageActions({ 
+  messageId, 
+  onRegenerate, 
+  onEdit, 
+  onDelete, 
+  onCopy,
+  isUser
+}: { 
+  messageId: string; 
+  onRegenerate?: (id: string) => void;
+  onEdit?: (id: string, content: string) => void;
+  onDelete?: (id: string) => void;
+  onCopy?: () => void;
+  isUser: boolean;
+}) {
+  const [showActions, setShowActions] = useState(false);
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setShowActions(!showActions)}
+        className="p-1 rounded-lg hover:bg-white/10 text-slate-600 hover:text-slate-300 transition-all"
+      >
+        <MoreHorizontal size={12} />
+      </button>
+
+      <AnimatePresence>
+        {showActions && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, y: 4 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: 4 }}
+            transition={{ duration: 0.1 }}
+            className="absolute bottom-full right-0 mb-1 bg-slate-900/95 backdrop-blur-2xl border border-white/10 rounded-xl overflow-hidden shadow-2xl shadow-black/50 z-50 min-w-[140px]"
+          >
+            {onCopy && (
+              <button onClick={() => { onCopy(); setShowActions(false); }} className="w-full flex items-center gap-2 px-3 py-2 text-[11px] text-slate-300 hover:bg-white/5 transition-all">
+                <Copy size={10} /> Copy
+              </button>
+            )}
+            {!isUser && onRegenerate && (
+              <button onClick={() => { onRegenerate(messageId); setShowActions(false); }} className="w-full flex items-center gap-2 px-3 py-2 text-[11px] text-slate-300 hover:bg-white/5 transition-all">
+                <RefreshCw size={10} /> Regenerate
+              </button>
+            )}
+            {isUser && onEdit && (
+              <button onClick={() => { onEdit(messageId, ""); setShowActions(false); }} className="w-full flex items-center gap-2 px-3 py-2 text-[11px] text-slate-300 hover:bg-white/5 transition-all">
+                <Edit3 size={10} /> Edit
+              </button>
+            )}
+            {onDelete && (
+              <button onClick={() => { onDelete(messageId); setShowActions(false); }} className="w-full flex items-center gap-2 px-3 py-2 text-[11px] text-rose-400 hover:bg-rose-500/10 transition-all">
+                <Trash2 size={10} /> Delete
+              </button>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SCROLL TO BOTTOM BUTTON
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function ScrollToBottom({ onClick, visible }: { onClick: () => void; visible: boolean }) {
+  return (
+    <AnimatePresence>
+      {visible && (
+        <motion.button
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 10 }}
+          onClick={onClick}
+          className="absolute bottom-4 right-4 z-20 p-2 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-400 hover:bg-purple-500/30 transition-all shadow-lg shadow-purple-500/20"
+        >
+          <ArrowDown size={14} />
+        </motion.button>
+      )}
+    </AnimatePresence>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MAIN AIPANEL COMPONENT — The most powerful AI editor panel ever
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export function AIPanel({
@@ -720,6 +1570,23 @@ export function AIPanel({
   onPinChat,
   onDeleteChat,
   hasConsoleErrors,
+  openFiles,
+  activeFilePath,
+  onSwitchFile,
+  availableModels,
+  activeModel,
+  onSwitchModel,
+  tokenCount,
+  onRegenerateMessage,
+  onEditMessage,
+  onDeleteMessage,
+  onExportChat,
+  onShareChat,
+  onSearchInChat,
+  projectContext,
+  gitStatus,
+  terminalOutput,
+  onRunTerminal,
 }: AIPanelProps) {
   const isMobile = useIsMobile();
   const isSmallPhone = useIsSmallPhone();
@@ -730,11 +1597,40 @@ export function AIPanel({
   const [toolResults, setToolResults] = useState<ToolResult[]>([]);
   const [isListening, setIsListening] = useState(false);
   const [zoom, setZoom] = useState(1);
+  const [proMode, setProMode] = useState(true);
+  const [showScrollButton, setShowScrollButton] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+  const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showSearch, setShowSearch] = useState(false);
+  const [messageActions, setMessageActions] = useState<Record<string, boolean>>({});
+
+  // Speech recognition ref for cleanup
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("nuvuja-pro-mode");
+      if (saved !== null) setProMode(saved !== "false");
+    } catch { /* ignore */ }
+  }, []);
 
   // Panel dimensions - desktop only
-  const [panelWidth, setPanelWidth] = useState(420);
-  const [panelHeight, setPanelHeight] = useState(0);
-  const [panelTop, setPanelTop] = useState(44);
+  const [panelWidth, setPanelWidth] = useState(480);
+  const [panelHeight, setPanelHeight] = useState(640);
+  const [panelTop, setPanelTop] = useState(80);
+
+  // Load saved dimensions on mount
+  useEffect(() => {
+    try {
+      const savedW = localStorage.getItem("nuvuja-panel-width");
+      const savedH = localStorage.getItem("nuvuja-panel-height");
+      const savedT = localStorage.getItem("nuvuja-panel-top");
+      if (savedW) setPanelWidth(Math.max(360, Math.min(900, parseInt(savedW, 10))));
+      if (savedH) setPanelHeight(Math.max(400, Math.min(850, parseInt(savedH, 10))));
+      if (savedT) setPanelTop(Math.max(60, parseInt(savedT, 10)));
+    } catch { /* ignore */ }
+  }, []);
 
   const [isResizing, setIsResizing] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -746,58 +1642,80 @@ export function AIPanel({
   const resizeDirRef = useRef<string | null>(null);
   const startXRef = useRef(0);
   const startYRef = useRef(0);
-  const startWidthRef = useRef(420);
-  const startHeightRef = useRef(0);
-  const startTopRef = useRef(44);
+  const startWidthRef = useRef(480);
+  const startHeightRef = useRef(640);
+  const startTopRef = useRef(80);
+  const lastScrollHeightRef = useRef(0);
 
   // Safe panelTop initialization
   useEffect(() => {
+    if (typeof window === "undefined") return;
     const updateTop = () => {
-      const safeTopVal = getComputedStyle(document.documentElement).getPropertyValue("--safe-top").trim();
-      const numeric = parseInt(safeTopVal || "0", 10);
-      const safeTop = isNaN(numeric) ? 0 : numeric;
-      const top = Math.max(44, 44 + safeTop);
-      setPanelTop(top);
-      startTopRef.current = top;
+      try {
+        const safeTopVal = getComputedStyle(document.documentElement).getPropertyValue("--safe-top").trim();
+        const numeric = parseInt(safeTopVal || "0", 10);
+        const safeTop = isNaN(numeric) ? 0 : numeric;
+        const top = Math.max(60, 60 + safeTop);
+        setPanelTop(top);
+        startTopRef.current = top;
+      } catch { /* ignore */ }
     };
     updateTop();
     window.addEventListener("orientationchange", () => setTimeout(updateTop, 300));
     return () => window.removeEventListener("orientationchange", updateTop);
   }, []);
 
-  // Panel height calculation with visualViewport - SAFE
+  // Panel height - cap at viewport but respect user resize
   useEffect(() => {
+    if (typeof window === "undefined") return;
     const update = () => {
-      const vv = window.visualViewport;
-      const visibleHeight = vv ? vv.height : window.innerHeight;
-      const h = Math.max(200, visibleHeight - panelTop);
-      setPanelHeight(h);
-      startHeightRef.current = h;
+      try {
+        const vv = window.visualViewport;
+        const visibleHeight = vv ? vv.height : window.innerHeight;
+        const maxH = visibleHeight - panelTop - 20;
+        setPanelHeight((prev) => Math.min(prev, maxH));
+        startHeightRef.current = panelHeight;
+      } catch { /* ignore */ }
     };
     update();
     const vv = window.visualViewport;
     if (vv) {
       vv.addEventListener("resize", update);
-      vv.addEventListener("scroll", update);
     }
     window.addEventListener("resize", update);
     window.addEventListener("orientationchange", () => setTimeout(update, 300));
     return () => {
       if (vv) {
         vv.removeEventListener("resize", update);
-        vv.removeEventListener("scroll", update);
       }
       window.removeEventListener("resize", update);
       window.removeEventListener("orientationchange", update);
     };
-  }, [panelTop]);
+  }, [panelTop, panelHeight]);
 
-  // Auto-scroll
+  // Smart auto-scroll - only scroll if user was at bottom
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      const el = scrollRef.current;
+      const isAtBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 50;
+      if (isAtBottom || conversations.length === 0) {
+        el.scrollTop = el.scrollHeight;
+      }
+      lastScrollHeightRef.current = el.scrollHeight;
     }
   }, [conversations, isLoading, toolResults]);
+
+  // Scroll detection for scroll-to-bottom button
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const handleScroll = () => {
+      const isAtBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 100;
+      setShowScrollButton(!isAtBottom && el.scrollHeight > el.clientHeight);
+    };
+    el.addEventListener("scroll", handleScroll);
+    return () => el.removeEventListener("scroll", handleScroll);
+  }, []);
 
   // Security level detection
   useEffect(() => {
@@ -814,20 +1732,39 @@ export function AIPanel({
     }
   }, [currentCode]);
 
-  // Keyboard shortcut: Escape to close
+  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Escape to close
       if (e.key === "Escape" && isOpen) {
+        if (showCommandPalette) { setShowCommandPalette(false); return; }
+        if (showSearch) { setShowSearch(false); return; }
+        if (showSettings) { setShowSettings(false); return; }
         onToggle();
+      }
+      // Cmd/Ctrl+K for command palette
+      if ((e.metaKey || e.ctrlKey) && e.key === "k" && isOpen) {
+        e.preventDefault();
+        setShowCommandPalette(true);
+      }
+      // / to focus input when not typing
+      if (e.key === "/" && isOpen && !isTyping && document.activeElement?.tagName !== "INPUT") {
+        e.preventDefault();
+        inputRef.current?.focus();
+      }
+      // Cmd/Ctrl+Enter to send
+      if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && isOpen && input.trim()) {
+        e.preventDefault();
+        handleSend();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onToggle]);
+  }, [isOpen, onToggle, input, isTyping, showCommandPalette, showSearch, showSettings]);
 
   // MOUSE + TOUCH Resize handlers - DESKTOP ONLY
   useEffect(() => {
-    if (isMobile) return; // No resize on mobile
+    if (isMobile) return;
 
     const handleMove = (e: MouseEvent | TouchEvent) => {
       if (!isResizingRef.current || !resizeDirRef.current) return;
@@ -849,15 +1786,15 @@ export function AIPanel({
       let newH = startHeightRef.current;
       let newT = startTopRef.current;
 
-      if (dir.includes("w")) newW = Math.max(320, Math.min(900, startWidthRef.current - dx));
-      if (dir.includes("e")) newW = Math.max(320, Math.min(900, startWidthRef.current + dx));
+      if (dir.includes("w")) newW = Math.max(360, Math.min(900, startWidthRef.current - dx));
+      if (dir.includes("e")) newW = Math.max(360, Math.min(900, startWidthRef.current + dx));
       if (dir.includes("n")) {
         const safeTop = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--safe-top") || "0", 10) || 0;
-        newT = Math.max(safeTop, Math.min(window.innerHeight - 200, startTopRef.current + dy));
-        newH = Math.max(200, startHeightRef.current - dy);
+        newT = Math.max(safeTop + 44, Math.min(window.innerHeight - 300, startTopRef.current + dy));
+        newH = Math.max(400, startHeightRef.current - dy);
       }
       if (dir.includes("s")) {
-        newH = Math.max(200, Math.min(window.innerHeight - panelTop, startHeightRef.current + dy));
+        newH = Math.max(400, Math.min(window.innerHeight - panelTop - 20, startHeightRef.current + dy));
       }
       setPanelWidth(newW);
       setPanelHeight(newH);
@@ -868,6 +1805,11 @@ export function AIPanel({
       isResizingRef.current = false;
       resizeDirRef.current = null;
       setIsResizing(false);
+      try {
+        localStorage.setItem("nuvuja-panel-width", String(panelWidth));
+        localStorage.setItem("nuvuja-panel-height", String(panelHeight));
+        localStorage.setItem("nuvuja-panel-top", String(panelTop));
+      } catch { /* ignore */ }
     };
 
     window.addEventListener("mousemove", handleMove);
@@ -881,10 +1823,10 @@ export function AIPanel({
       window.removeEventListener("touchmove", handleMove);
       window.removeEventListener("touchend", handleUp);
     };
-  }, [isMobile, panelTop]);
+  }, [isMobile, panelTop, panelWidth, panelHeight]);
 
   const startResize = useCallback((dir: string) => (e: React.MouseEvent | React.TouchEvent) => {
-    if (isMobile) return; // No resize on mobile
+    if (isMobile) return;
     isResizingRef.current = true;
     resizeDirRef.current = dir;
 
@@ -904,12 +1846,20 @@ export function AIPanel({
     e.stopPropagation();
   }, [isMobile, panelWidth, panelHeight, panelTop]);
 
-  // Voice input
-  const toggleVoice = () => {
+  // Voice input with proper cleanup
+  const toggleVoice = useCallback(() => {
     if (!("webkitSpeechRecognition" in window) && !("SpeechRecognition" in window)) {
       alert("Voice input is not supported in your browser.");
       return;
     }
+
+    if (isListening && recognitionRef.current) {
+      recognitionRef.current.stop();
+      recognitionRef.current = null;
+      setIsListening(false);
+      return;
+    }
+
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) return;
 
@@ -917,24 +1867,40 @@ export function AIPanel({
     recognition.lang = "en-US";
     recognition.continuous = false;
     recognition.interimResults = false;
+    recognitionRef.current = recognition;
 
-    if (isListening) {
-      recognition.stop();
+    setIsListening(true);
+    recognition.start();
+
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
+      const transcript = event.results[0][0].transcript;
+      setInput((prev) => prev + " " + transcript);
       setIsListening(false);
-    } else {
-      setIsListening(true);
-      recognition.start();
-      recognition.onresult = (event: SpeechRecognitionEvent) => {
-        const transcript = event.results[0][0].transcript;
-        setInput((prev) => prev + " " + transcript);
-        setIsListening(false);
-      };
-      recognition.onerror = () => setIsListening(false);
-      recognition.onend = () => setIsListening(false);
-    }
-  };
+      recognitionRef.current = null;
+    };
 
-  const handleSend = () => {
+    recognition.onerror = () => {
+      setIsListening(false);
+      recognitionRef.current = null;
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+      recognitionRef.current = null;
+    };
+  }, [isListening]);
+
+  // Cleanup speech recognition on unmount
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.abort();
+        recognitionRef.current = null;
+      }
+    };
+  }, []);
+
+  const handleSend = useCallback(() => {
     if (!input.trim() || isLoading) return;
     let action: "chat" | "review" | "fix" | "explain" | "generate" = "chat";
     let message = input.trim();
@@ -950,19 +1916,25 @@ export function AIPanel({
     setInput("");
     setShowSuggestions(false);
     setAttachCode(false);
-  };
+  }, [input, isLoading, attachCode, currentCode, currentLanguage, onSendMessage]);
 
   const suggestions = [
-    { text: "/review — Deep code review with security audit", icon: ShieldCheck, color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/20" },
-    { text: "/fix — Auto-fix errors with CVE check", icon: Wand2, color: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/20" },
-    { text: "/explain — Explain with architecture diagram", icon: Brain, color: "text-sky-400", bg: "bg-sky-500/10", border: "border-sky-500/20" },
-    { text: "/generate — Generate production-ready code", icon: Rocket, color: "text-purple-400", bg: "bg-purple-500/10", border: "border-purple-500/20" },
+    { text: "/review — Deep code review with security audit", icon: ShieldCheck, color: "emerald" as const, desc: "Analyze code quality, security & performance" },
+    { text: "/fix — Auto-fix errors with CVE check", icon: Wand2, color: "amber" as const, desc: "Detect and patch bugs automatically" },
+    { text: "/explain — Explain with architecture diagram", icon: Brain, color: "sky" as const, desc: "Understand how your code works" },
+    { text: "/generate — Generate production-ready code", icon: Rocket, color: "purple" as const, desc: "Create complete features from description" },
   ];
 
-  const sortedChats = useMemo(() => [...chats].sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || b.updatedAt - a.updatedAt), [chats]);
+  const sortedChats = useMemo(() => {
+    return [...chats].sort((a, b) => {
+      const pinnedDiff = (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0);
+      if (pinnedDiff !== 0) return pinnedDiff;
+      return b.updatedAt - a.updatedAt;
+    });
+  }, [chats]);
 
-  // Extract tool results from conversations
-  useEffect(() => {
+  // Extract tool results from conversations (memoized)
+  const parsedToolResults = useMemo(() => {
     const newToolResults: ToolResult[] = [];
     conversations.forEach((conv) => {
       if (conv.role === "assistant" && conv.content.includes("###TOOL_RESULT###")) {
@@ -977,11 +1949,28 @@ export function AIPanel({
         }
       }
     });
-    setToolResults(newToolResults);
+    return newToolResults;
   }, [conversations]);
 
+  useEffect(() => {
+    setToolResults(parsedToolResults);
+  }, [parsedToolResults]);
+
+  // Command palette items
+  const commandItems = [
+    { icon: ShieldCheck, label: "Review Code", shortcut: "/review", action: () => { setInput("/review "); setShowCommandPalette(false); inputRef.current?.focus(); } },
+    { icon: Wand2, label: "Fix Code", shortcut: "/fix", action: () => { setInput("/fix "); setShowCommandPalette(false); inputRef.current?.focus(); } },
+    { icon: Brain, label: "Explain", shortcut: "/explain", action: () => { setInput("/explain "); setShowCommandPalette(false); inputRef.current?.focus(); } },
+    { icon: Rocket, label: "Generate", shortcut: "/generate", action: () => { setInput("/generate "); setShowCommandPalette(false); inputRef.current?.focus(); } },
+    { icon: Search, label: "Search in Chat", shortcut: "Cmd+Shift+F", action: () => { setShowSearch(true); setShowCommandPalette(false); } },
+    { icon: Download, label: "Export Chat", shortcut: "", action: () => { onExportChat?.(); setShowCommandPalette(false); } },
+    { icon: Share2, label: "Share Chat", shortcut: "", action: () => { onShareChat?.(); setShowCommandPalette(false); } },
+    { icon: Trash2, label: "Clear Chat", shortcut: "", action: () => { onClearChat(); setShowCommandPalette(false); } },
+    { icon: Plus, label: "New Chat", shortcut: "", action: () => { onNewChat(); setShowCommandPalette(false); } },
+  ];
+
   // ═══════════════════════════════════════════════════════════════════════════════
-  // RENDER: TOGGLE BUTTON (when closed)
+  // RENDER: TOGGLE BUTTON — ᓄᕙᔭ
   // ═══════════════════════════════════════════════════════════════════════════════
 
   const toggleButton = (
@@ -990,55 +1979,81 @@ export function AIPanel({
       initial={{ scale: 0.8, opacity: 0, y: 20 }}
       animate={{ scale: 1, opacity: 1, y: 0 }}
       exit={{ scale: 0.8, opacity: 0, y: 20 }}
-      whileHover={{ scale: 1.08 }}
+      whileHover={{ scale: 1.08, boxShadow: "0 0 40px rgba(168,85,247,0.5)" }}
       whileTap={{ scale: 0.95 }}
       onClick={(e) => {
         e.stopPropagation();
         e.preventDefault();
         onToggle();
       }}
-      className="fixed flex items-center gap-2.5 px-5 py-3.5 rounded-2xl shadow-2xl text-white backdrop-blur-sm border border-white/10 pointer-events-auto cursor-pointer ai-toggle-btn"
-      style={{ zIndex: 9999 }}
+      className="fixed flex items-center gap-3 px-5 py-3.5 rounded-2xl text-white pointer-events-auto cursor-pointer"
+      style={{
+        zIndex: 9999,
+        bottom: 80,
+        right: 20,
+        background: "linear-gradient(135deg, rgba(139,92,246,0.92) 0%, rgba(56,189,248,0.88) 50%, rgba(168,85,247,0.92) 100%)",
+        backdropFilter: "blur(16px)",
+        WebkitBackdropFilter: "blur(16px)",
+        boxShadow: "0 8px 32px rgba(139,92,246,0.35), 0 0 0 1px rgba(255,255,255,0.12) inset, 0 0 24px rgba(56,189,248,0.25)",
+        border: "1px solid rgba(255,255,255,0.18)",
+      }}
     >
-      <motion.div
-        animate={{ rotate: 360 }}
-        transition={{
-          duration: 20,
-          repeat: Number.POSITIVE_INFINITY,
-          ease: "linear",
-          repeatType: "loop"
-        }}
-      >
-        <Orbit size={20} />
-      </motion.div>
-      <span className="text-sm font-semibold tracking-wide">ᓄᕙᔭ</span>
+      <div className="relative">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 20, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
+          className="relative z-10"
+        >
+          <Orbit size={22} className="text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.7)]" />
+        </motion.div>
+        <div className="absolute inset-0 bg-white/25 blur-xl rounded-full" />
+      </div>
+
+      <div className="flex flex-col items-start">
+        <span className="text-sm font-bold tracking-wider text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.6)]">
+          ᓄᕙᔭ
+        </span>
+        <span className="text-[9px] text-white/70 font-medium tracking-wide">AI Assistant</span>
+      </div>
+
       {hasConsoleErrors && (
+        <motion.div
+          className="relative ml-1"
+          animate={{ scale: [1, 1.2, 1] }}
+          transition={{ duration: 1.5, repeat: Number.POSITIVE_INFINITY }}
+        >
+          <span className="w-2.5 h-2.5 rounded-full bg-red-400 shadow-[0_0_12px_rgba(248,113,113,0.9)] block" />
+          <motion.span
+            className="absolute inset-0 w-2.5 h-2.5 rounded-full bg-red-400 opacity-75"
+            animate={{ scale: [1, 2, 1], opacity: [0.75, 0, 0.75] }}
+            transition={{ duration: 1.5, repeat: Number.POSITIVE_INFINITY, ease: "easeOut" }}
+          />
+        </motion.div>
+      )}
+      {!hasConsoleErrors && isLoading && (
+        <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}>
+          <Loader2 size={14} className="text-white/80" />
+        </motion.div>
+      )}
+      {!hasConsoleErrors && !isLoading && conversations.length > 0 && (
         <motion.span
-          animate={{ scale: [1, 1.3, 1] }}
-          transition={{
-            duration: 1.5,
-            repeat: Number.POSITIVE_INFINITY,
-            repeatType: "loop"
-          }}
-          className="w-2.5 h-2.5 rounded-full bg-red-400 shadow-lg shadow-red-400/50"
+          animate={{ opacity: [0.4, 1, 0.4] }}
+          transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
+          className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)]"
         />
       )}
-      {!hasConsoleErrors && conversations.length > 0 && (
+      {!hasConsoleErrors && !isLoading && conversations.length === 0 && (
         <motion.span
-          animate={{ opacity: [0.5, 1, 0.5] }}
-          transition={{
-            duration: 2,
-            repeat: Number.POSITIVE_INFINITY,
-            repeatType: "loop"
-          }}
-          className="w-2 h-2 rounded-full bg-white"
+          animate={{ opacity: [0.3, 0.8, 0.3] }}
+          transition={{ duration: 3, repeat: Number.POSITIVE_INFINITY }}
+          className="w-1.5 h-1.5 rounded-full bg-white/50"
         />
       )}
     </motion.button>
   );
 
   // ═══════════════════════════════════════════════════════════════════════════════
-  // RENDER: MAIN PANEL (when open)
+  // RENDER: MAIN PANEL
   // ═══════════════════════════════════════════════════════════════════════════════
 
   const panelContent = (
@@ -1049,48 +2064,65 @@ export function AIPanel({
       exit={{ x: "100%", opacity: 0 }}
       transition={{ type: "spring", damping: 25, stiffness: 200 }}
       style={{
-        top: panelTop,
-        right: 0,
+        top: isMobile ? panelTop : panelTop,
+        right: isMobile ? 0 : 20,
         width: isMobile ? "100%" : panelWidth,
         maxWidth: isMobile ? "100vw" : 900,
-        height: panelHeight
+        height: isMobile ? panelHeight : panelHeight,
       }}
-      className={cn("fixed flex flex-row shadow-2xl shadow-black/50 overflow-hidden ai-panel-container", isResizing && "select-none")}
+      className={cn("fixed flex flex-row shadow-2xl shadow-black/60 overflow-hidden", isResizing && "select-none")}
+      role="dialog"
+      aria-label="AI Assistant Panel"
+      aria-modal="true"
     >
-      {/* Holographic background with particles */}
+      {/* Deep space background */}
       <div className="absolute inset-0 z-0">
         <ParticleBackground />
       </div>
-      <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-2xl z-[1]" />
-      <div className="absolute inset-0 bg-gradient-to-br from-purple-900/10 via-slate-950/50 to-sky-900/10 z-[1]" />
+      <div className="absolute inset-0 bg-slate-950/85 backdrop-blur-2xl z-[1]" />
+      <div className="absolute inset-0 bg-gradient-to-br from-purple-900/15 via-slate-950/40 to-sky-900/15 z-[1]" />
 
       {/* Border glow */}
-      <div className="absolute inset-0 rounded-l-2xl border border-purple-500/10 pointer-events-none" />
-      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-purple-500/30 to-transparent" />
+      <div className={cn("absolute inset-0 border border-purple-500/10 pointer-events-none", !isMobile && "rounded-l-[20px]")} />
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-purple-500/40 to-transparent" />
+      <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-sky-500/20 to-transparent" />
 
       {isResizing && <div className="fixed inset-0 z-[9999] cursor-none" />}
 
-      {/* Resize overlay */}
-      <div className={cn("absolute inset-0 pointer-events-none z-[100] border-2 border-dashed transition-opacity duration-200 rounded-l-2xl", isResizing ? "border-purple-500/60 opacity-100" : "border-purple-500/0 opacity-0")}>
-        <div className="absolute top-2 left-2 bg-purple-500/90 text-white text-[10px] px-2 py-0.5 rounded font-mono backdrop-blur-sm">
-          {Math.round(panelWidth)}×{Math.round(panelHeight)} @ {Math.round(panelTop)}px
+      {/* Resize overlay with dimensions */}
+      <div className={cn("absolute inset-0 pointer-events-none z-[100] border-2 border-dashed transition-opacity duration-200", !isMobile && "rounded-l-[20px]", isResizing ? "border-purple-500/60 opacity-100" : "border-purple-500/0 opacity-0")}>
+        <div className="absolute top-3 left-3 bg-purple-500/90 text-white text-[10px] px-2.5 py-1 rounded-lg font-mono backdrop-blur-sm shadow-lg">
+          {Math.round(panelWidth)} × {Math.round(panelHeight)} @ {Math.round(panelTop)}px
         </div>
       </div>
 
-      {/* Resize handles - DESKTOP ONLY, hidden on mobile */}
+      {/* Resize handles - DESKTOP ONLY, all 8 directions */}
       {!isMobile && (
         <>
-          <div onMouseDown={startResize("w")} className="absolute top-8 bottom-8 left-0 w-3 cursor-ew-resize z-50 group flex items-center justify-center">
-            <div className={cn("w-0.5 h-12 rounded-full transition-all", isResizing && resizeDirRef.current?.includes("w") ? "bg-purple-400 w-1" : "bg-slate-600/0 group-hover:bg-slate-400/40")} />
+          <div onMouseDown={startResize("w")} className="absolute top-10 bottom-10 left-0 w-3 cursor-ew-resize z-50 group flex items-center justify-center">
+            <div className={cn("w-0.5 h-14 rounded-full transition-all", isResizing && resizeDirRef.current?.includes("w") ? "bg-purple-400 w-1 shadow-[0_0_8px_rgba(168,85,247,0.6)]" : "bg-slate-600/0 group-hover:bg-slate-400/50")} />
           </div>
-          <div onMouseDown={startResize("n")} className="absolute top-0 left-8 right-8 h-3 cursor-ns-resize z-50 group flex items-center justify-center">
-            <div className={cn("h-0.5 w-12 rounded-full transition-all", isResizing && resizeDirRef.current === "n" ? "bg-purple-400 h-1" : "bg-slate-600/0 group-hover:bg-slate-400/40")} />
+          <div onMouseDown={startResize("e")} className="absolute top-10 bottom-10 right-0 w-3 cursor-ew-resize z-50 group flex items-center justify-center">
+            <div className={cn("w-0.5 h-14 rounded-full transition-all", isResizing && resizeDirRef.current?.includes("e") ? "bg-purple-400 w-1 shadow-[0_0_8px_rgba(168,85,247,0.6)]" : "bg-slate-600/0 group-hover:bg-slate-400/50")} />
           </div>
-          <div onMouseDown={startResize("s")} className="absolute bottom-0 left-8 right-8 h-3 cursor-ns-resize z-50 group flex items-center justify-center">
-            <div className={cn("h-0.5 w-12 rounded-full transition-all", isResizing && resizeDirRef.current === "s" ? "bg-purple-400 h-1" : "bg-slate-600/0 group-hover:bg-slate-400/40")} />
+          <div onMouseDown={startResize("n")} className="absolute top-0 left-10 right-10 h-3 cursor-ns-resize z-50 group flex items-center justify-center">
+            <div className={cn("h-0.5 w-14 rounded-full transition-all", isResizing && resizeDirRef.current === "n" ? "bg-purple-400 h-1 shadow-[0_0_8px_rgba(168,85,247,0.6)]" : "bg-slate-600/0 group-hover:bg-slate-400/50")} />
           </div>
-          <div onMouseDown={startResize("nw")} className="absolute top-0 left-0 w-6 h-6 cursor-nwse-resize z-50" />
-          <div onMouseDown={startResize("sw")} className="absolute bottom-0 left-0 w-6 h-6 cursor-nesw-resize z-50" />
+          <div onMouseDown={startResize("s")} className="absolute bottom-0 left-10 right-10 h-3 cursor-ns-resize z-50 group flex items-center justify-center">
+            <div className={cn("h-0.5 w-14 rounded-full transition-all", isResizing && resizeDirRef.current === "s" ? "bg-purple-400 h-1 shadow-[0_0_8px_rgba(168,85,247,0.6)]" : "bg-slate-600/0 group-hover:bg-slate-400/50")} />
+          </div>
+          <div onMouseDown={startResize("nw")} className="absolute top-0 left-0 w-7 h-7 cursor-nwse-resize z-50 group flex items-start justify-start p-1">
+            <div className={cn("w-2 h-2 rounded-full transition-all", isResizing && resizeDirRef.current === "nw" ? "bg-purple-400 scale-150 shadow-[0_0_8px_rgba(168,85,247,0.8)]" : "bg-slate-600/0 group-hover:bg-slate-400/60")} />
+          </div>
+          <div onMouseDown={startResize("ne")} className="absolute top-0 right-0 w-7 h-7 cursor-nesw-resize z-50 group flex items-start justify-end p-1">
+            <div className={cn("w-2 h-2 rounded-full transition-all", isResizing && resizeDirRef.current === "ne" ? "bg-purple-400 scale-150 shadow-[0_0_8px_rgba(168,85,247,0.8)]" : "bg-slate-600/0 group-hover:bg-slate-400/60")} />
+          </div>
+          <div onMouseDown={startResize("sw")} className="absolute bottom-0 left-0 w-7 h-7 cursor-nesw-resize z-50 group flex items-end justify-start p-1">
+            <div className={cn("w-2 h-2 rounded-full transition-all", isResizing && resizeDirRef.current === "sw" ? "bg-purple-400 scale-150 shadow-[0_0_8px_rgba(168,85,247,0.8)]" : "bg-slate-600/0 group-hover:bg-slate-400/60")} />
+          </div>
+          <div onMouseDown={startResize("se")} className="absolute bottom-0 right-0 w-7 h-7 cursor-nwse-resize z-50 group flex items-end justify-end p-1">
+            <div className={cn("w-2 h-2 rounded-full transition-all", isResizing && resizeDirRef.current === "se" ? "bg-purple-400 scale-150 shadow-[0_0_8px_rgba(168,85,247,0.8)]" : "bg-slate-600/0 group-hover:bg-slate-400/60")} />
+          </div>
         </>
       )}
 
@@ -1098,41 +2130,34 @@ export function AIPanel({
       <AnimatePresence>
         {showChatList && (
           <motion.div
-            initial={isMobile ? { x: -50, opacity: 0 } : { width: 0, opacity: 0 }}
-            animate={isMobile ? { x: 0, opacity: 1 } : { width: 220, opacity: 1 }}
-            exit={isMobile ? { x: -50, opacity: 0 } : { width: 0, opacity: 0 }}
-            transition={{ duration: 0.25, ease: "easeInOut" }}
+            initial={isMobile ? { x: -60, opacity: 0 } : { width: 0, opacity: 0 }}
+            animate={isMobile ? { x: 0, opacity: 1 } : { width: 240, opacity: 1 }}
+            exit={isMobile ? { x: -60, opacity: 0 } : { width: 0, opacity: 0 }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
             className={cn(
-              "border-r border-white/5 bg-slate-950/80 backdrop-blur-xl flex flex-col overflow-hidden shrink-0 relative z-10",
-              isMobile && "absolute inset-y-0 left-0 z-50 w-[280px] shadow-2xl shadow-black/80"
+              "border-r border-white/5 bg-slate-950/90 backdrop-blur-2xl flex flex-col overflow-hidden shrink-0 relative z-10",
+              isMobile && "absolute inset-y-0 left-0 z-50 w-[300px] shadow-2xl shadow-black/90"
             )}
           >
             <div className="flex items-center justify-between px-4 py-4 border-b border-white/5">
-              <div className="flex items-center gap-2">
-                <History size={13} className="text-purple-400" />
-                <span className="text-xs font-semibold text-slate-400 tracking-wider uppercase">Conversations</span>
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-lg bg-purple-500/15 flex items-center justify-center">
+                  <History size={13} className="text-purple-400" />
+                </div>
+                <span className="text-xs font-bold text-slate-400 tracking-wider uppercase">Conversations</span>
               </div>
               <div className="flex items-center gap-1">
                 {isMobile && (
-                  <button
-                    onClick={onToggleChatList}
-                    className="p-1.5 rounded-lg hover:bg-white/10 text-slate-500 hover:text-slate-300 transition-colors mr-1"
-                  >
+                  <button onClick={onToggleChatList} className="p-1.5 rounded-lg hover:bg-white/10 text-slate-500 hover:text-slate-300 transition-colors mr-1">
                     <X size={14} />
                   </button>
                 )}
-                <motion.button
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  onClick={onNewChat}
-                  className="p-1.5 rounded-lg hover:bg-purple-500/20 text-slate-500 hover:text-purple-400 transition-colors"
-                  title="New conversation"
-                >
+                <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={onNewChat} className="p-1.5 rounded-lg hover:bg-purple-500/20 text-slate-500 hover:text-purple-400 transition-colors" title="New conversation">
                   <Plus size={14} />
                 </motion.button>
               </div>
             </div>
-            <div className="flex-1 overflow-y-auto p-2 space-y-1 scrollbar-thin">
+            <div className="flex-1 overflow-y-auto p-2.5 space-y-1 scrollbar-thin">
               {sortedChats.map((chat) => (
                 <ChatListItem
                   key={chat.id}
@@ -1152,32 +2177,64 @@ export function AIPanel({
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative z-10">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3.5 border-b border-white/5 shrink-0 bg-slate-950/50 backdrop-blur-sm">
+        <div className="flex items-center justify-between px-4 py-3.5 border-b border-white/5 shrink-0 bg-slate-950/60 backdrop-blur-md">
           <div className="flex items-center gap-3">
             <motion.button
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               onClick={onToggleChatList}
               className={cn("p-2 rounded-xl transition-all", showChatList ? "bg-purple-500/20 text-purple-400" : "hover:bg-white/5 text-slate-500 hover:text-slate-300")}
+              aria-label="Toggle chat list"
             >
               <MessageSquare size={14} />
             </motion.button>
 
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-500/20 via-purple-500/20 to-purple-600/20 flex items-center justify-center border border-purple-500/20 shadow-lg shadow-purple-500/10">
-              <Bot size={16} className="text-purple-400" />
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-500/25 via-purple-500/25 to-purple-600/25 flex items-center justify-center border border-purple-500/25 shadow-lg shadow-purple-500/15">
+              <Bot size={17} className="text-purple-300" />
             </div>
 
             <div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-bold text-slate-200">ᓄᕙᔭ AI</span>
+              <div className="flex items-center gap-2.5">
+                <span className="text-sm font-bold text-slate-100">ᓄᕙᔭ AI</span>
                 <SecurityBadge level={securityLevel} />
               </div>
-              <span className="text-[10px] text-slate-600">Nuvuja Godmode v4.0</span>
+              <span className="text-[10px] text-slate-600 font-medium">Nuvuja Godmode v5.0</span>
             </div>
           </div>
 
           <div className="flex items-center gap-1">
-            {/* Zoom controls - hidden on small phones */}
+            {/* Model Selector */}
+            {availableModels && availableModels.length > 0 && onSwitchModel && (
+              <ModelSelector models={availableModels} activeModel={activeModel || ""} onSwitch={onSwitchModel} />
+            )}
+
+            {/* Pro/Beginner mode toggle */}
+            <button
+              onClick={() => {
+                const newMode = !proMode;
+                setProMode(newMode);
+                try { localStorage.setItem("nuvuja-pro-mode", String(newMode)); } catch {}
+              }}
+              className={cn(
+                "px-2.5 py-1 rounded-lg text-[10px] font-semibold border transition-all mr-1",
+                proMode
+                  ? "bg-purple-500/15 text-purple-400 border-purple-500/25 hover:bg-purple-500/25"
+                  : "bg-sky-500/15 text-sky-400 border-sky-500/25 hover:bg-sky-500/25"
+              )}
+              title={proMode ? "Switch to Beginner Mode" : "Switch to Pro Mode"}
+            >
+              {proMode ? "Pro" : "Beginner"}
+            </button>
+
+            {/* Search button */}
+            <button
+              onClick={() => setShowSearch(!showSearch)}
+              className={cn("p-2 rounded-xl transition-colors", showSearch ? "bg-purple-500/20 text-purple-400" : "hover:bg-white/5 text-slate-500 hover:text-slate-300")}
+              aria-label="Search in chat"
+            >
+              <Search size={13} />
+            </button>
+
             {!isSmallPhone && (
               <div className="flex items-center gap-0.5 mr-2 bg-white/5 rounded-xl p-0.5 border border-white/5">
                 <button onClick={() => setZoom((z) => Math.max(0.5, z - 0.1))} className="p-1.5 rounded-lg hover:bg-white/10 text-slate-500 hover:text-slate-300 transition-colors" title="Zoom out">
@@ -1190,101 +2247,190 @@ export function AIPanel({
               </div>
             )}
 
-            <button onClick={() => setShowSettings(!showSettings)} className="p-2 rounded-xl hover:bg-white/5 text-slate-500 hover:text-slate-300 transition-colors" title="Settings">
+            <button onClick={() => setShowSettings(!showSettings)} className="p-2 rounded-xl hover:bg-white/5 text-slate-500 hover:text-slate-300 transition-colors" title="Settings" aria-label="Settings">
               <Settings size={13} />
             </button>
-            <button onClick={onClearChat} className="p-2 rounded-xl hover:bg-rose-500/10 text-slate-500 hover:text-rose-400 transition-colors" title="Clear chat">
+            <button onClick={onClearChat} className="p-2 rounded-xl hover:bg-rose-500/10 text-slate-500 hover:text-rose-400 transition-colors" title="Clear chat" aria-label="Clear chat">
               <Trash2 size={13} />
             </button>
-            <button onClick={onToggle} className="p-2 rounded-xl hover:bg-white/5 text-slate-500 hover:text-slate-300 transition-colors" title="Close panel">
+            <button onClick={onToggle} className="p-2 rounded-xl hover:bg-white/5 text-slate-500 hover:text-slate-300 transition-colors" title="Close panel" aria-label="Close panel">
               <X size={14} />
             </button>
           </div>
         </div>
 
+        {/* Git Status Bar */}
+        <GitStatusBar status={gitStatus} />
+
+        {/* File Context Bar */}
+        {openFiles && openFiles.length > 0 && onSwitchFile && (
+          <FileContextBar files={openFiles} activeFile={activeFilePath || ""} onSwitchFile={onSwitchFile} />
+        )}
+
+        {/* Search Bar */}
+        <AnimatePresence>
+          {showSearch && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden border-b border-white/5"
+            >
+              <div className="flex items-center gap-2 px-4 py-2">
+                <Search size={12} className="text-slate-500" />
+                <input
+                  autoFocus
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      onSearchInChat?.(searchQuery);
+                    }
+                    if (e.key === "Escape") {
+                      setShowSearch(false);
+                      setSearchQuery("");
+                    }
+                  }}
+                  placeholder="Search in conversation..."
+                  className="flex-1 bg-transparent text-xs text-slate-300 outline-none placeholder-slate-600"
+                />
+                <button onClick={() => { setShowSearch(false); setSearchQuery(""); }} className="p-1 rounded-lg hover:bg-white/10 text-slate-500">
+                  <X size={10} />
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Token Usage */}
+        {tokenCount && (
+          <TokenUsageBar used={tokenCount.used} limit={tokenCount.limit} />
+        )}
+
         {/* Messages */}
-        <div
-          ref={scrollRef}
-          className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4 min-h-0 scrollbar-thin"
-        >
+        <div ref={scrollRef} className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4 min-h-0 scrollbar-thin relative">
           <div style={{ transform: `scale(${zoom})`, transformOrigin: "top left", width: `${100 / zoom}%`, minHeight: "100%" }}>
 
             {/* Welcome state */}
             {conversations.length === 0 && (
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="text-center py-16"
+                transition={{ duration: 0.6, ease: "easeOut" }}
+                className="text-center py-12"
               >
                 <motion.div
                   animate={{ rotate: 360 }}
-                  transition={{
-                    duration: 30,
-                    repeat: Number.POSITIVE_INFINITY,
-                    ease: "linear",
-                    repeatType: "loop"
-                  }}
-                  className="w-20 h-20 mx-auto mb-6 rounded-3xl bg-gradient-to-br from-purple-500/20 via-sky-500/20 to-purple-600/20 flex items-center justify-center border border-purple-500/20 shadow-2xl shadow-purple-500/20"
+                  transition={{ duration: 40, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
+                  className="w-24 h-24 mx-auto mb-8 rounded-3xl bg-gradient-to-br from-purple-500/25 via-sky-500/25 to-purple-600/25 flex items-center justify-center border border-purple-500/25 shadow-2xl shadow-purple-500/25"
                 >
-                  <Atom size={36} className="text-purple-400" />
+                  <Atom size={42} className="text-purple-300 drop-shadow-[0_0_15px_rgba(168,85,247,0.6)]" />
                 </motion.div>
-                <h2 className="text-lg font-bold text-slate-200 mb-2">ᓄᕙᔭ is online</h2>
+                <h2 className="text-xl font-bold text-slate-100 mb-2 tracking-tight">ᓄᕙᔭ is online</h2>
                 <p className="text-sm text-slate-500 mb-1">Autonomous software engineering intelligence</p>
-                <p className="text-xs text-slate-600">Web search · GitHub access · Security audit · Unlimited output</p>
+                <p className="text-xs text-slate-600">Web search · GitHub access · Security audit · Code generation</p>
+
+                {proMode && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.5 }}
+                    className="flex items-center justify-center gap-4 mt-6"
+                  >
+                    <div className="flex items-center gap-1.5 text-[10px] text-slate-600">
+                      <Cpu size={10} className="text-purple-400" /> Groq LPU
+                    </div>
+                    <div className="flex items-center gap-1.5 text-[10px] text-slate-600">
+                      <Zap size={10} className="text-amber-400" /> 800+ tokens/s
+                    </div>
+                    <div className="flex items-center gap-1.5 text-[10px] text-slate-600">
+                      <Shield size={10} className="text-emerald-400" /> Security audit
+                    </div>
+                  </motion.div>
+                )}
               </motion.div>
             )}
 
-            {/* Suggestions */}
+            {/* Suggestions with descriptions */}
             {showSuggestions && conversations.length === 0 && (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ delay: 0.3 }}
-                className="space-y-2 mt-6"
+                transition={{ delay: 0.4 }}
+                className="space-y-2 mt-4"
               >
                 {suggestions.map((s, i) => (
                   <motion.button
                     key={`suggestion-${i}`}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.4 + i * 0.1 }}
-                    whileHover={{ scale: 1.02, x: 4 }}
+                    transition={{ delay: 0.5 + i * 0.1 }}
+                    whileHover={{ scale: 1.02, x: 6 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => { setInput(s.text.split(" — ")[0]); setShowSuggestions(false); }}
-                    className={cn("w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs text-left transition-all group border", s.bg, s.border, "hover:bg-white/5")}
+                    className={cn(
+                      "w-full flex items-center gap-4 px-5 py-3.5 rounded-xl text-xs text-left transition-all group border",
+                      s.color === "emerald" ? "bg-emerald-500/5 border-emerald-500/10 hover:bg-emerald-500/10" :
+                      s.color === "amber" ? "bg-amber-500/5 border-amber-500/10 hover:bg-amber-500/10" :
+                      s.color === "sky" ? "bg-sky-500/5 border-sky-500/10 hover:bg-sky-500/10" :
+                      "bg-purple-500/5 border-purple-500/10 hover:bg-purple-500/10"
+                    )}
                   >
-                    <s.icon size={16} className={cn(s.color, "shrink-0")} />
-                    <div>
-                      <span className="text-slate-300 font-medium">{s.text}</span>
+                    <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center shrink-0", s.color === "emerald" ? "bg-emerald-500/15" : s.color === "amber" ? "bg-amber-500/15" : s.color === "sky" ? "bg-sky-500/15" : "bg-purple-500/15")}>
+                      <s.icon size={16} className={s.color === "emerald" ? "text-emerald-400" : s.color === "amber" ? "text-amber-400" : s.color === "sky" ? "text-sky-400" : "text-purple-400"} />
                     </div>
-                    <ChevronRight size={12} className="ml-auto text-slate-600 group-hover:text-slate-400 transition-colors" />
+                    <div className="flex-1 min-w-0">
+                      <span className="text-slate-200 font-semibold block">{s.text.split(" — ")[0]}</span>
+                      <span className="text-slate-600 text-[10px] block mt-0.5">{s.desc}</span>
+                    </div>
+                    <ChevronRight size={14} className="text-slate-700 group-hover:text-slate-400 transition-colors shrink-0" />
                   </motion.button>
                 ))}
+              </motion.div>
+            )}
+
+            {/* Quick action chips for pro mode */}
+            {proMode && conversations.length > 0 && !isLoading && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex flex-wrap gap-2 mb-4"
+              >
+                <QuickActionChip icon={Wand2} label="Refactor" color="purple" onClick={() => { setInput("/fix Refactor this code to be cleaner"); handleSend(); }} />
+                <QuickActionChip icon={ShieldCheck} label="Audit" color="emerald" onClick={() => { setInput("/review Security audit"); handleSend(); }} />
+                <QuickActionChip icon={Brain} label="Explain" color="sky" onClick={() => { setInput("/explain How does this work?"); handleSend(); }} />
+                <QuickActionChip icon={Rocket} label="Optimize" color="amber" onClick={() => { setInput("/fix Optimize performance"); handleSend(); }} />
+                <QuickActionChip icon={GitBranch} label="Git Diff" color="rose" onClick={() => { setInput("Show me the git diff for recent changes"); handleSend(); }} />
+                <QuickActionChip icon={Terminal} label="Terminal" color="cyan" onClick={() => { setInput("Run terminal command: "); handleSend(); }} />
               </motion.div>
             )}
 
             {/* Tool results */}
             {toolResults.length > 0 && (
               <div className="space-y-2 mb-4">
-                <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1">
-                  <Zap size={10} /> Tool Results
-                </p>
+                <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  <Zap size={10} className="text-amber-500/70" />
+                  Tool Results
+                </div>
                 {toolResults.slice(-3).map((result, i) => (
                   <ToolResultCard key={`tool-${result.tool}-${i}`} result={result} />
                 ))}
               </div>
             )}
 
-            {/* Messages */}
+            {/* Messages with staggered animation */}
             {conversations.map((conv, i) => (
               <motion.div
                 key={conv.id || `msg-${i}`}
-                initial={{ opacity: 0, y: 12, scale: 0.98 }}
+                initial={{ opacity: 0, y: 16, scale: 0.97 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{ delay: i * 0.03, type: "spring", stiffness: 300, damping: 25 }}
+                transition={{ delay: Math.min(i * 0.04, 0.3), type: "spring", stiffness: 350, damping: 28 }}
                 className={cn("flex gap-3", conv.role === "user" ? "flex-row-reverse" : "flex-row")}
               >
-                <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5 shadow-lg", conv.role === "user" ? "bg-sky-500/20 shadow-sky-500/10" : "bg-purple-500/20 shadow-purple-500/10")}>
+                <div className={cn(
+                  "w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5 shadow-lg",
+                  conv.role === "user" ? "bg-sky-500/15 shadow-sky-500/10" : "bg-purple-500/15 shadow-purple-500/10"
+                )}>
                   {conv.role === "user" ? <User size={13} className="text-sky-400" /> : <Bot size={13} className="text-purple-400" />}
                 </div>
                 <div className={cn("flex-1 max-w-[88%]", conv.role === "user" && "text-right")}>
@@ -1296,8 +2442,27 @@ export function AIPanel({
                       } catch { return null; }
                     })()} />
                   ) : (
-                    <div className={cn("inline-block px-4 py-3 rounded-2xl text-left shadow-sm", conv.role === "user" ? "bg-sky-500/10 border border-sky-500/20" : "bg-white/5 border border-white/5 backdrop-blur-sm")}>
+                    <div className={cn(
+                      "inline-block px-4 py-3 rounded-2xl text-left shadow-sm relative group",
+                      conv.role === "user"
+                        ? "bg-sky-500/8 border border-sky-500/15"
+                        : "bg-white/[0.03] border border-white/[0.06] backdrop-blur-sm"
+                    )}>
                       <MessageContent content={conv.content} language={currentLanguage} onApplyCode={conv.role === "assistant" ? onApplyCode : undefined} />
+
+                      {/* Message actions */}
+                      <div className={cn("absolute -top-2 opacity-0 group-hover:opacity-100 transition-opacity", conv.role === "user" ? "left-2" : "right-2")}>
+                        <MessageActions
+                          messageId={conv.id || `msg-${i}`}
+                          onRegenerate={onRegenerateMessage}
+                          onEdit={onEditMessage}
+                          onDelete={onDeleteMessage}
+                          onCopy={() => {
+                            navigator.clipboard.writeText(conv.content);
+                          }}
+                          isUser={conv.role === "user"}
+                        />
+                      </div>
                     </div>
                   )}
                   <p className="text-[9px] text-slate-600 mt-1.5 flex items-center gap-1.5">
@@ -1310,28 +2475,40 @@ export function AIPanel({
               </motion.div>
             ))}
 
-            {/* Thinking animation with star field */}
-            {isLoading && <ThinkingAnimation />}
+            {/* Star Field Thinking Animation */}
+            {isLoading && <StarFieldThinking />}
           </div>
+
+          {/* Scroll to bottom button */}
+          <ScrollToBottom visible={showScrollButton} onClick={() => {
+            if (scrollRef.current) {
+              scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+            }
+          }} />
         </div>
 
-        {/* Input */}
-        <div className="p-3 border-t border-white/5 bg-slate-950/80 backdrop-blur-xl shrink-0">
+        {/* Input area */}
+        <div className="p-3.5 border-t border-white/5 bg-slate-950/80 backdrop-blur-2xl shrink-0">
           {currentCode && (
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => setAttachCode(!attachCode)}
-              className={cn("flex items-center gap-2 mb-2.5 px-3 py-1.5 rounded-lg text-[11px] transition-all border", attachCode ? "bg-purple-500/20 text-purple-400 border-purple-500/30" : "text-slate-600 hover:text-slate-400 hover:bg-white/5 border-transparent")}
+              className={cn(
+                "flex items-center gap-2 mb-2.5 px-3 py-1.5 rounded-lg text-[11px] transition-all border",
+                attachCode
+                  ? "bg-purple-500/15 text-purple-400 border-purple-500/30"
+                  : "text-slate-600 hover:text-slate-400 hover:bg-white/5 border-transparent"
+              )}
             >
               <Paperclip size={10} />
               {attachCode ? "Code attached · Click to detach" : "Attach current file"}
-              {attachCode && <span className="text-[9px] text-slate-500">{currentLanguage}</span>}
+              {attachCode && <span className="text-[9px] text-slate-500 font-mono">{currentLanguage}</span>}
             </motion.button>
           )}
 
           <div className="flex gap-2">
-            {/* MIC BUTTON with pulse animation when listening */}
+            {/* Voice button */}
             <motion.button
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
@@ -1341,13 +2518,17 @@ export function AIPanel({
                 isListening ? "bg-rose-500/20 text-rose-400" : "bg-white/5 text-slate-500 hover:text-slate-300 hover:bg-white/10"
               )}
               title={isListening ? "Stop listening" : "Voice input"}
+              aria-label={isListening ? "Stop listening" : "Voice input"}
             >
-              {isListening && <span className="absolute inset-0 rounded-xl mic-pulse" />}
+              {isListening && (
+                <motion.span
+                  className="absolute inset-0 rounded-xl"
+                  animate={{ boxShadow: ["0 0 0 0 rgba(244,63,94,0.4)", "0 0 0 8px rgba(244,63,94,0)", "0 0 0 0 rgba(244,63,94,0.4)"] }}
+                  transition={{ duration: 1.5, repeat: Number.POSITIVE_INFINITY }}
+                />
+              )}
               {isListening ? (
-                <motion.div
-                  animate={{ scaleY: [1, 1.3, 1] }}
-                  transition={{ duration: 0.5, repeat: Number.POSITIVE_INFINITY, repeatType: "loop" }}
-                >
+                <motion.div animate={{ scaleY: [1, 1.3, 1] }} transition={{ duration: 0.5, repeat: Number.POSITIVE_INFINITY }}>
                   <MicOff size={15} />
                 </motion.div>
               ) : (
@@ -1359,18 +2540,24 @@ export function AIPanel({
               <input
                 ref={inputRef}
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={(e) => {
+                  setInput(e.target.value);
+                  setIsTyping(e.target.value.length > 0);
+                }}
                 onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
+                onFocus={() => setIsTyping(true)}
+                onBlur={() => setIsTyping(false)}
                 placeholder="Ask ᓄᕙᔭ anything..."
                 enterKeyHint="send"
                 autoCapitalize="off"
                 autoCorrect="off"
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-200 placeholder-slate-600 outline-none focus:border-purple-500/40 focus:ring-1 focus:ring-purple-500/20 transition-all backdrop-blur-sm pointer-events-auto"
+                inputMode="text"
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-2.5 text-sm text-slate-200 placeholder-slate-600 outline-none focus:border-purple-500/40 focus:ring-1 focus:ring-purple-500/20 transition-all backdrop-blur-sm"
               />
               {isListening && (
                 <motion.div
                   animate={{ opacity: [0.3, 1, 0.3] }}
-                  transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, repeatType: "loop" }}
+                  transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY }}
                   className="absolute right-3 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-rose-400"
                 />
               )}
@@ -1381,18 +2568,25 @@ export function AIPanel({
               whileTap={{ scale: 0.95 }}
               onClick={handleSend}
               disabled={!input.trim() || isLoading}
-              className={cn("px-5 py-2.5 rounded-xl transition-all flex items-center justify-center shadow-lg", input.trim() && !isLoading ? "bg-gradient-to-r from-sky-500 to-purple-500 text-white hover:opacity-90 shadow-purple-500/25" : "bg-white/5 text-slate-600 cursor-not-allowed")}
+              className={cn(
+                "px-5 py-2.5 rounded-xl transition-all flex items-center justify-center shadow-lg",
+                input.trim() && !isLoading
+                  ? "bg-gradient-to-r from-sky-500 to-purple-500 text-white hover:opacity-90 shadow-purple-500/30"
+                  : "bg-white/5 text-slate-600 cursor-not-allowed"
+              )}
+              aria-label="Send message"
             >
               <Send size={14} />
             </motion.button>
           </div>
 
-          <div className="flex items-center justify-between mt-2">
+          <div className="flex items-center justify-between mt-2.5">
             <p className="text-[9px] text-slate-700 flex items-center gap-3">
               <span className="flex items-center gap-1"><Zap size={8} /> /review</span>
               <span className="flex items-center gap-1"><Wand2 size={8} /> /fix</span>
               <span className="flex items-center gap-1"><Brain size={8} /> /explain</span>
               <span className="flex items-center gap-1"><Rocket size={8} /> /generate</span>
+              <span className="flex items-center gap-1"><Command size={8} /> Cmd+K</span>
             </p>
             <div className="flex items-center gap-2">
               {isLoading && (
@@ -1400,11 +2594,110 @@ export function AIPanel({
                   <Loader2 size={8} className="animate-spin" /> Processing
                 </span>
               )}
-              <span className="text-[9px] text-slate-700">{input.length} chars</span>
+              <span className="text-[9px] text-slate-700 font-mono">{input.length} chars</span>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Command Palette Overlay */}
+      <AnimatePresence>
+        {showCommandPalette && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-start justify-center pt-20"
+            onClick={() => setShowCommandPalette(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, y: -20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -20, scale: 0.95 }}
+              className="w-80 bg-slate-900/95 backdrop-blur-2xl border border-white/10 rounded-2xl overflow-hidden shadow-2xl shadow-black/50"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="px-4 py-3 border-b border-white/5">
+                <div className="flex items-center gap-2">
+                  <Command size={14} className="text-purple-400" />
+                  <span className="text-xs font-bold text-slate-200">Command Palette</span>
+                </div>
+              </div>
+              <div className="p-2 space-y-0.5 max-h-64 overflow-y-auto">
+                {commandItems.map((item, i) => (
+                  <button
+                    key={i}
+                    onClick={item.action}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all hover:bg-white/5 group"
+                  >
+                    <item.icon size={14} className="text-slate-500 group-hover:text-purple-400 transition-colors" />
+                    <div className="flex-1 min-w-0">
+                      <span className="text-[11px] text-slate-300 block">{item.label}</span>
+                      {item.shortcut && <span className="text-[9px] text-slate-600">{item.shortcut}</span>}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Settings Panel */}
+      <AnimatePresence>
+        {showSettings && (
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            className="absolute top-14 right-4 w-64 bg-slate-900/95 backdrop-blur-2xl border border-white/10 rounded-2xl overflow-hidden shadow-2xl shadow-black/50 z-50"
+          >
+            <div className="px-4 py-3 border-b border-white/5">
+              <span className="text-xs font-bold text-slate-200">Settings</span>
+            </div>
+            <div className="p-3 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-slate-400">Pro Mode</span>
+                <button
+                  onClick={() => {
+                    const newMode = !proMode;
+                    setProMode(newMode);
+                    try { localStorage.setItem("nuvuja-pro-mode", String(newMode)); } catch {}
+                  }}
+                  className={cn(
+                    "w-8 h-4 rounded-full transition-all relative",
+                    proMode ? "bg-purple-500" : "bg-slate-700"
+                  )}
+                >
+                  <div className={cn("absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all", proMode ? "left-4.5" : "left-0.5")} />
+                </button>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-slate-400">Attach Code</span>
+                <button
+                  onClick={() => setAttachCode(!attachCode)}
+                  className={cn(
+                    "w-8 h-4 rounded-full transition-all relative",
+                    attachCode ? "bg-purple-500" : "bg-slate-700"
+                  )}
+                >
+                  <div className={cn("absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all", attachCode ? "left-4.5" : "left-0.5")} />
+                </button>
+              </div>
+              {onExportChat && (
+                <button onClick={onExportChat} className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-[11px] text-slate-300 hover:bg-white/5 transition-all">
+                  <Download size={12} /> Export Chat
+                </button>
+              )}
+              {onShareChat && (
+                <button onClick={onShareChat} className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-[11px] text-slate-300 hover:bg-white/5 transition-all">
+                  <Share2 size={12} /> Share Chat
+                </button>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 
