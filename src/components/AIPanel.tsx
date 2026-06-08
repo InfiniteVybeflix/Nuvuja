@@ -904,12 +904,9 @@ function CodeBlock({ code, language, onApply }: { code: string; language: string
 
   const cleanCode = useMemo(() => {
     return code
-      .replace(/^```\w*
-/, "")
-      .replace(/^```
-/, "")
-      .replace(/
-```$/, "")
+      .replace(/^```\w*\n/, "")
+      .replace(/^```\n/, "")
+      .replace(/\n```$/, "")
       .replace(/^\s*```\w*\s*$/, "")
       .trim();
   }, [code]);
