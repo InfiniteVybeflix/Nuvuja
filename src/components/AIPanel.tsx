@@ -353,7 +353,7 @@ function ThinkingAnimation() {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function ToolResultCard({ result }: { result: ToolResult }) {
-  const toolIcons: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
+  const toolIcons: Record<string, React.ElementType> = {
     web_search: Search,
     github_fetch: Github,
     github_search: GitBranch,
