@@ -3,118 +3,38 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Send,
-  Bot,
-  User,
-  Sparkles,
-  Loader2,
-  Code2,
-  Wand2,
-  AlertTriangle,
-  CheckCircle,
-  Copy,
-  Check,
-  Trash2,
-  Paperclip,
-  X,
-  ZoomIn,
-  ZoomOut,
-  Plus,
-  Pin,
-  MessageSquare,
-  Pencil,
-  ChevronLeft,
-  ChevronRight,
-  Globe,
-  Github,
-  Package,
-  Shield,
-  ShieldCheck,
-  ShieldAlert,
-  Zap,
-  Brain,
-  Cpu,
-  Terminal,
-  FileCode,
-  GitBranch,
-  Search,
-  ExternalLink,
-  ChevronDown,
-  ChevronUp,
-  Clock,
-  Wifi,
-  WifiOff,
-  Volume2,
-  VolumeX,
-  Mic,
-  MicOff,
-  Maximize2,
-  Minimize2,
-  Settings,
-  History,
-  Star,
-  Flame,
-  Eye,
-  EyeOff,
-  Download,
-  Upload,
-  RefreshCw,
-  AlertOctagon,
-  Bug,
-  Lightbulb,
-  BookOpen,
-  Hash,
-  Type,
-  Image,
-  Film,
-  Music,
-  Database,
-  Server,
-  Cloud,
-  Lock,
-  Unlock,
-  Key,
-  Fingerprint,
-  Scan,
-  Radar,
-  Rocket,
-  Atom,
-  Orbit,
-  Infinity,
-  Dna,
-  Dices,
-  Puzzle,
-  Layers,
-  Box,
-  Boxes,
-  Container,
-  Cuboid,
-  Hexagon,
-  Octagon,
-  Pentagon,
-  Triangle,
-  CircleDot,
-  Square,
-  Diamond,
-  Crown,
-  Trophy,
-  Medal,
-  Award,
-  BadgeCheck,
-  BadgeAlert,
-  BadgeInfo,
-  BadgeX,
+  Send, Bot, User, Sparkles, Loader2, Code2, Wand2, AlertTriangle,
+  CheckCircle, Copy, Check, Trash2, Paperclip, X, ZoomIn, ZoomOut,
+  Plus, Pin, MessageSquare, Pencil, ChevronLeft, ChevronRight,
+  Globe, Github, Package, Shield, ShieldCheck, ShieldAlert, Zap,
+  Brain, Cpu, Terminal, FileCode, GitBranch, Search, ExternalLink,
+  ChevronDown, ChevronUp, Clock, Wifi, WifiOff, Volume2, VolumeX,
+  Mic, MicOff, Maximize2, Minimize2, Settings, History, Star,
+  Flame, Eye, EyeOff, Download, Upload, RefreshCw, AlertOctagon,
+  Bug, Lightbulb, BookOpen, Hash, Type, Image, Film, Music,
+  Database, Server, Cloud, Lock, Unlock, Key, Fingerprint, Scan,
+  Radar, Rocket, Atom, Orbit, Infinity, Dna, Dices, Puzzle,
+  Layers, Box, Boxes, Container, Cuboid, Hexagon, Octagon,
+  Pentagon, Triangle, CircleDot, Square, Diamond, Crown, Trophy,
+  Medal, Award, BadgeCheck, BadgeAlert, BadgeInfo, BadgeX,
 } from "lucide-react";
+// Type declarations for Web Speech API
+declare global {
+  interface Window {
+    SpeechRecognition?: typeof SpeechRecognition;
+    webkitSpeechRecognition?: typeof SpeechRecognition;
+  }
+}
+
 import { AIConversation, ChatSession } from "@/types";
 import { cn } from "@/lib/utils";
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// MOBILE DETECTION HOOK
+// MOBILE DETECTION HOOKS
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function useIsMobile(breakpoint = 768) {
   const [isMobile, setIsMobile] = useState(false);
-
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < breakpoint);
     check();
@@ -125,7 +45,6 @@ function useIsMobile(breakpoint = 768) {
       window.removeEventListener("orientationchange", check);
     };
   }, [breakpoint]);
-
   return isMobile;
 }
 
@@ -194,9 +113,14 @@ function HolographicCard({ children, className, glowColor = "purple" }: { childr
   );
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// PARTICLE BACKGROUND - Only renders when panel is open
+// ═══════════════════════════════════════════════════════════════════════════════
+
 function ParticleBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isMobile = useIsMobile();
+  const animationRef = useRef<number>(0);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -204,11 +128,10 @@ function ParticleBackground() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // Respect reduced motion preference
     const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (prefersReduced) return;
 
-    let animationId: number;
+    let frameCount = 0;
     const particleCount = isMobile ? 12 : 25;
     const particles: Array<{ x: number; y: number; vx: number; vy: number; size: number; alpha: number; color: string }> = [];
 
@@ -234,12 +157,10 @@ function ParticleBackground() {
       });
     }
 
-    let frameCount = 0;
     const animate = () => {
       frameCount++;
-      // Skip frames on mobile for performance (30fps instead of 60fps)
       if (isMobile && frameCount % 2 !== 0) {
-        animationId = requestAnimationFrame(animate);
+        animationRef.current = requestAnimationFrame(animate);
         return;
       }
 
@@ -257,7 +178,6 @@ function ParticleBackground() {
         ctx.globalAlpha = p.alpha;
         ctx.fill();
 
-        // Only connect on desktop - too expensive on mobile
         if (!isMobile) {
           particles.slice(i + 1).forEach((p2) => {
             const dx = p.x - p2.x;
@@ -277,12 +197,12 @@ function ParticleBackground() {
       });
 
       ctx.globalAlpha = 1;
-      animationId = requestAnimationFrame(animate);
+      animationRef.current = requestAnimationFrame(animate);
     };
     animate();
 
     return () => {
-      cancelAnimationFrame(animationId);
+      cancelAnimationFrame(animationRef.current);
       window.removeEventListener("resize", resize);
     };
   }, [isMobile]);
@@ -290,23 +210,38 @@ function ParticleBackground() {
   return <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none" style={{ opacity: 0.6 }} />;
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// THINKING ANIMATION WITH STAR FIELD
+// ═══════════════════════════════════════════════════════════════════════════════
+
 function ThinkingAnimation() {
   return (
-    <div className="flex items-center gap-3 px-4 py-3">
+    <div className="flex items-center gap-3 px-4 py-3 relative overflow-hidden">
+      {/* Star field background */}
+      <div className="absolute inset-0 ai-thinking-stars pointer-events-none" />
+
       <div className="relative">
         <div className="w-8 h-8 rounded-full border-2 border-purple-500/30 animate-pulse" />
-        <div className="absolute inset-0 w-8 h-8 rounded-full border-t-2 border-purple-400 animate-spin" style={{ animationDuration: "1.5s" }} />
+        <div 
+          className="absolute inset-0 w-8 h-8 rounded-full border-t-2 border-purple-400" 
+          style={{ animation: "spin 1.5s linear infinite" }} 
+        />
         <Brain size={14} className="absolute inset-0 m-auto text-purple-400" />
       </div>
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-1 relative z-10">
         <span className="text-xs font-medium text-purple-300">ᓄᕙᔭ is thinking...</span>
         <div className="flex gap-1">
-          {[0, 1, 2].map((idx: number) => (
+          {[0, 1, 2].map((idx) => (
             <motion.div
               key={idx}
               className="w-1.5 h-1.5 rounded-full bg-purple-400"
               animate={{ opacity: [0.3, 1, 0.3], scale: [0.8, 1.2, 0.8] }}
-              transition={{ duration: 1.2, repeat: Infinity, delay: idx * 0.2 } as any}
+              transition={{ 
+                duration: 1.2, 
+                repeat: Infinity, 
+                repeatType: "loop",
+                delay: idx * 0.2 
+              }}
             />
           ))}
         </div>
@@ -314,6 +249,10 @@ function ThinkingAnimation() {
     </div>
   );
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TOOL RESULT CARD
+// ═══════════════════════════════════════════════════════════════════════════════
 
 function ToolResultCard({ result }: { result: ToolResult }) {
   const toolIcons: Record<string, any> = {
@@ -404,6 +343,10 @@ function ToolResultCard({ result }: { result: ToolResult }) {
   );
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// SECURITY BADGE
+// ═══════════════════════════════════════════════════════════════════════════════
+
 function SecurityBadge({ level }: { level: "secure" | "warning" | "critical" | "unknown" }) {
   const config = {
     secure: { icon: ShieldCheck, color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20", label: "Secure" },
@@ -483,8 +426,16 @@ function CodeBlock({ code, language, onApply }: { code: string; language: string
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// MESSAGE CONTENT
+// MESSAGE CONTENT - SAFE RENDERING
 // ═══════════════════════════════════════════════════════════════════════════════
+
+function InlineCode({ code }: { code: string }) {
+  return (
+    <code className="px-1.5 py-0.5 rounded-md bg-slate-800/80 text-sky-400 text-[11px] font-mono border border-slate-700/30">
+      {code}
+    </code>
+  );
+}
 
 function MessageContent({ content, language, onApplyCode }: { content: string; language: string; onApplyCode?: (code: string) => void }) {
   const parts = content.split(/(```[\w]*\n?[\s\S]*?```)/g);
@@ -495,21 +446,43 @@ function MessageContent({ content, language, onApplyCode }: { content: string; l
         if (codeMatch) {
           const lang = codeMatch[1] || language;
           const code = codeMatch[2].trim();
-          return <CodeBlock key={i} code={code} language={lang} onApply={onApplyCode} />;
+          return <CodeBlock key={`code-${i}`} code={code} language={lang} onApply={onApplyCode} />;
         }
         const lines = part.split("\n");
         return lines.map((line, j) => {
-          const inlineMatch = line.match(/`([^`]+)`/g);
-          if (inlineMatch) {
-            let processed = line;
-            inlineMatch.forEach((match) => {
-              const code = match.slice(1, -1);
-              processed = processed.replace(match, `<code class="px-1.5 py-0.5 rounded-md bg-slate-800/80 text-sky-400 text-[11px] font-mono border border-slate-700/30">${code}</code>`);
-            });
-            return <p key={`${i}-${j}`} className="text-[13px] text-slate-300 leading-relaxed" dangerouslySetInnerHTML={{ __html: processed }} />;
+          if (!line.trim()) return null;
+
+          // Handle inline code with backticks
+          const inlineCodes: Array<{ text: string; isCode: boolean }> = [];
+          let remaining = line;
+          let match;
+          const inlineRegex = /`([^`]+)`/g;
+          let lastIndex = 0;
+
+          while ((match = inlineRegex.exec(line)) !== null) {
+            if (match.index > lastIndex) {
+              inlineCodes.push({ text: line.slice(lastIndex, match.index), isCode: false });
+            }
+            inlineCodes.push({ text: match[1], isCode: true });
+            lastIndex = match.index + match[0].length;
           }
-          if (line.trim()) return <p key={`${i}-${j}`} className="text-[13px] text-slate-300 leading-relaxed">{line}</p>;
-          return null;
+          if (lastIndex < line.length) {
+            inlineCodes.push({ text: line.slice(lastIndex), isCode: false });
+          }
+
+          if (inlineCodes.length === 0) {
+            inlineCodes.push({ text: line, isCode: false });
+          }
+
+          return (
+            <p key={`line-${i}-${j}`} className="text-[13px] text-slate-300 leading-relaxed">
+              {inlineCodes.map((segment, idx) => 
+                segment.isCode 
+                  ? <InlineCode key={idx} code={segment.text} />
+                  : <span key={idx}>{segment.text}</span>
+              )}
+            </p>
+          );
         });
       })}
     </div>
@@ -542,7 +515,7 @@ function ReviewCard({ review }: { review: any }) {
               <Bug size={10} /> Issues ({review.issues.length})
             </p>
             {review.issues.map((issue: any, i: number) => (
-              <div key={i} className={cn("flex items-start gap-2 p-2 rounded-lg text-[11px] border", issue.severity === "error" ? "bg-rose-500/5 border-rose-500/20" : issue.severity === "warning" ? "bg-amber-500/5 border-amber-500/20" : "bg-sky-500/5 border-sky-500/20")}>
+              <div key={`issue-${i}`} className={cn("flex items-start gap-2 p-2 rounded-lg text-[11px] border", issue.severity === "error" ? "bg-rose-500/5 border-rose-500/20" : issue.severity === "warning" ? "bg-amber-500/5 border-amber-500/20" : "bg-sky-500/5 border-sky-500/20")}>
                 {issue.severity === "error" ? <AlertOctagon size={10} className="text-rose-400 shrink-0 mt-0.5" /> : issue.severity === "warning" ? <AlertTriangle size={10} className="text-amber-400 shrink-0 mt-0.5" /> : <CheckCircle size={10} className="text-sky-400 shrink-0 mt-0.5" />}
                 <div>
                   <span className="text-slate-500">Line {issue.line}:</span> <span className="text-slate-300">{issue.message}</span>
@@ -559,7 +532,7 @@ function ReviewCard({ review }: { review: any }) {
               <Lightbulb size={10} /> Improvements
             </p>
             {review.improvements.map((imp: string, i: number) => (
-              <p key={i} className="text-[11px] text-slate-400 flex items-start gap-1.5">
+              <p key={`imp-${i}`} className="text-[11px] text-slate-400 flex items-start gap-1.5">
                 <Sparkles size={8} className="text-purple-400 shrink-0 mt-0.5" /> {imp}
               </p>
             ))}
@@ -659,16 +632,15 @@ export function AIPanel({
   const [toolResults, setToolResults] = useState<ToolResult[]>([]);
   const [isListening, setIsListening] = useState(false);
   const [zoom, setZoom] = useState(1);
+
+  // Panel dimensions - desktop only
   const [panelWidth, setPanelWidth] = useState(420);
   const [panelHeight, setPanelHeight] = useState(0);
-
-  // FIX: Safe panelTop calculation - never NaN
   const [panelTop, setPanelTop] = useState(44);
 
   const [isResizing, setIsResizing] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [securityLevel, setSecurityLevel] = useState<"secure" | "warning" | "critical" | "unknown">("unknown");
-  const [isExpanded, setIsExpanded] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -679,14 +651,11 @@ export function AIPanel({
   const startWidthRef = useRef(420);
   const startHeightRef = useRef(0);
   const startTopRef = useRef(44);
-  const touchStartXRef = useRef(0);
-  const touchStartYRef = useRef(0);
 
-  // Safe panelTop initialization in useEffect (after DOM is ready)
+  // Safe panelTop initialization
   useEffect(() => {
     const updateTop = () => {
       const safeTopVal = getComputedStyle(document.documentElement).getPropertyValue("--safe-top").trim();
-      // Handle cases: "0px", "34px", "", "0"
       const numeric = parseInt(safeTopVal || "0", 10);
       const safeTop = isNaN(numeric) ? 0 : numeric;
       const top = Math.max(44, 44 + safeTop);
@@ -758,8 +727,10 @@ export function AIPanel({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onToggle]);
 
-  // MOUSE + TOUCH Resize handlers
+  // MOUSE + TOUCH Resize handlers - DESKTOP ONLY
   useEffect(() => {
+    if (isMobile) return; // No resize on mobile
+
     const handleMove = (e: MouseEvent | TouchEvent) => {
       if (!isResizingRef.current || !resizeDirRef.current) return;
 
@@ -801,20 +772,21 @@ export function AIPanel({
       setIsResizing(false); 
     };
 
-    window.addEventListener("mousemove", handleMove as any);
+    window.addEventListener("mousemove", handleMove);
     window.addEventListener("mouseup", handleUp);
-    window.addEventListener("touchmove", handleMove as any, { passive: false });
+    window.addEventListener("touchmove", handleMove, { passive: false });
     window.addEventListener("touchend", handleUp);
 
     return () => { 
-      window.removeEventListener("mousemove", handleMove as any); 
+      window.removeEventListener("mousemove", handleMove); 
       window.removeEventListener("mouseup", handleUp); 
-      window.removeEventListener("touchmove", handleMove as any);
+      window.removeEventListener("touchmove", handleMove);
       window.removeEventListener("touchend", handleUp);
     };
-  }, [panelTop]);
+  }, [isMobile, panelTop]);
 
   const startResize = useCallback((dir: string) => (e: React.MouseEvent | React.TouchEvent) => {
+    if (isMobile) return; // No resize on mobile
     isResizingRef.current = true;
     resizeDirRef.current = dir;
 
@@ -832,12 +804,16 @@ export function AIPanel({
     setIsResizing(true);
     e.preventDefault();
     e.stopPropagation();
-  }, [panelWidth, panelHeight, panelTop]);
+  }, [isMobile, panelWidth, panelHeight, panelTop]);
 
   // Voice input
   const toggleVoice = () => {
-    if (!("webkitSpeechRecognition" in window)) return;
-    const recognition = new (window as any).webkitSpeechRecognition();
+    if (!("webkitSpeechRecognition" in window) && !("SpeechRecognition" in window)) {
+      alert("Voice input is not supported in your browser.");
+      return;
+    }
+    const SpeechRecognition = (window as unknown as { SpeechRecognition?: typeof SpeechRecognition; webkitSpeechRecognition?: typeof SpeechRecognition }).SpeechRecognition || (window as unknown as { SpeechRecognition?: typeof SpeechRecognition; webkitSpeechRecognition?: typeof SpeechRecognition }).webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
     recognition.lang = "en-US";
     recognition.continuous = false;
     recognition.interimResults = false;
@@ -895,7 +871,9 @@ export function AIPanel({
           try {
             const result = JSON.parse(match[1]);
             newToolResults.push({ tool: result.tool, result: result.result, timestamp: conv.timestamp });
-          } catch {}
+          } catch {
+            // Ignore parse errors
+          }
         }
       }
     });
@@ -909,10 +887,10 @@ export function AIPanel({
   const toggleButton = (
     <motion.button
       key="nuvuja-toggle"
-      initial={false}
+      initial={{ scale: 0.8, opacity: 0, y: 20 }}
       animate={{ scale: 1, opacity: 1, y: 0 }}
       exit={{ scale: 0.8, opacity: 0, y: 20 }}
-      whileHover={{ scale: 1.08, boxShadow: "0 0 40px rgba(168, 85, 247, 0.4)" }}
+      whileHover={{ scale: 1.08 }}
       whileTap={{ scale: 0.95 }}
       onClick={(e) => {
         e.stopPropagation();
@@ -920,11 +898,16 @@ export function AIPanel({
         onToggle();
       }}
       className="fixed flex items-center gap-2.5 px-5 py-3.5 rounded-2xl shadow-2xl text-white backdrop-blur-sm border border-white/10 pointer-events-auto cursor-pointer ai-toggle-btn"
-      style={{ zIndex: 99999 }}
+      style={{ zIndex: 9999 }}
     >
       <motion.div
-        animate={{ rotate: [0, 360] }}
-        transition={{ duration: 20, repeat: Infinity, ease: "linear" } as any}
+        animate={{ rotate: 360 }}
+        transition={{ 
+          duration: 20, 
+          repeat: Infinity, 
+          ease: "linear",
+          repeatType: "loop"
+        }}
       >
         <Orbit size={20} />
       </motion.div>
@@ -932,14 +915,22 @@ export function AIPanel({
       {hasConsoleErrors && (
         <motion.span
           animate={{ scale: [1, 1.3, 1] }}
-          transition={{ duration: 1.5, repeat: Infinity } as any}
+          transition={{ 
+            duration: 1.5, 
+            repeat: Infinity,
+            repeatType: "loop"
+          }}
           className="w-2.5 h-2.5 rounded-full bg-red-400 shadow-lg shadow-red-400/50"
         />
       )}
       {!hasConsoleErrors && conversations.length > 0 && (
         <motion.span
           animate={{ opacity: [0.5, 1, 0.5] }}
-          transition={{ duration: 2, repeat: Infinity } as any}
+          transition={{ 
+            duration: 2, 
+            repeat: Infinity,
+            repeatType: "loop"
+          }}
           className="w-2 h-2 rounded-full bg-white"
         />
       )}
@@ -960,13 +951,13 @@ export function AIPanel({
       style={{ 
         top: panelTop, 
         right: 0, 
-        width: isMobile ? "100%" : "100%", 
-        maxWidth: isMobile ? "100vw" : panelWidth,
+        width: isMobile ? "100%" : panelWidth,
+        maxWidth: isMobile ? "100vw" : 900,
         height: panelHeight 
       }}
       className={cn("fixed flex flex-row shadow-2xl shadow-black/50 overflow-hidden ai-panel-container", isResizing && "select-none")}
     >
-      {/* Holographic background */}
+      {/* Holographic background with particles */}
       <div className="absolute inset-0 z-0">
         <ParticleBackground />
       </div>
@@ -986,24 +977,24 @@ export function AIPanel({
         </div>
       </div>
 
-      {/* Resize handles - hidden on mobile */}
+      {/* Resize handles - DESKTOP ONLY, hidden on mobile */}
       {!isMobile && (
         <>
-          <div onMouseDown={startResize("w")} onTouchStart={startResize("w")} className="absolute top-8 bottom-8 left-0 w-3 cursor-ew-resize z-50 group flex items-center justify-center">
+          <div onMouseDown={startResize("w")} className="absolute top-8 bottom-8 left-0 w-3 cursor-ew-resize z-50 group flex items-center justify-center">
             <div className={cn("w-0.5 h-12 rounded-full transition-all", isResizing && resizeDirRef.current?.includes("w") ? "bg-purple-400 w-1" : "bg-slate-600/0 group-hover:bg-slate-400/40")} />
           </div>
-          <div onMouseDown={startResize("n")} onTouchStart={startResize("n")} className="absolute top-0 left-8 right-8 h-3 cursor-ns-resize z-50 group flex items-center justify-center">
+          <div onMouseDown={startResize("n")} className="absolute top-0 left-8 right-8 h-3 cursor-ns-resize z-50 group flex items-center justify-center">
             <div className={cn("h-0.5 w-12 rounded-full transition-all", isResizing && resizeDirRef.current === "n" ? "bg-purple-400 h-1" : "bg-slate-600/0 group-hover:bg-slate-400/40")} />
           </div>
-          <div onMouseDown={startResize("s")} onTouchStart={startResize("s")} className="absolute bottom-0 left-8 right-8 h-3 cursor-ns-resize z-50 group flex items-center justify-center">
+          <div onMouseDown={startResize("s")} className="absolute bottom-0 left-8 right-8 h-3 cursor-ns-resize z-50 group flex items-center justify-center">
             <div className={cn("h-0.5 w-12 rounded-full transition-all", isResizing && resizeDirRef.current === "s" ? "bg-purple-400 h-1" : "bg-slate-600/0 group-hover:bg-slate-400/40")} />
           </div>
-          <div onMouseDown={startResize("nw")} onTouchStart={startResize("nw")} className="absolute top-0 left-0 w-6 h-6 cursor-nwse-resize z-50" />
-          <div onMouseDown={startResize("sw")} onTouchStart={startResize("sw")} className="absolute bottom-0 left-0 w-6 h-6 cursor-nesw-resize z-50" />
+          <div onMouseDown={startResize("nw")} className="absolute top-0 left-0 w-6 h-6 cursor-nwse-resize z-50" />
+          <div onMouseDown={startResize("sw")} className="absolute bottom-0 left-0 w-6 h-6 cursor-nesw-resize z-50" />
         </>
       )}
 
-      {/* Chat List Sidebar - MOBILE: overlay modal, DESKTOP: inline */}
+      {/* Chat List Sidebar */}
       <AnimatePresence>
         {showChatList && (
           <motion.div
@@ -1042,9 +1033,9 @@ export function AIPanel({
               </div>
             </div>
             <div className="flex-1 overflow-y-auto p-2 space-y-1 scrollbar-thin">
-              {sortedChats.map((chat) => (
+              {sortedChats.map((chat, index) => (
                 <ChatListItem
-                  key={chat.id}
+                  key={chat.id || `chat-${index}`}
                   chat={chat}
                   isActive={chat.id === activeChatId}
                   onSwitch={() => onSwitchChat(chat.id)}
@@ -1126,8 +1117,13 @@ export function AIPanel({
                 className="text-center py-16"
               >
                 <motion.div
-                  animate={{ rotate: [0, 360] }}
-                  transition={{ duration: 30, repeat: Infinity, ease: "linear" } as any}
+                  animate={{ rotate: 360 }}
+                  transition={{ 
+                    duration: 30, 
+                    repeat: Infinity, 
+                    ease: "linear",
+                    repeatType: "loop"
+                  }}
                   className="w-20 h-20 mx-auto mb-6 rounded-3xl bg-gradient-to-br from-purple-500/20 via-sky-500/20 to-purple-600/20 flex items-center justify-center border border-purple-500/20 shadow-2xl shadow-purple-500/20"
                 >
                   <Atom size={36} className="text-purple-400" />
@@ -1148,7 +1144,7 @@ export function AIPanel({
               >
                 {suggestions.map((s, i) => (
                   <motion.button
-                    key={s.text}
+                    key={`suggestion-${i}`}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.4 + i * 0.1 }}
@@ -1174,7 +1170,7 @@ export function AIPanel({
                   <Zap size={10} /> Tool Results
                 </p>
                 {toolResults.slice(-3).map((result, i) => (
-                  <ToolResultCard key={`${result.tool}-${i}`} result={result} />
+                  <ToolResultCard key={`tool-${result.tool}-${i}`} result={result} />
                 ))}
               </div>
             )}
@@ -1182,7 +1178,7 @@ export function AIPanel({
             {/* Messages */}
             {conversations.map((conv, i) => (
               <motion.div
-                key={conv.id}
+                key={conv.id || `msg-${i}`}
                 initial={{ opacity: 0, y: 12, scale: 0.98 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ delay: i * 0.03, type: "spring", stiffness: 300, damping: 25 }}
@@ -1214,7 +1210,7 @@ export function AIPanel({
               </motion.div>
             ))}
 
-            {/* Thinking animation */}
+            {/* Thinking animation with star field */}
             {isLoading && <ThinkingAnimation />}
           </div>
         </div>
@@ -1235,15 +1231,28 @@ export function AIPanel({
           )}
 
           <div className="flex gap-2">
-            {/* MIC BUTTON - now with proper Mic icon */}
+            {/* MIC BUTTON with pulse animation when listening */}
             <motion.button
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               onClick={toggleVoice}
-              className={cn("p-2.5 rounded-xl transition-all shrink-0", isListening ? "bg-rose-500/20 text-rose-400 animate-pulse" : "bg-white/5 text-slate-500 hover:text-slate-300 hover:bg-white/10")}
+              className={cn(
+                "p-2.5 rounded-xl transition-all shrink-0 relative",
+                isListening ? "bg-rose-500/20 text-rose-400" : "bg-white/5 text-slate-500 hover:text-slate-300 hover:bg-white/10"
+              )}
               title={isListening ? "Stop listening" : "Voice input"}
             >
-              {isListening ? <MicOff size={15} className="animate-pulse" /> : <Mic size={15} />}
+              {isListening && <span className="absolute inset-0 rounded-xl mic-pulse" />}
+              {isListening ? (
+                <motion.div
+                  animate={{ scaleY: [1, 1.3, 1] }}
+                  transition={{ duration: 0.5, repeat: Infinity, repeatType: "loop" }}
+                >
+                  <MicOff size={15} />
+                </motion.div>
+              ) : (
+                <Mic size={15} />
+              )}
             </motion.button>
 
             <div className="flex-1 relative z-10">
@@ -1261,7 +1270,7 @@ export function AIPanel({
               {isListening && (
                 <motion.div
                   animate={{ opacity: [0.3, 1, 0.3] }}
-                  transition={{ duration: 1, repeat: Infinity } as any}
+                  transition={{ duration: 1, repeat: Infinity, repeatType: "loop" }}
                   className="absolute right-3 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-rose-400"
                 />
               )}
@@ -1301,10 +1310,10 @@ export function AIPanel({
 
   return (
     <>
-      <AnimatePresence>
+      <AnimatePresence mode="wait">
         {!isOpen && toggleButton}
       </AnimatePresence>
-      <AnimatePresence>
+      <AnimatePresence mode="wait">
         {isOpen && panelContent}
       </AnimatePresence>
     </>
