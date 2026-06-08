@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import JSZip from "jszip";
 import { FileNode, EditorTab, AIConversation, ChatSession, ConsoleEntry } from "@/types";
@@ -104,18 +104,22 @@ function findFileRecursive(fileList: FileNode[], name: string): FileNode | null 
 // ERROR BOUNDARY
 // ═══════════════════════════════════════════════════════════════════════════════
 
-import React from "react";
+interface ErrorBoundaryProps {
+  children: React.ReactNode;
+}
 
-class NuvujaErrorBoundary extends React.Component<
-  { children: React.ReactNode },
-  { hasError: boolean; error: Error | null }
-> {
-  constructor(props: { children: React.ReactNode }) {
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+class NuvujaErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false, error: null };
   }
 
-  static getDerivedStateFromError(error: Error) {
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
     return { hasError: true, error };
   }
 
@@ -162,8 +166,6 @@ export default function Home() {
 
   const [showChatList, setShowChatList] = useState(false);
 
-
-
   const [chats, setChats] = useSafeLocalStorage<ChatSession[]>("nuvuja-chats", []);
   const [activeChatId, setActiveChatId] = useSafeLocalStorage<string | null>("nuvuja-active-chat", null);
 
@@ -177,7 +179,6 @@ export default function Home() {
   const [showConsole, setShowConsole] = useState(false);
 
   const [showTutorial, setShowTutorial] = useState(false);
-
 
   const [showSidebar, setShowSidebar] = useState(() => {
     if (typeof window !== "undefined") {
@@ -197,10 +198,20 @@ export default function Home() {
   const [aiStatus, setAIStatus] = useState("ready");
 
   const [isConnected, setIsConnected] = useState(true);
-  const [markers, setMarkers] = useState<any[]>([]);
+  const [markers, setMarkers] = useState<Array<{
+    startLineNumber: number;
+    startColumn: number;
+    endLineNumber: number;
+    endColumn: number;
+    message: string;
+    severity: number;
+    suggestion?: string;
+  }>>([]);
 
   const [sidebarWidth, setSidebarWidth] = useState(220);
   const [isResizing, setIsResizing] = useState(false);
+
+  const isMobile = useIsMobile();
 
   const conversations = useMemo(() => {
     const chat = chats.find((c) => c.id === activeChatId);
@@ -213,22 +224,19 @@ export default function Home() {
 
   const chatsRef = useRef(chats);
   const filesRef = useRef(files);
-
   const tabsRef = useRef(tabs);
   const activeTabIdRef = useRef(activeTabId);
-
+  const activeChatIdRef = useRef(activeChatId);
   const consoleEntriesRef = useRef(consoleEntries);
-
 
   useEffect(() => { chatsRef.current = chats; }, [chats]);
   useEffect(() => { filesRef.current = files; }, [files]);
-
   useEffect(() => { tabsRef.current = tabs; }, [tabs]);
   useEffect(() => { activeTabIdRef.current = activeTabId; }, [activeTabId]);
-
+  useEffect(() => { activeChatIdRef.current = activeChatId; }, [activeChatId]);
   useEffect(() => { consoleEntriesRef.current = consoleEntries; }, [consoleEntries]);
 
-
+  // Auto-save interval
   useEffect(() => {
     const interval = setInterval(() => {
       try {
@@ -309,7 +317,7 @@ export default function Home() {
             type: e.data.type,
             args: e.data.args || [],
             message: (e.data.args || [])
-              .map((a: any) => (typeof a === "object" ? JSON.stringify(a) : String(a)))
+              .map((a: unknown) => (typeof a === "object" ? JSON.stringify(a) : String(a)))
               .join(" "),
             timestamp: e.data.timestamp || Date.now(),
             stack: e.data.type === "error" ? e.data.args?.[1] : undefined,
@@ -513,11 +521,24 @@ export default function Home() {
     }
   }, [handleContentChange]);
 
-  const handleLoadTemplate = useCallback((template: any) => {
-    const newFiles = template.files.map((f: any) => ({
+  interface TemplateFile {
+    name: string;
+    type: "file" | "folder";
+    language?: string;
+    content?: string;
+    children?: TemplateFile[];
+  }
+
+  interface TemplateData {
+    name: string;
+    files: TemplateFile[];
+  }
+
+  const handleLoadTemplate = useCallback((template: TemplateData) => {
+    const newFiles = template.files.map((f) => ({
       ...f,
       id: generateId(),
-      parentId: undefined,
+      parentId: undefined as string | undefined,
     }));
     setFiles((prev) => [
       ...prev,
@@ -526,16 +547,16 @@ export default function Home() {
         name: template.name.toLowerCase().replace(/\s+/g, "-"),
         type: "folder" as const,
         isOpen: true,
-        children: newFiles,
+        children: newFiles as FileNode[],
       },
     ]);
     if (newFiles[0]) {
-      setTimeout(() => openFile(newFiles[0]), 0);
+      setTimeout(() => openFile(newFiles[0] as unknown as FileNode), 0);
     }
   }, [openFile]);
 
   const handleSendMessage = useCallback(async (
-    message: string, 
+    message: string,
     action: "chat" | "review" | "fix" | "explain" | "generate" = "chat",
     isContinuation: boolean = false
   ) => {
@@ -889,14 +910,19 @@ export default function Home() {
           const match = fullContent.match(/###REVIEW_START###([\s\S]*?)###REVIEW_END###/);
           if (match) {
             const review = JSON.parse(match[1].trim());
-            if (review.issues) {
-              const newMarkers = review.issues.map((issue: any) => ({
+            if (review.issues && Array.isArray(review.issues)) {
+              const newMarkers = review.issues.map((issue: {
+                line?: number;
+                message?: string;
+                severity?: number;
+                suggestion?: string;
+              }) => ({
                 startLineNumber: issue.line || 1,
                 startColumn: 1,
                 endLineNumber: issue.line || 1,
                 endColumn: 100,
-                message: issue.message,
-                severity: issue.severity,
+                message: issue.message || "",
+                severity: issue.severity || 1,
                 suggestion: issue.suggestion,
               }));
               setMarkers(newMarkers);
@@ -930,10 +956,10 @@ export default function Home() {
           handleSendMessage("Continue from where you stopped. Do NOT repeat what you already wrote. Output ONLY the new content that follows.", action, true);
         }, 800);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       setAIStatus("error");
       setIsConnected(false);
-      const errMsg = error?.message || "Unknown error";
+      const errMsg = error instanceof Error ? error.message : "Unknown error";
       setChats((prev) =>
         prev.map((chat) => {
           if (chat.id !== currentActiveChatId) return chat;
@@ -993,9 +1019,7 @@ export default function Home() {
 
   const activeTab = tabs.find((t) => t.id === activeTabId);
   const lineCount = activeTab?.content?.split("\n").length || 0;
-
   const charCount = activeTab?.content?.length || 0;
-
 
   if (showWelcome) {
     return <WelcomeScreen onStart={() => setShowWelcome(false)} />;
