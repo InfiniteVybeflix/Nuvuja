@@ -18,16 +18,64 @@ import {
   Pentagon, Triangle, CircleDot, Square, Diamond, Crown, Trophy,
   Medal, Award, BadgeCheck, BadgeAlert, BadgeInfo, BadgeX,
 } from "lucide-react";
-// Type declarations for Web Speech API
-declare global {
-  interface Window {
-    SpeechRecognition?: typeof SpeechRecognition;
-    webkitSpeechRecognition?: typeof SpeechRecognition;
-  }
-}
 
 import { AIConversation, ChatSession } from "@/types";
 import { cn } from "@/lib/utils";
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SPEECH RECOGNITION TYPES
+// ═══════════════════════════════════════════════════════════════════════════════
+
+interface SpeechRecognitionAlternative {
+  transcript: string;
+  confidence: number;
+}
+
+interface SpeechRecognitionResult {
+  readonly isFinal: boolean;
+  readonly length: number;
+  [index: number]: SpeechRecognitionAlternative;
+}
+
+interface SpeechRecognitionResultList {
+  readonly length: number;
+  [index: number]: SpeechRecognitionResult;
+}
+
+interface SpeechRecognitionEvent extends Event {
+  readonly resultIndex: number;
+  readonly results: SpeechRecognitionResultList;
+}
+
+interface SpeechRecognitionErrorEvent extends Event {
+  readonly error: string;
+  readonly message: string;
+}
+
+interface SpeechRecognition extends EventTarget {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  maxAlternatives: number;
+  onresult: ((event: SpeechRecognitionEvent) => void) | null;
+  onerror: ((event: SpeechRecognitionErrorEvent) => void) | null;
+  onend: ((event: Event) => void) | null;
+  onstart: ((event: Event) => void) | null;
+  start(): void;
+  stop(): void;
+  abort(): void;
+}
+
+interface SpeechRecognitionConstructor {
+  new (): SpeechRecognition;
+}
+
+declare global {
+  interface Window {
+    SpeechRecognition?: SpeechRecognitionConstructor;
+    webkitSpeechRecognition?: SpeechRecognitionConstructor;
+  }
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // MOBILE DETECTION HOOKS
@@ -63,10 +111,51 @@ function useIsSmallPhone(breakpoint = 380) {
 // TYPES
 // ═══════════════════════════════════════════════════════════════════════════════
 
+interface ToolResultItem {
+  title?: string;
+  name?: string;
+  url?: string;
+  version?: string;
+}
+
+interface ToolResultPackage {
+  name: string;
+  version: string;
+}
+
+interface ToolResultIssue {
+  severity: "critical" | "high" | "warning" | "info";
+  message: string;
+}
+
+interface ToolResultData {
+  success?: boolean;
+  error?: string;
+  latency?: number;
+  results?: ToolResultItem[];
+  packages?: ToolResultPackage[];
+  issues?: ToolResultIssue[];
+  content?: string;
+}
+
 interface ToolResult {
   tool: string;
-  result: any;
+  result: ToolResultData;
   timestamp: number;
+}
+
+interface ReviewIssue {
+  line: number;
+  severity: "error" | "warning" | "info";
+  message: string;
+  suggestion?: string;
+}
+
+interface ReviewData {
+  score: number;
+  summary: string;
+  issues: ReviewIssue[];
+  improvements: string[];
 }
 
 interface AIPanelProps {
@@ -89,6 +178,15 @@ interface AIPanelProps {
   onPinChat: (id: string) => void;
   onDeleteChat: (id: string) => void;
   hasConsoleErrors?: boolean;
+}
+
+interface ChatListItemProps {
+  chat: ChatSession;
+  isActive: boolean;
+  onSwitch: () => void;
+  onRename: (title: string) => void;
+  onPin: () => void;
+  onDelete: () => void;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -222,9 +320,9 @@ function ThinkingAnimation() {
 
       <div className="relative">
         <div className="w-8 h-8 rounded-full border-2 border-purple-500/30 animate-pulse" />
-        <div 
-          className="absolute inset-0 w-8 h-8 rounded-full border-t-2 border-purple-400" 
-          style={{ animation: "spin 1.5s linear infinite" }} 
+        <div
+          className="absolute inset-0 w-8 h-8 rounded-full border-t-2 border-purple-400"
+          style={{ animation: "spin 1.5s linear infinite" }}
         />
         <Brain size={14} className="absolute inset-0 m-auto text-purple-400" />
       </div>
@@ -236,11 +334,11 @@ function ThinkingAnimation() {
               key={idx}
               className="w-1.5 h-1.5 rounded-full bg-purple-400"
               animate={{ opacity: [0.3, 1, 0.3], scale: [0.8, 1.2, 0.8] }}
-              transition={{ 
-                duration: 1.2, 
-                repeat: Infinity, 
+              transition={{
+                duration: 1.2,
+                repeat: Infinity,
                 repeatType: "loop",
-                delay: idx * 0.2 
+                delay: idx * 0.2
               }}
             />
           ))}
@@ -255,7 +353,7 @@ function ThinkingAnimation() {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function ToolResultCard({ result }: { result: ToolResult }) {
-  const toolIcons: Record<string, any> = {
+  const toolIcons: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
     web_search: Search,
     github_fetch: Github,
     github_search: GitBranch,
@@ -299,9 +397,9 @@ function ToolResultCard({ result }: { result: ToolResult }) {
         </div>
       ) : (
         <div className="text-[11px] text-slate-400 font-mono max-h-32 overflow-y-auto scrollbar-thin">
-          {result.result?.results?.length > 0 && (
+          {result.result?.results && result.result.results.length > 0 && (
             <div className="space-y-1">
-              {result.result.results.slice(0, 3).map((r: any, i: number) => (
+              {result.result.results.slice(0, 3).map((r, i) => (
                 <div key={i} className="truncate">
                   {r.title && <span className="text-slate-300">{r.title}</span>}
                   {r.name && <span className="text-slate-300">{r.name}</span>}
@@ -313,9 +411,9 @@ function ToolResultCard({ result }: { result: ToolResult }) {
               )}
             </div>
           )}
-          {result.result?.packages?.length > 0 && (
+          {result.result?.packages && result.result.packages.length > 0 && (
             <div className="space-y-1">
-              {result.result.packages.slice(0, 3).map((p: any, i: number) => (
+              {result.result.packages.slice(0, 3).map((p, i) => (
                 <div key={i} className="flex items-center gap-2">
                   <Package size={8} className="text-red-400" />
                   <span className="text-slate-300">{p.name}</span>
@@ -324,9 +422,9 @@ function ToolResultCard({ result }: { result: ToolResult }) {
               ))}
             </div>
           )}
-          {result.result?.issues?.length > 0 && (
+          {result.result?.issues && result.result.issues.length > 0 && (
             <div className="space-y-1">
-              {result.result.issues.map((issue: any, i: number) => (
+              {result.result.issues.map((issue, i) => (
                 <div key={i} className={cn("flex items-center gap-1", issue.severity === "critical" ? "text-rose-400" : issue.severity === "high" ? "text-amber-400" : "text-slate-400")}>
                   {issue.severity === "critical" ? <ShieldAlert size={8} /> : <ShieldCheck size={8} />}
                   <span>{issue.message}</span>
@@ -476,8 +574,8 @@ function MessageContent({ content, language, onApplyCode }: { content: string; l
 
           return (
             <p key={`line-${i}-${j}`} className="text-[13px] text-slate-300 leading-relaxed">
-              {inlineCodes.map((segment, idx) => 
-                segment.isCode 
+              {inlineCodes.map((segment, idx) =>
+                segment.isCode
                   ? <InlineCode key={idx} code={segment.text} />
                   : <span key={idx}>{segment.text}</span>
               )}
@@ -493,7 +591,7 @@ function MessageContent({ content, language, onApplyCode }: { content: string; l
 // REVIEW CARD
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function ReviewCard({ review }: { review: any }) {
+function ReviewCard({ review }: { review: ReviewData | null }) {
   if (!review || !review.issues) return null;
   return (
     <HolographicCard glowColor={review.score >= 80 ? "emerald" : review.score >= 50 ? "amber" : "rose"} className="my-2">
@@ -509,12 +607,12 @@ function ReviewCard({ review }: { review: any }) {
         </div>
         <p className="text-[11px] text-slate-400 mb-3">{review.summary}</p>
 
-        {review.issues?.length > 0 && (
+        {review.issues && review.issues.length > 0 && (
           <div className="space-y-1.5 mb-3">
             <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1">
               <Bug size={10} /> Issues ({review.issues.length})
             </p>
-            {review.issues.map((issue: any, i: number) => (
+            {review.issues.map((issue, i) => (
               <div key={`issue-${i}`} className={cn("flex items-start gap-2 p-2 rounded-lg text-[11px] border", issue.severity === "error" ? "bg-rose-500/5 border-rose-500/20" : issue.severity === "warning" ? "bg-amber-500/5 border-amber-500/20" : "bg-sky-500/5 border-sky-500/20")}>
                 {issue.severity === "error" ? <AlertOctagon size={10} className="text-rose-400 shrink-0 mt-0.5" /> : issue.severity === "warning" ? <AlertTriangle size={10} className="text-amber-400 shrink-0 mt-0.5" /> : <CheckCircle size={10} className="text-sky-400 shrink-0 mt-0.5" />}
                 <div>
@@ -526,12 +624,12 @@ function ReviewCard({ review }: { review: any }) {
           </div>
         )}
 
-        {review.improvements?.length > 0 && (
+        {review.improvements && review.improvements.length > 0 && (
           <div className="space-y-1">
             <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1">
               <Lightbulb size={10} /> Improvements
             </p>
-            {review.improvements.map((imp: string, i: number) => (
+            {review.improvements.map((imp, i) => (
               <p key={`imp-${i}`} className="text-[11px] text-slate-400 flex items-start gap-1.5">
                 <Sparkles size={8} className="text-purple-400 shrink-0 mt-0.5" /> {imp}
               </p>
@@ -547,7 +645,7 @@ function ReviewCard({ review }: { review: any }) {
 // CHAT LIST ITEM
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function ChatListItem({ chat, isActive, onSwitch, onRename, onPin, onDelete }: any) {
+function ChatListItem({ chat, isActive, onSwitch, onRename, onPin, onDelete }: ChatListItemProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(chat.title);
 
@@ -766,10 +864,10 @@ export function AIPanel({
       setPanelTop(newT);
     };
 
-    const handleUp = () => { 
-      isResizingRef.current = false; 
-      resizeDirRef.current = null; 
-      setIsResizing(false); 
+    const handleUp = () => {
+      isResizingRef.current = false;
+      resizeDirRef.current = null;
+      setIsResizing(false);
     };
 
     window.addEventListener("mousemove", handleMove);
@@ -777,9 +875,9 @@ export function AIPanel({
     window.addEventListener("touchmove", handleMove, { passive: false });
     window.addEventListener("touchend", handleUp);
 
-    return () => { 
-      window.removeEventListener("mousemove", handleMove); 
-      window.removeEventListener("mouseup", handleUp); 
+    return () => {
+      window.removeEventListener("mousemove", handleMove);
+      window.removeEventListener("mouseup", handleUp);
       window.removeEventListener("touchmove", handleMove);
       window.removeEventListener("touchend", handleUp);
     };
@@ -812,8 +910,10 @@ export function AIPanel({
       alert("Voice input is not supported in your browser.");
       return;
     }
-    const SpeechRecognition = (window as unknown as { SpeechRecognition?: typeof SpeechRecognition; webkitSpeechRecognition?: typeof SpeechRecognition }).SpeechRecognition || (window as unknown as { SpeechRecognition?: typeof SpeechRecognition; webkitSpeechRecognition?: typeof SpeechRecognition }).webkitSpeechRecognition;
-    const recognition = new SpeechRecognition();
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) return;
+
+    const recognition = new SR();
     recognition.lang = "en-US";
     recognition.continuous = false;
     recognition.interimResults = false;
@@ -824,7 +924,7 @@ export function AIPanel({
     } else {
       setIsListening(true);
       recognition.start();
-      recognition.onresult = (event: any) => {
+      recognition.onresult = (event: SpeechRecognitionEvent) => {
         const transcript = event.results[0][0].transcript;
         setInput((prev) => prev + " " + transcript);
         setIsListening(false);
@@ -869,7 +969,7 @@ export function AIPanel({
         const matches = Array.from(conv.content.matchAll(/###TOOL_RESULT###\n({[\s\S]*?})\n###TOOL_END###/g));
         for (const match of matches) {
           try {
-            const result = JSON.parse(match[1]);
+            const result = JSON.parse(match[1]) as { tool: string; result: ToolResultData };
             newToolResults.push({ tool: result.tool, result: result.result, timestamp: conv.timestamp });
           } catch {
             // Ignore parse errors
@@ -902,9 +1002,9 @@ export function AIPanel({
     >
       <motion.div
         animate={{ rotate: 360 }}
-        transition={{ 
-          duration: 20, 
-          repeat: Infinity, 
+        transition={{
+          duration: 20,
+          repeat: Infinity,
           ease: "linear",
           repeatType: "loop"
         }}
@@ -915,8 +1015,8 @@ export function AIPanel({
       {hasConsoleErrors && (
         <motion.span
           animate={{ scale: [1, 1.3, 1] }}
-          transition={{ 
-            duration: 1.5, 
+          transition={{
+            duration: 1.5,
             repeat: Infinity,
             repeatType: "loop"
           }}
@@ -926,8 +1026,8 @@ export function AIPanel({
       {!hasConsoleErrors && conversations.length > 0 && (
         <motion.span
           animate={{ opacity: [0.5, 1, 0.5] }}
-          transition={{ 
-            duration: 2, 
+          transition={{
+            duration: 2,
             repeat: Infinity,
             repeatType: "loop"
           }}
@@ -948,12 +1048,12 @@ export function AIPanel({
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: "100%", opacity: 0 }}
       transition={{ type: "spring", damping: 25, stiffness: 200 }}
-      style={{ 
-        top: panelTop, 
-        right: 0, 
+      style={{
+        top: panelTop,
+        right: 0,
         width: isMobile ? "100%" : panelWidth,
         maxWidth: isMobile ? "100vw" : 900,
-        height: panelHeight 
+        height: panelHeight
       }}
       className={cn("fixed flex flex-row shadow-2xl shadow-black/50 overflow-hidden ai-panel-container", isResizing && "select-none")}
     >
@@ -1014,7 +1114,7 @@ export function AIPanel({
               </div>
               <div className="flex items-center gap-1">
                 {isMobile && (
-                  <button 
+                  <button
                     onClick={onToggleChatList}
                     className="p-1.5 rounded-lg hover:bg-white/10 text-slate-500 hover:text-slate-300 transition-colors mr-1"
                   >
@@ -1033,9 +1133,9 @@ export function AIPanel({
               </div>
             </div>
             <div className="flex-1 overflow-y-auto p-2 space-y-1 scrollbar-thin">
-              {sortedChats.map((chat, index) => (
+              {sortedChats.map((chat) => (
                 <ChatListItem
-                  key={chat.id || `chat-${index}`}
+                  key={chat.id}
                   chat={chat}
                   isActive={chat.id === activeChatId}
                   onSwitch={() => onSwitchChat(chat.id)}
@@ -1118,9 +1218,9 @@ export function AIPanel({
               >
                 <motion.div
                   animate={{ rotate: 360 }}
-                  transition={{ 
-                    duration: 30, 
-                    repeat: Infinity, 
+                  transition={{
+                    duration: 30,
+                    repeat: Infinity,
                     ease: "linear",
                     repeatType: "loop"
                   }}
@@ -1192,7 +1292,7 @@ export function AIPanel({
                     <ReviewCard review={(() => {
                       try {
                         const match = conv.content.match(/###REVIEW_START###([\s\S]*?)###REVIEW_END###/);
-                        return match ? JSON.parse(match[1].trim()) : null;
+                        return match ? (JSON.parse(match[1].trim()) as ReviewData) : null;
                       } catch { return null; }
                     })()} />
                   ) : (
