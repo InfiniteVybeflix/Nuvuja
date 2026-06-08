@@ -1,17 +1,28 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
-import ServiceWorker from "@/components/ServiceWorker";
 
 export const metadata: Metadata = {
-  title: "Nuvuja — Cloud-Born Code Editor",
-  description: "The most powerful editor in the universe. AI-powered, lightning-fast, and infinitely extensible.",
-  keywords: ["code editor", "AI", "IDE", "programming", "Nuvuja"],
-  authors: [{ name: "Nuvuja Labs" }],
-  openGraph: {
-    title: "Nuvuja Editor",
-    description: "Where code meets consciousness",
-    type: "website",
+  title: "ᓄᕙᔭ - Nuvuja AI Code Editor",
+  description: "Autonomous software engineering intelligence powered by AI",
+  manifest: "/manifest.json",
+  icons: {
+    icon: "/favicon.ico",
+    apple: "/apple-touch-icon.png",
   },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "ᓄᕙᔭ",
+  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
+  themeColor: "#020617",
 };
 
 export default function RootLayout({
@@ -20,18 +31,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" suppressHydrationWarning>
       <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-        <link rel="manifest" href="/manifest.json" />
-        <link rel="icon" type="image/png" href="/icon-192.png" />
-        <link rel="apple-touch-icon" href="/icon-192.png" />
-        <meta name="theme-color" content="#0f172a" />
+        {/* Modern PWA capability meta tag */}
+        <meta name="mobile-web-app-capable" content="yes" />
+        {/* Keep deprecated one for older iOS versions */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="ᓄᕙᔭ" />
+        <meta name="format-detection" content="telephone=no" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       </head>
-      <body className="antialiased">
-        <ServiceWorker />
+      <body className="antialiased" suppressHydrationWarning>
         {children}
       </body>
     </html>
