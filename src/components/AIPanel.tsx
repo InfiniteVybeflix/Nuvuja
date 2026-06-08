@@ -336,7 +336,7 @@ function ThinkingAnimation() {
               animate={{ opacity: [0.3, 1, 0.3], scale: [0.8, 1.2, 0.8] }}
               transition={{
                 duration: 1.2,
-                repeat: Infinity,
+                repeat: Number.POSITIVE_INFINITY,
                 repeatType: "loop",
                 delay: idx * 0.2
               }}
@@ -1004,7 +1004,7 @@ export function AIPanel({
         animate={{ rotate: 360 }}
         transition={{
           duration: 20,
-          repeat: Infinity,
+          repeat: Number.POSITIVE_INFINITY,
           ease: "linear",
           repeatType: "loop"
         }}
@@ -1017,7 +1017,7 @@ export function AIPanel({
           animate={{ scale: [1, 1.3, 1] }}
           transition={{
             duration: 1.5,
-            repeat: Infinity,
+            repeat: Number.POSITIVE_INFINITY,
             repeatType: "loop"
           }}
           className="w-2.5 h-2.5 rounded-full bg-red-400 shadow-lg shadow-red-400/50"
@@ -1028,7 +1028,7 @@ export function AIPanel({
           animate={{ opacity: [0.5, 1, 0.5] }}
           transition={{
             duration: 2,
-            repeat: Infinity,
+            repeat: Number.POSITIVE_INFINITY,
             repeatType: "loop"
           }}
           className="w-2 h-2 rounded-full bg-white"
@@ -1220,7 +1220,7 @@ export function AIPanel({
                   animate={{ rotate: 360 }}
                   transition={{
                     duration: 30,
-                    repeat: Infinity,
+                    repeat: Number.POSITIVE_INFINITY,
                     ease: "linear",
                     repeatType: "loop"
                   }}
@@ -1346,7 +1346,7 @@ export function AIPanel({
               {isListening ? (
                 <motion.div
                   animate={{ scaleY: [1, 1.3, 1] }}
-                  transition={{ duration: 0.5, repeat: Infinity, repeatType: "loop" }}
+                  transition={{ duration: 0.5, repeat: Number.POSITIVE_INFINITY, repeatType: "loop" }}
                 >
                   <MicOff size={15} />
                 </motion.div>
@@ -1370,7 +1370,7 @@ export function AIPanel({
               {isListening && (
                 <motion.div
                   animate={{ opacity: [0.3, 1, 0.3] }}
-                  transition={{ duration: 1, repeat: Infinity, repeatType: "loop" }}
+                  transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, repeatType: "loop" }}
                   className="absolute right-3 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-rose-400"
                 />
               )}
