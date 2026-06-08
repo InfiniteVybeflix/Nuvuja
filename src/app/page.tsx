@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import JSZip from "jszip";
 import { FileNode, EditorTab, AIConversation, ChatSession, ConsoleEntry } from "@/types";
@@ -33,7 +33,10 @@ function cn(...classes: (string | boolean | undefined)[]) {
   return classes.filter(Boolean).join(" ");
 }
 
-// Mobile detection hook
+// ═══════════════════════════════════════════════════════════════════════════════
+// MOBILE DETECTION HOOK
+// ═══════════════════════════════════════════════════════════════════════════════
+
 function useIsMobile(breakpoint = 768) {
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
@@ -49,6 +52,103 @@ function useIsMobile(breakpoint = 768) {
   return isMobile;
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// SAFE LOCALSTORAGE HOOK
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function useSafeLocalStorage<T>(key: string, initialValue: T): [T, (value: T | ((prev: T) => T)) => void] {
+  const [storedValue, setStoredValue] = useState<T>(() => {
+    try {
+      if (typeof window === "undefined") return initialValue;
+      const item = window.localStorage.getItem(key);
+      return item ? (JSON.parse(item) as T) : initialValue;
+    } catch (error) {
+      console.warn(`[Nuvuja] localStorage read error for ${key}:`, error);
+      return initialValue;
+    }
+  });
+
+  const setValue = useCallback((value: T | ((prev: T) => T)) => {
+    try {
+      setStoredValue((prev) => {
+        const newValue = typeof value === "function" ? (value as (prev: T) => T)(prev) : value;
+        if (typeof window !== "undefined") {
+          window.localStorage.setItem(key, JSON.stringify(newValue));
+        }
+        return newValue;
+      });
+    } catch (error) {
+      console.warn(`[Nuvuja] localStorage write error for ${key}:`, error);
+    }
+  }, [key]);
+
+  return [storedValue, setValue];
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FILE SYSTEM HELPERS (outside component to prevent recreation)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function findFileRecursive(fileList: FileNode[], name: string): FileNode | null {
+  for (const f of fileList) {
+    if (f.name === name) return f;
+    if (f.children) {
+      const found = findFileRecursive(f.children, name);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ERROR BOUNDARY
+// ═══════════════════════════════════════════════════════════════════════════════
+
+import React from "react";
+
+class NuvujaErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error: Error | null }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error("[Nuvuja Error Boundary]", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="h-screen w-screen flex items-center justify-center bg-slate-950 text-slate-200 p-8">
+          <div className="max-w-md text-center space-y-4">
+            <div className="text-6xl mb-4">⚠️</div>
+            <h1 className="text-2xl font-bold text-red-400">Something went wrong</h1>
+            <p className="text-slate-400 text-sm">{this.state.error?.message || "Unknown error"}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-6 py-3 bg-purple-500/20 text-purple-400 rounded-xl border border-purple-500/30 hover:bg-purple-500/30 transition-colors"
+            >
+              Reload ᓄᕙᔭ
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MAIN PAGE COMPONENT
+// ═══════════════════════════════════════════════════════════════════════════════
+
 export default function Home() {
   const isMobile = useIsMobile();
 
@@ -57,19 +157,9 @@ export default function Home() {
   const [tabs, setTabs] = useState<EditorTab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
 
-  // Chat system
-  const [chats, setChats] = useState<ChatSession[]>(() => {
-    try {
-      const saved = localStorage.getItem("nuvuja-chats");
-      if (saved) return JSON.parse(saved);
-    } catch {}
-    return [];
-  });
-  const [activeChatId, setActiveChatId] = useState<string | null>(() => {
-    try {
-      return localStorage.getItem("nuvuja-active-chat");
-    } catch { return null; }
-  });
+  // Chat system with safe localStorage
+  const [chats, setChats] = useSafeLocalStorage<ChatSession[]>("nuvuja-chats", []);
+  const [activeChatId, setActiveChatId] = useSafeLocalStorage<string | null>("nuvuja-active-chat", null);
   const [showChatList, setShowChatList] = useState(false);
 
   const conversations = useMemo(() => {
@@ -93,7 +183,7 @@ export default function Home() {
     return true;
   });
 
-  // MOBILE: Default to "code" view on mobile, "split" on desktop
+  // MOBILE: Default to "code" view on mobile
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     if (typeof window !== "undefined") {
       return window.innerWidth < 768 ? "code" : "code";
@@ -108,23 +198,55 @@ export default function Home() {
   const [sidebarWidth, setSidebarWidth] = useState(220);
   const [isResizing, setIsResizing] = useState(false);
 
-  // Initialize
+  // Refs for latest state in callbacks
+  const chatsRef = useRef(chats);
+  const filesRef = useRef(files);
+  const tabsRef = useRef(tabs);
+  const activeTabIdRef = useRef(activeTabId);
+  const consoleEntriesRef = useRef(consoleEntries);
+
+  useEffect(() => { chatsRef.current = chats; }, [chats]);
+  useEffect(() => { filesRef.current = files; }, [files]);
+  useEffect(() => { tabsRef.current = tabs; }, [tabs]);
+  useEffect(() => { activeTabIdRef.current = activeTabId; }, [activeTabId]);
+  useEffect(() => { consoleEntriesRef.current = consoleEntries; }, [consoleEntries]);
+
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // INITIALIZATION
+  // ═══════════════════════════════════════════════════════════════════════════════
+
   useEffect(() => {
-    const saved = loadWorkspace();
-    setFiles(saved);
-    const htmlFile = findFileRecursive(saved, "index.html");
-    if (htmlFile) {
-      openFile(htmlFile);
+    let mounted = true;
+    try {
+      const saved = loadWorkspace();
+      if (!mounted) return;
+      setFiles(saved);
+      const htmlFile = findFileRecursive(saved, "index.html");
+      if (htmlFile) {
+        // Use setTimeout to avoid state update during render
+        setTimeout(() => openFile(htmlFile), 0);
+      }
+    } catch (error) {
+      console.error("[Nuvuja] Failed to load workspace:", error);
+      if (mounted) {
+        setFiles(createDefaultWorkspace());
+      }
     }
+    return () => { mounted = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Auto-save
   useEffect(() => {
     const interval = setInterval(() => {
-      saveWorkspace(files);
+      try {
+        saveWorkspace(filesRef.current);
+      } catch (error) {
+        console.error("[Nuvuja] Auto-save failed:", error);
+      }
     }, 30000);
     return () => clearInterval(interval);
-  }, [files]);
+  }, []);
 
   // Resizing
   useEffect(() => {
@@ -148,6 +270,7 @@ export default function Home() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Enter" && showWelcome) {
+        e.preventDefault();
         setShowWelcome(false);
       }
       if (e.ctrlKey || e.metaKey) {
@@ -167,7 +290,7 @@ export default function Home() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [showWelcome, files]);
+  }, [showWelcome, handleSave]);
 
   // Auto-create first chat
   useEffect(() => {
@@ -185,13 +308,7 @@ export default function Home() {
     } else if (!activeChatId || !chats.find((c) => c.id === activeChatId)) {
       setActiveChatId(chats[0].id);
     }
-  }, []);
-
-  // Persist chats
-  useEffect(() => {
-    localStorage.setItem("nuvuja-chats", JSON.stringify(chats));
-    if (activeChatId) localStorage.setItem("nuvuja-active-chat", activeChatId);
-  }, [chats, activeChatId]);
+  }, [chats, activeChatId, setChats, setActiveChatId]);
 
   // Console listener
   useEffect(() => {
@@ -221,43 +338,38 @@ export default function Home() {
     const handleResize = () => {
       const mobile = window.innerWidth < 768;
       if (mobile) {
-        // On mobile, if we were in split mode, switch to code
         setViewMode((prev) => prev === "split" ? "code" : prev);
+        setShowSidebar(false);
       }
     };
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const findFileRecursive = (fileList: FileNode[], name: string): FileNode | null => {
-    for (const f of fileList) {
-      if (f.name === name) return f;
-      if (f.children) {
-        const found = findFileRecursive(f.children, name);
-        if (found) return found;
-      }
-    }
-    return null;
-  };
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // FILE OPERATIONS
+  // ═══════════════════════════════════════════════════════════════════════════════
 
   const openFile = useCallback((file: FileNode) => {
     if (file.type === "folder") return;
-    const existingTab = tabs.find((t) => t.fileId === file.id);
-    if (existingTab) {
-      setActiveTabId(existingTab.id);
-      return;
-    }
-    const newTab: EditorTab = {
-      id: generateId(),
-      fileId: file.id,
-      name: file.name,
-      language: file.language || getLanguageFromFilename(file.name),
-      content: file.content || "",
-      isDirty: false,
-    };
-    setTabs((prev) => [...prev, newTab]);
-    setActiveTabId(newTab.id);
-  }, [tabs]);
+    setTabs((prevTabs) => {
+      const existingTab = prevTabs.find((t) => t.fileId === file.id);
+      if (existingTab) {
+        setActiveTabId(existingTab.id);
+        return prevTabs;
+      }
+      const newTab: EditorTab = {
+        id: generateId(),
+        fileId: file.id,
+        name: file.name,
+        language: file.language || getLanguageFromFilename(file.name),
+        content: file.content || "",
+        isDirty: false,
+      };
+      setActiveTabId(newTab.id);
+      return [...prevTabs, newTab];
+    });
+  }, []);
 
   const handleTabChange = useCallback((tabId: string) => {
     setActiveTabId(tabId);
@@ -266,51 +378,59 @@ export default function Home() {
   const handleTabClose = useCallback((tabId: string) => {
     setTabs((prev) => {
       const newTabs = prev.filter((t) => t.id !== tabId);
-      if (activeTabId === tabId && newTabs.length > 0) {
+      if (activeTabIdRef.current === tabId && newTabs.length > 0) {
         setActiveTabId(newTabs[newTabs.length - 1].id);
       } else if (newTabs.length === 0) {
         setActiveTabId(null);
       }
       return newTabs;
     });
-  }, [activeTabId]);
+  }, []);
 
   const handleContentChange = useCallback((tabId: string, content: string) => {
     setTabs((prev) =>
       prev.map((t) => (t.id === tabId ? { ...t, content, isDirty: true } : t))
     );
-    const tab = tabs.find((t) => t.id === tabId);
+    const tab = tabsRef.current.find((t) => t.id === tabId);
     if (tab) {
       setFiles((prev) => updateFileContent(prev, tab.fileId, content));
     }
-  }, [tabs]);
+  }, []);
 
   const handleSave = useCallback(() => {
-    saveWorkspace(files);
-    setTabs((prev) => prev.map((t) => ({ ...t, isDirty: false })));
-  }, [files]);
+    try {
+      saveWorkspace(filesRef.current);
+      setTabs((prev) => prev.map((t) => ({ ...t, isDirty: false })));
+    } catch (error) {
+      console.error("[Nuvuja] Save failed:", error);
+    }
+  }, []);
 
   const handleExport = useCallback(async () => {
-    const zip = new JSZip();
-    const addToZip = (fileList: FileNode[], path: string = "") => {
-      for (const file of fileList) {
-        if (file.type === "file" && file.content) {
-          zip.file(`${path}${file.name}`, file.content);
+    try {
+      const zip = new JSZip();
+      const addToZip = (fileList: FileNode[], path: string = "") => {
+        for (const file of fileList) {
+          if (file.type === "file" && file.content) {
+            zip.file(`${path}${file.name}`, file.content);
+          }
+          if (file.type === "folder" && file.children) {
+            addToZip(file.children, `${path}${file.name}/`);
+          }
         }
-        if (file.type === "folder" && file.children) {
-          addToZip(file.children, `${path}${file.name}/`);
-        }
-      }
-    };
-    addToZip(files);
-    const blob = await zip.generateAsync({ type: "blob" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "nuvuja-project.zip";
-    a.click();
-    URL.revokeObjectURL(url);
-  }, [files]);
+      };
+      addToZip(filesRef.current);
+      const blob = await zip.generateAsync({ type: "blob" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "nuvuja-project.zip";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("[Nuvuja] Export failed:", error);
+    }
+  }, []);
 
   const handleAddFile = useCallback((parentId: string | null, type: "file" | "folder") => {
     const name = type === "file" ? "untitled.txt" : "new-folder";
@@ -325,7 +445,7 @@ export default function Home() {
     };
     setFiles((prev) => addFileNode(prev, parentId, newNode));
     if (type === "file") {
-      openFile(newNode);
+      setTimeout(() => openFile(newNode), 0);
     }
   }, [openFile]);
 
@@ -347,6 +467,10 @@ export default function Home() {
     setFiles((prev) => toggleFolder(prev, id));
   }, []);
 
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // CHAT OPERATIONS
+  // ═══════════════════════════════════════════════════════════════════════════════
+
   const handleNewChat = useCallback(() => {
     const newChat: ChatSession = {
       id: generateId(),
@@ -359,24 +483,24 @@ export default function Home() {
     setChats((prev) => [newChat, ...prev]);
     setActiveChatId(newChat.id);
     setShowChatList(false);
-  }, []);
+  }, [setChats, setActiveChatId]);
 
   const handleSwitchChat = useCallback((id: string) => {
     setActiveChatId(id);
     setShowChatList(false);
-  }, []);
+  }, [setActiveChatId]);
 
   const handleRenameChat = useCallback((id: string, title: string) => {
     setChats((prev) =>
       prev.map((c) => (c.id === id ? { ...c, title, updatedAt: Date.now() } : c))
     );
-  }, []);
+  }, [setChats]);
 
   const handlePinChat = useCallback((id: string) => {
     setChats((prev) =>
       prev.map((c) => (c.id === id ? { ...c, pinned: !c.pinned, updatedAt: Date.now() } : c))
     );
-  }, []);
+  }, [setChats]);
 
   const handleDeleteChat = useCallback((id: string) => {
     setChats((prev) => {
@@ -397,13 +521,14 @@ export default function Home() {
       }
       return next;
     });
-  }, [activeChatId]);
+  }, [activeChatId, setChats, setActiveChatId]);
 
   const handleApplyCode = useCallback((code: string) => {
-    if (activeTabId) {
-      handleContentChange(activeTabId, code);
+    const currentTabId = activeTabIdRef.current;
+    if (currentTabId) {
+      handleContentChange(currentTabId, code);
     }
-  }, [activeTabId, handleContentChange]);
+  }, [handleContentChange]);
 
   const handleLoadTemplate = useCallback((template: any) => {
     const newFiles = template.files.map((f: any) => ({
@@ -422,16 +547,21 @@ export default function Home() {
       },
     ]);
     if (newFiles[0]) {
-      openFile(newFiles[0]);
+      setTimeout(() => openFile(newFiles[0]), 0);
     }
   }, [openFile]);
+
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // AI MESSAGE HANDLER (THE MOST CRITICAL FUNCTION)
+  // ═══════════════════════════════════════════════════════════════════════════════
 
   const handleSendMessage = useCallback(async (
     message: string, 
     action: "chat" | "review" | "fix" | "explain" | "generate" = "chat",
     isContinuation: boolean = false
   ) => {
-    if (!activeChatId) return;
+    const currentActiveChatId = activeChatIdRef.current;
+    if (!currentActiveChatId) return;
 
     const userMsg: AIConversation = {
       id: generateId(),
@@ -440,24 +570,30 @@ export default function Home() {
       timestamp: Date.now(),
     };
 
-    setChats((prev) =>
-      prev.map((chat) => {
-        if (chat.id !== activeChatId) return chat;
+    // Use functional update to ensure we have latest chats
+    setChats((prevChats) => {
+      const updatedChats = prevChats.map((chat) => {
+        if (chat.id !== currentActiveChatId) return chat;
         const msgs = [...chat.messages, userMsg];
         const title =
           chat.messages.length === 0
             ? message.slice(0, 30).replace(/[^\w\s-]/g, "").trim() || "New Chat"
             : chat.title;
         return { ...chat, messages: msgs, title, updatedAt: Date.now() };
-      })
-    );
+      });
+      return updatedChats;
+    });
 
     setIsAILoading(true);
     setAIStatus("thinking");
 
     try {
-      const activeChat = chats.find((c) => c.id === activeChatId);
+      // Get latest state from refs
+      const currentChats = chatsRef.current;
+      const currentFiles = filesRef.current;
+      const activeChat = currentChats.find((c) => c.id === currentActiveChatId);
       const chatMessages = activeChat?.messages || [];
+      const currentConsoleEntries = consoleEntriesRef.current;
 
       // ═── TOKEN-SAFE CONTEXT BUILDER ───
       const MAX_CONTEXT_CHARS = 6000;
@@ -485,7 +621,7 @@ export default function Home() {
             }
           }
         };
-        walk(files);
+        walk(currentFiles);
         const result = lines.join("\n");
         return result.length > MAX_CONTEXT_CHARS
           ? result.slice(0, MAX_CONTEXT_CHARS) + "\n... [context truncated to save tokens]"
@@ -507,7 +643,7 @@ export default function Home() {
         apiContent += "\n\n" + buildSafeContext(false);
       }
 
-      const recentErrors = consoleEntries
+      const recentErrors = currentConsoleEntries
         .filter((e) => e.type === "error" || e.type === "warn")
         .slice(-MAX_CONSOLE_ERRORS);
       if (recentErrors.length > 0) {
@@ -558,7 +694,7 @@ export default function Home() {
                   model = parsed.model || model;
                 }
               } catch {
-                // Ignore
+                // Ignore parse errors in stream
               }
             }
           }
@@ -587,7 +723,7 @@ export default function Home() {
         const lineNum = parseInt(fixMatch[2], 10);
         const newLine = fixMatch[3].trim();
 
-        const targetFile = findFileByPath(files, filePath);
+        const targetFile = findFileByPath(currentFiles, filePath);
         if (targetFile?.content) {
           const lines = targetFile.content.split("\n");
           if (lineNum > 0 && lineNum <= lines.length) {
@@ -612,7 +748,7 @@ export default function Home() {
         const endLine = parseInt(patchMatch[3], 10);
         const newLinesRaw = patchMatch[4].trim();
 
-        const targetFile = findFileByPath(files, filePath);
+        const targetFile = findFileByPath(currentFiles, filePath);
         if (targetFile?.content) {
           const lines = targetFile.content.split("\n");
           const before = lines.slice(0, startLine - 1);
@@ -635,7 +771,7 @@ export default function Home() {
         const codeToApply = editorMatch[2].trim();
 
         if (filePath) {
-          const targetFile = findFileByPath(files, filePath);
+          const targetFile = findFileByPath(currentFiles, filePath);
           if (targetFile) {
             setFiles((prev) => updateFileContent(prev, targetFile.id, codeToApply));
             setTabs((prev) =>
@@ -643,7 +779,7 @@ export default function Home() {
                 t.fileId === targetFile.id ? { ...t, content: codeToApply, isDirty: true } : t
               )
             );
-            const isOpen = tabs.some((t) => t.fileId === targetFile.id);
+            const isOpen = tabsRef.current.some((t) => t.fileId === targetFile.id);
             if (!isOpen) {
               setTimeout(() => openFile(targetFile), 0);
             }
@@ -651,12 +787,10 @@ export default function Home() {
             console.warn(`[Nuvuja] EDITOR_START: File not found: "${filePath}"`);
           }
         } else {
-          setActiveTabId((currentTabId) => {
-            if (currentTabId) {
-              handleContentChange(currentTabId, codeToApply);
-            }
-            return currentTabId;
-          });
+          const currentTabId = activeTabIdRef.current;
+          if (currentTabId) {
+            handleContentChange(currentTabId, codeToApply);
+          }
         }
       }
 
@@ -790,14 +924,14 @@ export default function Home() {
             }
           }
         } catch {
-          // Ignore
+          // Ignore review parse errors
         }
       }
 
       // Save assistant message
       setChats((prev) =>
         prev.map((chat) => {
-          if (chat.id !== activeChatId) return chat;
+          if (chat.id !== currentActiveChatId) return chat;
           return {
             ...chat,
             messages: [...chat.messages, assistantMsg],
@@ -823,7 +957,7 @@ export default function Home() {
       const errMsg = error?.message || "Unknown error";
       setChats((prev) =>
         prev.map((chat) => {
-          if (chat.id !== activeChatId) return chat;
+          if (chat.id !== currentActiveChatId) return chat;
           return {
             ...chat,
             messages: [
@@ -843,148 +977,158 @@ export default function Home() {
       setIsAILoading(false);
       setIsContinuing(false);
     }
-  }, [activeChatId, chats, files, consoleEntries, handleContentChange, openFile]);
+  }, [setChats, handleContentChange, openFile]);
+
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // DERIVED STATE
+  // ═══════════════════════════════════════════════════════════════════════════════
 
   const activeTab = tabs.find((t) => t.id === activeTabId);
   const lineCount = activeTab?.content?.split("\n").length || 0;
   const charCount = activeTab?.content?.length || 0;
+
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // RENDER
+  // ═══════════════════════════════════════════════════════════════════════════════
 
   if (showWelcome) {
     return <WelcomeScreen onStart={() => setShowWelcome(false)} />;
   }
 
   return (
-    <div className="h-[100dvh] flex flex-col bg-slate-950 overflow-hidden nuvuja-root" data-theme={theme}>
-      <Toolbar
-        onRun={() => setViewMode((m) => m === "code" ? "split" : m === "split" ? "preview" : "code")}
-        onSave={handleSave}
-        onExport={handleExport}
-        onToggleTheme={() => setTheme(theme === "light" ? "nuvuja-dark" : "light")}
-        onOpenTutorial={() => setShowTutorial(true)}
-        onLoadTemplate={handleLoadTemplate}
-        onToggleSidebar={() => setShowSidebar(!showSidebar)}
-        onSetViewMode={setViewMode}
-        theme={theme}
-        viewMode={viewMode}
-        sidebarOpen={showSidebar}
-        isRunning={viewMode !== "code"}
-        hasChanges={tabs.some((t) => t.isDirty)}
-      />
+    <NuvujaErrorBoundary>
+      <div className="h-[100dvh] flex flex-col bg-slate-950 overflow-hidden nuvuja-root" data-theme={theme}>
+        <Toolbar
+          onRun={() => setViewMode((m) => m === "code" ? "split" : m === "split" ? "preview" : "code")}
+          onSave={handleSave}
+          onExport={handleExport}
+          onToggleTheme={() => setTheme(theme === "light" ? "nuvuja-dark" : "light")}
+          onOpenTutorial={() => setShowTutorial(true)}
+          onLoadTemplate={handleLoadTemplate}
+          onToggleSidebar={() => setShowSidebar(!showSidebar)}
+          onSetViewMode={setViewMode}
+          theme={theme}
+          viewMode={viewMode}
+          sidebarOpen={showSidebar}
+          isRunning={viewMode !== "code"}
+          hasChanges={tabs.some((t) => t.isDirty)}
+        />
 
-      <div className="flex-1 flex overflow-hidden min-h-0">
-        <AnimatePresence initial={false}>
-          {showSidebar && (
-            <motion.div
-              initial={{ width: 0, opacity: 0 }}
-              animate={{ width: sidebarWidth, opacity: 1 }}
-              exit={{ width: 0, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="shrink-0 flex"
-            >
-              <div className="w-full h-full overflow-hidden">
-                <FileExplorer
-                  files={files}
-                  activeFileId={activeTab?.fileId || null}
-                  onFileClick={openFile}
-                  onToggleFolder={handleToggleFolder}
-                  onAddFile={handleAddFile}
-                  onDeleteNode={handleDeleteNode}
-                  onRenameNode={handleRenameNode}
+        <div className="flex-1 flex overflow-hidden min-h-0">
+          <AnimatePresence initial={false} mode="wait">
+            {showSidebar && (
+              <motion.div
+                initial={{ width: 0, opacity: 0 }}
+                animate={{ width: sidebarWidth, opacity: 1 }}
+                exit={{ width: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="shrink-0 flex"
+              >
+                <div className="w-full h-full overflow-hidden">
+                  <FileExplorer
+                    files={files}
+                    activeFileId={activeTab?.fileId || null}
+                    onFileClick={openFile}
+                    onToggleFolder={handleToggleFolder}
+                    onAddFile={handleAddFile}
+                    onDeleteNode={handleDeleteNode}
+                    onRenameNode={handleRenameNode}
+                  />
+                </div>
+                <div
+                  className="w-1 cursor-col-resize hover:bg-purple-500/50 transition-colors shrink-0"
+                  onMouseDown={() => setIsResizing(true)}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <div className="flex-1 flex min-w-0 min-h-0 overflow-hidden">
+            {(viewMode === "code" || viewMode === "split") && (
+              <div className={cn("flex flex-col min-h-0 overflow-hidden", viewMode === "code" ? "flex-1" : "flex-1")}>
+                <EditorPanel
+                  tabs={tabs}
+                  activeTabId={activeTabId}
+                  onTabChange={handleTabChange}
+                  onTabClose={handleTabClose}
+                  onContentChange={handleContentChange}
+                  theme={theme}
+                  markers={markers}
+                  onAskAI={(code, action) => {
+                    setShowAI(true);
+                    setTimeout(() => {
+                      const input = document.querySelector('input[placeholder*="Ask ᓄᕙᔭ"]') as HTMLInputElement;
+                      if (input) {
+                        const prefix = action.includes("fix") ? "/fix" : action.includes("explain") ? "/explain" : "";
+                        input.value = `${prefix} ${action}:\n\n\`\`\`\n${code.slice(0, 800)}\n\`\`\``;
+                        input.focus();
+                      }
+                    }, 100);
+                  }}
                 />
               </div>
-              <div
-                className="w-1 cursor-col-resize hover:bg-purple-500/50 transition-colors shrink-0"
-                onMouseDown={() => setIsResizing(true)}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
+            )}
 
-        <div className="flex-1 flex min-w-0 min-h-0 overflow-hidden">
-          {(viewMode === "code" || viewMode === "split") && (
-            <div className={cn("flex flex-col min-h-0 overflow-hidden", viewMode === "code" ? "flex-1" : "flex-1")}>
-              <EditorPanel
-                tabs={tabs}
-                activeTabId={activeTabId}
-                onTabChange={handleTabChange}
-                onTabClose={handleTabClose}
-                onContentChange={handleContentChange}
-                theme={theme}
-                markers={markers}
-                onAskAI={(code, action) => {
-                  setShowAI(true);
-                  setTimeout(() => {
-                    const input = document.querySelector('input[placeholder*="Ask ᓄᕙᔭ"]') as HTMLInputElement;
-                    if (input) {
-                      const prefix = action.includes("fix") ? "/fix" : action.includes("explain") ? "/explain" : "";
-                      input.value = `${prefix} ${action}:\n\n\`\`\`\n${code.slice(0, 800)}\n\`\`\``;
-                      input.focus();
-                    }
-                  }, 100);
-                }}
-              />
-            </div>
-          )}
-
-          {(viewMode === "preview" || viewMode === "split") && (
-            <div className={cn("flex flex-col border-l border-slate-800/50 min-h-0 overflow-hidden", viewMode === "preview" ? "flex-1" : "w-[45%] shrink-0")}>
-              <Preview
-                files={files}
-                onClose={() => setViewMode("code")}
-                onRefresh={() => {}}
-                isFullScreen={viewMode === "preview"}
-              />
-            </div>
-          )}
+            {(viewMode === "preview" || viewMode === "split") && (
+              <div className={cn("flex flex-col border-l border-slate-800/50 min-h-0 overflow-hidden", viewMode === "preview" ? "flex-1" : "w-[45%] shrink-0")}>
+                <Preview
+                  files={files}
+                  onClose={() => setViewMode("code")}
+                  onRefresh={() => {}}
+                  isFullScreen={viewMode === "preview"}
+                />
+              </div>
+            )}
+          </div>
         </div>
+
+        <AIPanel
+          conversations={conversations}
+          onSendMessage={handleSendMessage}
+          onClearChat={() => {
+            setChats((prev) =>
+              prev.map((c) => (c.id === activeChatId ? { ...c, messages: [] } : c))
+            );
+          }}
+          isLoading={isAILoading}
+          currentCode={activeTab?.content || ""}
+          currentLanguage={activeTab?.language || "plaintext"}
+          onApplyCode={handleApplyCode}
+          isOpen={showAI}
+          onToggle={() => setShowAI(!showAI)}
+          chats={chats}
+          activeChatId={activeChatId}
+          showChatList={showChatList}
+          onToggleChatList={() => setShowChatList(!showChatList)}
+          onNewChat={handleNewChat}
+          onSwitchChat={handleSwitchChat}
+          onRenameChat={handleRenameChat}
+          onPinChat={handlePinChat}
+          onDeleteChat={handleDeleteChat}
+          hasConsoleErrors={consoleEntries.some((e) => e.type === "error")}
+        />
+
+        <ConsolePanel
+          entries={consoleEntries}
+          isOpen={showConsole}
+          onToggle={() => setShowConsole(!showConsole)}
+          onClear={() => setConsoleEntries([])}
+        />
+
+        <StatusBar
+          language={activeTab?.language || "plaintext"}
+          lineCount={lineCount}
+          charCount={charCount}
+          cursorLine={1}
+          cursorColumn={1}
+          isConnected={isConnected}
+          aiStatus={aiStatus}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+        />
+
+        <Tutorial isOpen={showTutorial} onClose={() => setShowTutorial(false)} />
       </div>
-
-      <AIPanel
-        conversations={conversations}
-        onSendMessage={handleSendMessage}
-        onClearChat={() => {
-          setChats((prev) =>
-            prev.map((c) => (c.id === activeChatId ? { ...c, messages: [] } : c))
-          );
-        }}
-        isLoading={isAILoading}
-        currentCode={activeTab?.content || ""}
-        currentLanguage={activeTab?.language || "plaintext"}
-        onApplyCode={handleApplyCode}
-        isOpen={showAI}
-        onToggle={() => setShowAI(!showAI)}
-        chats={chats}
-        activeChatId={activeChatId}
-        showChatList={showChatList}
-        onToggleChatList={() => setShowChatList(!showChatList)}
-        onNewChat={handleNewChat}
-        onSwitchChat={handleSwitchChat}
-        onRenameChat={handleRenameChat}
-        onPinChat={handlePinChat}
-        onDeleteChat={handleDeleteChat}
-        hasConsoleErrors={consoleEntries.some((e) => e.type === "error")}
-      />
-
-      <ConsolePanel
-        entries={consoleEntries}
-        isOpen={showConsole}
-        onToggle={() => setShowConsole(!showConsole)}
-        onClear={() => setConsoleEntries([])}
-      />
-
-      <StatusBar
-        language={activeTab?.language || "plaintext"}
-        lineCount={lineCount}
-        charCount={charCount}
-        cursorLine={1}
-        cursorColumn={1}
-        isConnected={isConnected}
-        aiStatus={aiStatus}
-        viewMode={viewMode}
-        onViewModeChange={setViewMode}
-      />
-
-      <Tutorial isOpen={showTutorial} onClose={() => setShowTutorial(false)} />
-    </div>
+    </NuvujaErrorBoundary>
   );
 }
