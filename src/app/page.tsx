@@ -163,6 +163,10 @@ export default function Home() {
   const [showChatList, setShowChatList] = useState(false);
 
 
+
+  const [chats, setChats] = useSafeLocalStorage<ChatSession[]>("nuvuja-chats", []);
+  const [activeChatId, setActiveChatId] = useSafeLocalStorage<string | null>("nuvuja-active-chat", null);
+
   const [isAILoading, setIsAILoading] = useState(false);
   const [continuationContext, setContinuationContext] = useState("");
 
