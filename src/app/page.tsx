@@ -150,32 +150,31 @@ class NuvujaErrorBoundary extends React.Component<
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export default function Home() {
-  const isMobile = useIsMobile();
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // STATE HOOKS
+  // ═══════════════════════════════════════════════════════════════════════════════
 
   const [showWelcome, setShowWelcome] = useState(true);
   const [files, setFiles] = useState<FileNode[]>([]);
+
   const [tabs, setTabs] = useState<EditorTab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
 
-  // Chat system with safe localStorage
-  const [chats, setChats] = useSafeLocalStorage<ChatSession[]>("nuvuja-chats", []);
-  const [activeChatId, setActiveChatId] = useSafeLocalStorage<string | null>("nuvuja-active-chat", null);
   const [showChatList, setShowChatList] = useState(false);
 
-  const conversations = useMemo(() => {
-    const chat = chats.find((c) => c.id === activeChatId);
-    return chat?.messages || [];
-  }, [chats, activeChatId]);
 
   const [isAILoading, setIsAILoading] = useState(false);
   const [continuationContext, setContinuationContext] = useState("");
+
   const [isContinuing, setIsContinuing] = useState(false);
   const [showAI, setShowAI] = useState(false);
+
   const [consoleEntries, setConsoleEntries] = useState<ConsoleEntry[]>([]);
   const [showConsole, setShowConsole] = useState(false);
+
   const [showTutorial, setShowTutorial] = useState(false);
 
-  // MOBILE: Hide sidebar by default on small screens
+
   const [showSidebar, setShowSidebar] = useState(() => {
     if (typeof window !== "undefined") {
       return window.innerWidth >= 768;
@@ -183,7 +182,6 @@ export default function Home() {
     return true;
   });
 
-  // MOBILE: Default to "code" view on mobile
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     if (typeof window !== "undefined") {
       return window.innerWidth < 768 ? "code" : "code";
@@ -193,26 +191,53 @@ export default function Home() {
 
   const [theme, setTheme] = useState<"nuvuja-dark" | "light">("nuvuja-dark");
   const [aiStatus, setAIStatus] = useState("ready");
+
   const [isConnected, setIsConnected] = useState(true);
   const [markers, setMarkers] = useState<any[]>([]);
+
   const [sidebarWidth, setSidebarWidth] = useState(220);
   const [isResizing, setIsResizing] = useState(false);
 
-  // Refs for latest state in callbacks
+  const conversations = useMemo(() => {
+    const chat = chats.find((c) => c.id === activeChatId);
+    return chat?.messages || [];
+  }, [chats, activeChatId]);
+
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // REFS
+  // ═══════════════════════════════════════════════════════════════════════════════
+
   const chatsRef = useRef(chats);
   const filesRef = useRef(files);
+
   const tabsRef = useRef(tabs);
   const activeTabIdRef = useRef(activeTabId);
+
   const consoleEntriesRef = useRef(consoleEntries);
+
 
   useEffect(() => { chatsRef.current = chats; }, [chats]);
   useEffect(() => { filesRef.current = files; }, [files]);
+
   useEffect(() => { tabsRef.current = tabs; }, [tabs]);
   useEffect(() => { activeTabIdRef.current = activeTabId; }, [activeTabId]);
+
   useEffect(() => { consoleEntriesRef.current = consoleEntries; }, [consoleEntries]);
 
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      try {
+        saveWorkspace(filesRef.current);
+      } catch (error) {
+        console.error("[Nuvuja] Auto-save failed:", error);
+      }
+    }, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
   // ═══════════════════════════════════════════════════════════════════════════════
-  // INITIALIZATION
+  // EFFECTS WITHOUT CALLBACK DEPENDENCIES
   // ═══════════════════════════════════════════════════════════════════════════════
 
   useEffect(() => {
@@ -236,19 +261,6 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Auto-save
-  useEffect(() => {
-    const interval = setInterval(() => {
-      try {
-        saveWorkspace(filesRef.current);
-      } catch (error) {
-        console.error("[Nuvuja] Auto-save failed:", error);
-      }
-    }, 30000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Resizing
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isResizing) return;
@@ -266,33 +278,6 @@ export default function Home() {
     };
   }, [isResizing]);
 
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Enter" && showWelcome) {
-        e.preventDefault();
-        setShowWelcome(false);
-      }
-      if (e.ctrlKey || e.metaKey) {
-        if (e.key === "s") {
-          e.preventDefault();
-          handleSave();
-        }
-        if (e.key === "p") {
-          e.preventDefault();
-          setViewMode((m) => m === "code" ? "split" : m === "split" ? "preview" : "code");
-        }
-        if (e.key === "b") {
-          e.preventDefault();
-          setShowSidebar((s) => !s);
-        }
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [showWelcome, handleSave]);
-
-  // Auto-create first chat
   useEffect(() => {
     if (chats.length === 0) {
       const newChat: ChatSession = {
@@ -310,7 +295,6 @@ export default function Home() {
     }
   }, [chats, activeChatId, setChats, setActiveChatId]);
 
-  // Console listener
   useEffect(() => {
     const handleMessage = (e: MessageEvent) => {
       if (e.data?.source === "nuvuja-console") {
@@ -333,7 +317,6 @@ export default function Home() {
     return () => window.removeEventListener("message", handleMessage);
   }, []);
 
-  // MOBILE: Handle sidebar and view mode on resize
   useEffect(() => {
     const handleResize = () => {
       const mobile = window.innerWidth < 768;
@@ -347,7 +330,7 @@ export default function Home() {
   }, []);
 
   // ═══════════════════════════════════════════════════════════════════════════════
-  // FILE OPERATIONS
+  // CALLBACKS
   // ═══════════════════════════════════════════════════════════════════════════════
 
   const openFile = useCallback((file: FileNode) => {
@@ -467,10 +450,6 @@ export default function Home() {
     setFiles((prev) => toggleFolder(prev, id));
   }, []);
 
-  // ═══════════════════════════════════════════════════════════════════════════════
-  // CHAT OPERATIONS
-  // ═══════════════════════════════════════════════════════════════════════════════
-
   const handleNewChat = useCallback(() => {
     const newChat: ChatSession = {
       id: generateId(),
@@ -550,10 +529,6 @@ export default function Home() {
       setTimeout(() => openFile(newFiles[0]), 0);
     }
   }, [openFile]);
-
-  // ═══════════════════════════════════════════════════════════════════════════════
-  // AI MESSAGE HANDLER (THE MOST CRITICAL FUNCTION)
-  // ═══════════════════════════════════════════════════════════════════════════════
 
   const handleSendMessage = useCallback(async (
     message: string, 
@@ -980,16 +955,43 @@ export default function Home() {
   }, [setChats, handleContentChange, openFile]);
 
   // ═══════════════════════════════════════════════════════════════════════════════
+  // EFFECTS WITH CALLBACK DEPENDENCIES
+  // ═══════════════════════════════════════════════════════════════════════════════
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Enter" && showWelcome) {
+        e.preventDefault();
+        setShowWelcome(false);
+      }
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key === "s") {
+          e.preventDefault();
+          handleSave();
+        }
+        if (e.key === "p") {
+          e.preventDefault();
+          setViewMode((m) => m === "code" ? "split" : m === "split" ? "preview" : "code");
+        }
+        if (e.key === "b") {
+          e.preventDefault();
+          setShowSidebar((s) => !s);
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [showWelcome, handleSave]);
+
+  // ═══════════════════════════════════════════════════════════════════════════════
   // DERIVED STATE
   // ═══════════════════════════════════════════════════════════════════════════════
 
   const activeTab = tabs.find((t) => t.id === activeTabId);
   const lineCount = activeTab?.content?.split("\n").length || 0;
+
   const charCount = activeTab?.content?.length || 0;
 
-  // ═══════════════════════════════════════════════════════════════════════════════
-  // RENDER
-  // ═══════════════════════════════════════════════════════════════════════════════
 
   if (showWelcome) {
     return <WelcomeScreen onStart={() => setShowWelcome(false)} />;
