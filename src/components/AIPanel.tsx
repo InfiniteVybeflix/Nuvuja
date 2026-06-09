@@ -211,7 +211,6 @@ import {
   Smartphone,
   Tablet,
   Laptop,
-  Desktop,
   Cast,
   Airplay,
   Bluetooth,
