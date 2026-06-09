@@ -4,310 +4,102 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 import {
+  // Core UI & Actions
+  Send, Bot, User, Check, Copy,
+  X, Pin, Pencil, Download, Upload,
+  ExternalLink, Search, Link, Unlink, Bookmark,
+  Heart, ThumbsUp, ThumbsDown, Flag, Tag,
+  Tags, Share2, MoreHorizontal, MoreVertical, GripVertical,
+  GripHorizontal, MousePointer, MousePointerClick, Move, RotateCcw,
+  Redo, Undo, RefreshCw, RefreshCcw, RotateCw,
+  Repeat, Shuffle, Maximize, Minimize, Maximize2,
+  Minimize2, ZoomIn, ZoomOut, Focus, Aperture,
+  Bolt, Flashlight, Github, Globe, Image,
+  Paperclip,
+
+  // Communication & Media
+  MessageSquare, MessageCircle, MessagesSquare, Mail, Bell,
+  BellRing, BellOff, Mic, MicOff, Mic2,
+  Volume, Volume1, Volume2, VolumeX, Headphones,
+  Speaker, Video, Camera, Images, Tv,
+  MonitorPlay, Cast, Airplay, Play, Pause,
+  FastForward, Rewind, SkipForward, SkipBack, PlayCircle,
+  PauseCircle, StopCircle, Film, Music, Music2,
+  Clapperboard, Popcorn, Ticket,
+
   // AI & Intelligence
-  Atom, Brain, Cpu, Dna, Infinity,
-  Orbit, Radar, Rocket, Scan, Sparkles,
-  Wand, Wand2, Zap,
-
-  // Chat & Communication
-  Bell, BellOff, BellRing, Bot, Mail,
-  MessageCircle, MessagesSquare, MessageSquare, Send, Share2,
-  User, Users, Users2, UsersRound, UserCheck,
-  UserCheck2, UserCog, UserCog2, UserMinus, UserMinus2,
-  UserPlus, UserPlus2, UserRound, UserRoundCheck, UserRoundCog,
-  UserRoundMinus, UserRoundPen, UserRoundPlus, UserRoundSearch, UserRoundX,
-  UserSearch, UserSquare, UserSquare2, UserX, UserX2,
-
-  // Status & Feedback
-  AlertCircle, AlertOctagon, AlertTriangle, BadgeAlert, BadgeCheck,
-  BadgeInfo, BadgeX, Check, CheckCircle, CheckCircle2,
-  CheckSquare, CircleDot, Info, HelpCircle, Loader2,
-  Minus, MinusCircle, Plus, PlusCircle, X,
-  XCircle,
+  Sparkles, Wand2, Wand, Brain, Cpu,
+  Zap, Atom, Rocket, Dna, Infinity,
+  Orbit, Radar, Scan, Fingerprint, Dices,
 
   // Code & Development
-  Braces, Brackets, Bug, BugOff, BugPlay,
-  Code2, Command, Container, Cuboid, CurlyBraces,
-  FileCode, FileCode2, FileJson, FilePlus, FileText,
-  FileType, Folder, FolderMinus, FolderOpen, FolderPlus,
-  FolderTree, GitBranch, GitCommit, GitFork, GitMerge,
-  GitPullRequest, Hash, Parentheses, Terminal, Type,
-
-  // Files & Storage
-  Archive, ArchiveRestore, ArchiveX, Box, Boxes,
-  Clipboard, ClipboardCopy, ClipboardList, Database, DatabaseBackup,
-  DatabaseZap, HardDrive, HardDriveDownload, HardDriveUpload, Inbox,
-  Inbox2, Package, Package2, PackageCheck, PackageMinus,
-  PackageOpen, PackagePlus, PackageSearch, PackageX, Save,
-  Server, ServerCog, ServerCrash, ServerOff, Trash,
-  Trash2,
-
-  // UI Controls & Navigation
-  ArrowDown, ArrowDownRight, ArrowLeft, ArrowRight, ArrowUp,
-  ArrowUpRight, ChevronDown, ChevronLeft, ChevronRight, ChevronUp,
-  ChevronFirst, ChevronLast, ChevronsDown, ChevronsLeft, ChevronsRight,
-  ChevronsUp, ExternalLink, Globe, Globe2, GlobeLock,
-  GlobeOff, GlobeX, Home, House, HousePlug,
-  HousePlus, HouseWifi, Link, Link2, Link2Off,
-  Map, MapPin, MapPinned, MoreHorizontal, MoreVertical,
-  MousePointer, MousePointerClick, Navigation, Navigation2, Navigation2Off,
-  NavigationOff, Pin, PinOff, Search, Settings,
-  Settings2, Unlink, Unlink2,
-
-  // Media & Entertainment
-  Airplay, Camera, CameraOff, Cast, Clapperboard,
-  Film, Gamepad, Gamepad2, GamepadDirectional, Headphones,
-  Image, ImageDown, ImageMinus, ImageOff, ImagePlay,
-  ImagePlus, ImageUp, ImageUpscale, Images, Joystick,
-  MonitorPlay, MonitorStop, MonitorUp, MonitorX, Music,
-  Music2, Music3, Music4, Pause, PauseCircle,
-  PictureInPicture, PictureInPicture2, Play, PlayCircle, SkipBack,
-  SkipForward, Speaker, StopCircle, Ticket, TicketCheck,
-  TicketMinus, TicketPercent, TicketPlus, TicketSlash, TicketX,
-  Tickets, TicketsPlane, ToyBrick, Tv, Tv2,
-  TvMinimal, TvMinimalPlay, Video, VideoOff, Videotape,
-  Volume, Volume1, Volume2, VolumeOff, VolumeX,
+  Code2, Terminal, FileCode, FileCode2, GitBranch,
+  GitCommit, GitPullRequest, GitMerge, GitFork, FolderTree,
+  Bug, Hash, Type, FileJson, FileType,
+  FileText, FilePlus, FolderPlus, FolderMinus, Folder,
+  FolderOpen, Trash, Edit3, Scissors, Clipboard,
+  ClipboardCopy, ClipboardList, Command, Container, Boxes,
+  Box, Package, Save, Trash2,
 
   // Security & Privacy
-  Eye, EyeOff, Fingerprint, FingerprintPattern, Key,
-  KeyRound, KeySquare, Lock, LockKeyhole, LockKeyholeOpen,
-  LockOpen, ScanBarcode, ScanEye, ScanFace, ScanLine,
-  ScanQrCode, ScanSearch, ScanText, Shield, ShieldAlert,
-  ShieldBan, ShieldCheck, ShieldClose, ShieldEllipsis, ShieldHalf,
-  ShieldMinus, ShieldOff, ShieldPlus, ShieldQuestion, ShieldUser,
-  ShieldX, Unlock, UnlockKeyhole, Vault,
+  Shield, ShieldCheck, ShieldAlert, Lock, Unlock,
+  Key, Eye, EyeOff,
 
-  // Data & Analytics
-  Activity, ActivitySquare, BarChart, BarChart2, BarChart3,
-  BarChart4, BarChartBig, BarChartHorizontal, BarChartHorizontalBig, ChartBar,
-  ChartBarDecreasing, ChartBarIncreasing, ChartBarStacked, ChartCandlestick, ChartColumn,
-  ChartColumnIncreasing, ChartGantt, ChartLine, ChartNetwork, ChartNoAxesColumn,
-  ChartNoAxesColumnIncreasing, ChartNoAxesCombined, ChartNoAxesGantt, ChartNoAxesGrid, ChartPie,
-  ChartScatter, ChartSpline, GanttChart, GanttChartSquare, Kanban,
-  KanbanSquare, KanbanSquareDashed, LineChart, PieChart, SquareChartGantt,
-  SquareGantt, SquareKanban, SquareKanbanDashed, TrendingDown, TrendingUp,
-  TrendingUpDown,
+  // Status & Feedback
+  CheckCircle, CheckCircle2, AlertCircle, AlertTriangle, AlertOctagon,
+  Info, HelpCircle, XCircle, MinusCircle, PlusCircle,
+  CheckSquare, Minus, Plus,
 
-  // Editing & Creative
-  Blend, Blocks, BringToFront, ColorWheel, Compass,
-  Copy, DraftingCompass, Eraser, Focus, Highlighter,
-  Layers, Layers2, Layers3, Merge, Paintbrush,
-  Paintbrush2, PaintbrushVertical, PaintBucket, PaintRoller, Palette,
-  Pen, PenLine, PenOff, PenSquare, PenTool,
-  Pencil, PencilLine, PencilOff, PencilRuler, Redo,
-  Redo2, RedoDot, Ruler, Scissors, SendToBack,
-  SprayCan, Stamp, Sticker, StickyNote, SwatchBook,
-  Undo, Undo2, UndoDot, WandSparkles,
+  // Navigation & Arrows
+  ArrowUp, ArrowDown, ArrowLeft, ArrowRight, ArrowUpRight,
+  ArrowDownRight, ChevronLeft, ChevronRight, ChevronDown, ChevronUp,
+  ChevronFirst, ChevronLast, ChevronsDown, ChevronsLeft, ChevronsRight,
+  ChevronsUp,
 
-  // Layout & Organization
-  AlignCenter, AlignCenterHorizontal, AlignCenterVertical, AlignEndHorizontal, AlignEndVertical,
-  AlignHorizontalDistributeCenter, AlignHorizontalDistributeEnd, AlignHorizontalDistributeStart, AlignHorizontalJustifyCenter, AlignHorizontalJustifyEnd,
-  AlignHorizontalJustifyStart, AlignHorizontalSpaceAround, AlignHorizontalSpaceBetween, AlignJustify, AlignLeft,
-  AlignRight, AlignStartHorizontal, AlignStartVertical, AlignVerticalDistributeCenter, AlignVerticalDistributeEnd,
-  AlignVerticalDistributeStart, AlignVerticalJustifyCenter, AlignVerticalJustifyEnd, AlignVerticalJustifyStart, AlignVerticalSpaceAround,
-  AlignVerticalSpaceBetween, Columns, Columns2, Columns3, Columns3Cog,
-  Columns4, Combine, FoldHorizontal, FoldVertical, GripHorizontal,
-  GripVertical, Group, Layout, LayoutDashboard, LayoutGrid,
-  LayoutList, LayoutPanelLeft, LayoutPanelTop, LayoutTemplate, List,
-  ListCheck, ListChecks, ListCollapse, ListEnd, ListFilter,
-  ListFilterPlus, ListMinus, ListMusic, ListOrdered, ListPlus,
-  ListRestart, ListStart, ListTodo, ListTree, ListVideo,
-  ListX, Maximize, Maximize2, Minimize, Minimize2,
-  PanelBottom, PanelBottomClose, PanelBottomDashed, PanelBottomInactive, PanelBottomOpen,
-  PanelLeft, PanelLeftClose, PanelLeftDashed, PanelLeftInactive, PanelLeftOpen,
-  PanelRight, PanelRightClose, PanelRightDashed, PanelRightInactive, PanelRightOpen,
-  PanelTop, PanelTopClose, PanelTopDashed, PanelTopInactive, PanelTopOpen,
-  PanelsLeftBottom, PanelsRightBottom, PanelsTopLeft, Rows, Rows2,
-  Rows3, Rows4, Sidebar, SplitSquareHorizontal, SplitSquareVertical,
-  StretchHorizontal, StretchVertical, Ungroup,
+  // Layout & Panels
+  Layout, LayoutGrid, LayoutList, PanelLeft, PanelRight,
+  Sidebar, Split, Columns, Rows, AlignLeft,
+  AlignCenter, AlignRight,
 
   // Devices & Hardware
-  Battery, BatteryCharging, BatteryFull, BatteryLow, BatteryMedium,
-  BatteryPlus, BatteryWarning, Bluetooth, BluetoothConnected, BluetoothOff,
-  BluetoothSearching, Cable, CableCar, Computer, Desktop,
-  EthernetPort, HdmiPort, Laptop, Laptop2, LaptopMinimal,
-  LaptopMinimalCheck, Monitor, MonitorCheck, MonitorCog, MonitorDot,
-  MonitorDown, MonitorOff, MonitorPause, MonitorSpeaker, MonitorSmartphone,
-  Nfc, PcCase, Plug, Plug2, PlugZap,
-  PlugZap2, Power, PowerCircle, PowerOff, PowerSquare,
-  Printer, PrinterCheck, Projector, Signal, SignalHigh,
-  SignalLow, SignalMedium, SignalZero, Smartphone, SmartphoneCharging,
-  SmartphoneNfc, Tablet, TabletSmartphone, Tablets, Usb,
-  Watch, Wifi, WifiHigh, WifiLow, WifiOff,
-  WifiPen, WifiZero,
-
-  // Time & Progress
-  AlarmClock, AlarmClockCheck, AlarmClockMinus, AlarmClockOff, AlarmClockPlus,
-  AlarmMinus, AlarmPlus, AlarmSmoke, Calendar, Calendar1,
-  CalendarArrowDown, CalendarArrowUp, CalendarCheck, CalendarCheck2, CalendarClock,
-  CalendarCog, CalendarDays, CalendarFold, CalendarHeart, CalendarMinus,
-  CalendarMinus2, CalendarOff, CalendarPlus, CalendarPlus2, CalendarRange,
-  CalendarSearch, CalendarX, CalendarX2, Clock, Clock1,
-  Clock10, Clock11, Clock12, Clock2, Clock3,
-  Clock4, Clock5, Clock6, Clock7, Clock8,
-  Clock9, ClockAlert, ClockArrowDown, ClockArrowUp, ClockFading,
-  ClockPlus, History, Hourglass, IterationCcw, IterationCw,
-  Loader, LoaderCircle, LoaderPinwheel, RefreshCcw, RefreshCw,
-  Repeat, Repeat1, Repeat2, RotateCcw, RotateCw,
-  Shuffle, Timer, TimerOff, TimerReset,
+  Monitor, Smartphone, Tablet, Laptop,
+  Battery, BatteryCharging, BatteryFull, BatteryMedium, BatteryLow,
+  Plug, PlugZap, Power, PowerOff, Signal,
+  Wifi, WifiOff, Bluetooth,
 
   // Shapes & Geometry
-  Circle, CircleAlert, CircleArrowDown, CircleArrowLeft, CircleArrowRight,
-  CircleArrowUp, CircleCheck, CircleCheckBig, CircleChevronDown, CircleChevronLeft,
-  CircleChevronRight, CircleChevronUp, CircleDashed, CircleDotDashed, CircleEllipsis,
-  CircleMinus, CircleOff, CirclePause, CirclePercent, CirclePlay,
-  CirclePlus, CirclePower, CircleSlash, CircleSlash2, CircleSmall,
-  CircleStop, CircleUser, CircleUserRound, CircleX, Cross,
-  Diamond, DiamondMinus, DiamondPercent, DiamondPlus, Hexagon,
-  Octagon, OctagonAlert, OctagonMinus, OctagonPause, OctagonX,
-  Pentagon, Shapes, Square, SquareActivity, SquareArrowDown,
-  SquareArrowDownLeft, SquareArrowDownRight, SquareArrowLeft, SquareArrowOutDownLeft, SquareArrowOutDownRight,
-  SquareArrowOutUpLeft, SquareArrowOutUpRight, SquareArrowRight, SquareArrowUp, SquareArrowUpLeft,
-  SquareArrowUpRight, SquareAsterisk, SquareBottomDashedScissors, SquareCheck, SquareCheckBig,
-  SquareChevronDown, SquareChevronLeft, SquareChevronRight, SquareChevronUp, SquareCode,
-  SquareDashed, SquareDashedBottom, SquareDashedBottomCode, SquareDashedKanban, SquareDashedMousePointer,
-  SquareDivide, SquareDot, SquareEqual, SquareFunction, SquareLibrary,
-  SquareM, SquareMenu, SquareMinus, SquareMousePointer, SquareParking,
-  SquareParkingOff, SquarePen, SquarePercent, SquarePi, SquarePilcrow,
-  SquarePlay, SquarePlus, SquarePower, SquareRadical, SquareRoundCorner,
-  SquareScissors, SquareSigma, SquareSlash, SquareSplitHorizontal, SquareSplitVertical,
-  SquareStack, SquareTerminal, SquareUser, SquareUserRound, SquareX,
-  SquaresExclude, SquaresIntersect, SquaresSubtract, SquaresUnite, Squircle,
-  Star, StarFull, StarHalf, StarOff, Triangle,
-  TriangleAlert, TriangleDashed, TriangleRight,
+  Square, CircleDot, Triangle, Hexagon, Octagon,
+  Pentagon, Diamond, Cuboid, Star,
 
-  // Science & Nature
-  Atom2, Atom3, Beaker, BeakerOff, Cloud,
-  CloudAlert, CloudBackup, CloudCheck, CloudCog, CloudDownload,
-  CloudDrizzle, CloudFog, CloudHail, CloudLightning, CloudMoon,
-  CloudMoonRain, CloudOff, CloudRain, CloudRainWind, CloudSnow,
-  CloudSun, CloudSunRain, CloudUpload, CloudSync, Cloudy,
-  DnaOff, Earth, EarthLock, Eclipse, Flame,
-  FlaskConical, FlaskConical2, FlaskConical2Off, FlaskConicalOff, FlaskRound,
-  Leaf, LeafyGreen, Microscope, Microscope2, Moon,
-  MoonStar, Mountain, MountainSnow, PalmTree, Rocket2,
-  Satellite, SatelliteDish, Seedling, Sprout, Sun,
-  Telescope, TreeDeciduous, TreePalm, TreePine, Trees,
-  Volcano,
+  // Data & Charts
+  BarChart3, PieChart, Activity, TrendingUp, TrendingDown,
+  Database, Server, Cloud,
 
-  // Games & Fun
-  Clover, Dice1, Dice2, Dice3, Dice4,
-  Dice5, Dice6, Dices, Flower, Flower2,
-  Gift, Gift2, PartyPopper, PlayingCard, PlayingCard2,
-  Puzzle, Spade,
+  // Time & Progress
+  Clock, History, Loader2, Watch,
 
-  // Text & Typography
-  Bold, CaseLower, CaseSensitive, CaseUpper, Code,
-  CodeSquare, CodeXml, Heading, Heading1, Heading2,
-  Heading3, Heading4, Heading5, Heading6, Italic,
-  LetterText, Pilcrow, PilcrowLeft, PilcrowRight, PilcrowSquare,
-  Quote, RemoveFormatting, Strikethrough, Subscript, Superscript,
-  Text, TextCursor, TextCursorInput, TextQuote, TextSearch,
-  TextSelect, TypeOutline, Underline,
-
-  // Money & Finance
-  Banknote, BanknoteArrowDown, BanknoteArrowUp, BanknoteX, Bitcoin,
-  CircleDollarSign, CircleEuro, CircleIndianRupee, CircleJapaneseYen, CirclePoundSterling,
-  CircleRussianRuble, CircleSwissFranc, CircleTurkishLira, Coins, CreditCard,
-  DollarSign, Euro, IndianRupee, JapaneseYen, PoundSterling,
-  RussianRuble, SwissFranc, TurkishLira, Wallet, Wallet2,
-  WalletCards, Won,
-
-  // Transportation
-  Anchor, Bike, Bus, BusFront, Car,
-  CarFront, CarTaxiFront, Helicopter, Plane, PlaneLanding,
-  PlaneTakeoff, Sailboat, Ship, ShipWheel, TrainFront,
-  TrainFrontTunnel, TrainTrack, TramFront, Truck, TruckElectric,
-  TruckLoading, TruckPickup, TruckTow,
-
-  // Food & Drink
-  Apple, Banana, Bean, BeanOff, Beef,
-  BeefOff, Beer, BeerOff, Bone, Candy,
-  CandyCane, CandyOff, CandyStick, Carrot, Cherry,
-  Chocolate, Citrus, Coffee, Cookie, Croissant,
-  CupSoda, Cupcake, Dessert, Donut, Drink,
-  Drumstick, Egg, EggFried, EggOff, Fish,
-  FishOff, FishSymbol, FishingHook, FishingRod, GlassWater,
-  Grape, IceCream, IceCream2, IceCreamBowl, IceCreamCone,
-  Lemon, Lollipop, Martini, Milk, MilkOff,
-  Orange, Peach, Pear, Pepper, PepperHot,
-  Pineapple, Pizza, Popsicle, Potato, Pumpkin,
-  Radish, Salad, Soup, Strawberry, Tomato,
-  Vegan, Watermelon, Wheat, WheatOff, Wine,
-  WineOff,
-
-  // Health & Medical
-  Ambulance, Bandage, Biohazard, BicepsFlexed, BriefcaseMedical,
-  CapsulePill, CapsulePill2, Heart, HeartCrack, HeartHandshake,
-  HeartMinus, HeartOff, HeartPlus, HeartPulse, Pill,
-  PillBottle, Stethoscope, Syringe, Vial, Vial2,
-  Vial3,
-
-  // Social & Community
-  Accessibility, Baby, Child, Contact, Contact2,
-  ContactRound, Frown, Ghost, Laugh, Man,
-  Meh, PersonStanding, Skull, Smile, SmilePlus,
-  Woman,
-
-  // Weather
-  Hurricane, Rainbow, Snowflake, SunDim, SunMedium,
-  SunMoon, SunSnow, Sunrise, Sunset, Tornado,
-  Wind, WindArrowDown,
-
-  // Work & Business
-  BaggageClaim, Briefcase, BriefcaseBusiness, BriefcaseConveyorBelt, Building,
-  Building2, Building3, Building4, Building5,
-  Factory, Store, Warehouse,
+  // Toggles & Controls
+  ToggleLeft, ToggleRight, Sliders, SlidersHorizontal, Filter,
+  SortAsc, SortDesc, Settings,
 
   // Awards & Achievements
-  Award, Badge, BadgeCent, BadgeDollarSign, BadgeEuro,
-  BadgeHelp, BadgeIndianRupee, BadgeJapaneseYen, BadgeMinus, BadgePercent,
-  BadgePlus, BadgePoundSterling, BadgeQuestionMark, BadgeRussianRuble, BadgeSwissFranc,
-  BadgeTurkishLira, Crown, Gem, Medal, Pearl,
-  PearlOff, PearlRing, Ribbon, Trophy,
+  Trophy, Medal, Award, Crown, BadgeCheck,
+  BadgeAlert, BadgeInfo, BadgeX,
 
-  // Toggles & Sliders
-  Cog, CogOff, Drill, Filter, FilterX,
-  Hammer, Pickaxe, SortAsc, SortDesc, ToggleLeft,
-  ToggleRight, Wrench,
+  // Editing & Creative
+  Palette, Paintbrush, PaintBucket, PenTool, Eraser,
+  Ruler, Compass, DraftingCompass, Layers, Puzzle,
+  Blocks, Shapes, ToyBrick, Gamepad2, Joystick,
 
-  // Education & Learning
-  Book, BookA, BookAlert, BookAudio, BookCheck,
-  BookCopy, BookDashed, BookDown, BookHeadphones, BookHeart,
-  BookImage, BookKey, BookLock, BookMarked, BookMinus,
-  BookOpen, BookOpenCheck, BookOpenText, BookPlus, BookSearch,
-  BookText, BookType, BookUp, BookUp2, BookUser,
-  BookX, Bookmark, BookmarkCheck, BookmarkMinus, BookmarkOff,
-  BookmarkPlus, BookmarkX, GraduationCap, Library, LibraryBig,
-  LibrarySquare, School, School2, School3, School4,
-  School5,
+  // Science & Nature
+  Flame, Sun, Moon, Lightbulb, BookOpen,
 
-  // Photography & Video
-  Aperture, GalleryHorizontal, GalleryHorizontalEnd, GalleryThumbnails, GalleryVertical,
-  GalleryVerticalEnd,
+  // Files & Lists
+  List, ListOrdered, ListChecks, Archive, ArchiveRestore,
+  ArchiveX, Inbox, Inbox2,
 
-  // Music & Audio
-  Album, AudioLines, AudioWaveform, Disc, Disc2,
-  Disc3, DiscAlbum, KeyboardMusic, Radio, RadioReceiver,
-  RadioTower,
-
-  // Writing & Documents
-  Marker, Notebook, NotebookPen, NotebookTabs, NotebookText,
-  NotepadText, NotepadTextDashed, Page, Page2, Page3,
-  Page4, Page5, Scroll, ScrollText,
-
-  // Animals & Nature
-  Ant, Beetle, Bird, Birdhouse, Butterfly,
-  Caterpillar, Cat, Dog, Dragonfly, Grasshopper,
-  Ladybug, Mosquito, PawPrint, PawPrint2, PawPrint3,
-  PawPrint4, PawPrint5, PawPrint6, PawPrint7, PawPrint8,
-  PawPrint9, PawPrint10, PillBug, Rabbit, Snail,
-  Spider, Spider2, Turtle, Worm,
-
-  // Sports & Fitness
-  Bicycle, Dumbbell, Scooter, ScooterElectric, Sword,
-  Swords, Volleyball,
 } from "lucide-react";
+
 
 import { AIConversation, ChatSession } from "@/types";
 import { cn } from "@/lib/utils";
