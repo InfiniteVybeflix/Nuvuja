@@ -1601,6 +1601,9 @@ export function AIPanel({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onToggle]);
 
+  // Resize handle refs for native touch events
+  const westHandleRef = useRef<HTMLDivElement>(null);
+
   // MOUSE + TOUCH Resize handlers
   useEffect(() => {
     const handleMove = (e: MouseEvent | TouchEvent) => {
@@ -1661,6 +1664,28 @@ export function AIPanel({
       window.removeEventListener("touchend", handleUp);
     };
   }, [isMobile, panelTop, panelWidth, panelHeight]);
+
+  // Native touch events for mobile resize handle (passive: false required)
+  useEffect(() => {
+    const el = westHandleRef.current;
+    if (!el) return;
+
+    const onTouchStart = (e: TouchEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      isResizingRef.current = true;
+      resizeDirRef.current = "w";
+      startXRef.current = e.touches[0].clientX;
+      startYRef.current = e.touches[0].clientY;
+      startWidthRef.current = panelWidth;
+      startHeightRef.current = panelHeight;
+      startTopRef.current = panelTop;
+      setIsResizing(true);
+    };
+
+    el.addEventListener("touchstart", onTouchStart, { passive: false });
+    return () => el.removeEventListener("touchstart", onTouchStart);
+  }, [panelWidth, panelHeight, panelTop]);
 
   const startResize = useCallback((dir: string) => (e: React.MouseEvent | React.TouchEvent) => {
     isResizingRef.current = true;
@@ -1885,13 +1910,26 @@ export function AIPanel({
         </div>
       </div>
 
-      {/* Resize handles - DESKTOP ONLY, all 8 directions */}
+      {/* West edge - Always visible for mobile resize */}
+      <div
+        ref={westHandleRef}
+        onMouseDown={startResize("w")}
+        className={cn(
+          "absolute top-10 bottom-10 left-0 z-50 flex items-center justify-center",
+          isMobile ? "w-8 cursor-pointer" : "w-3 cursor-ew-resize"
+        )}
+      >
+        <div className={cn(
+          "h-20 rounded-full transition-all",
+          isResizing && resizeDirRef.current?.includes("w")
+            ? "bg-purple-400 w-1.5 shadow-[0_0_12px_rgba(168,85,247,0.8)]"
+            : isMobile ? "bg-purple-400/50 w-1.5" : "bg-slate-500/30 w-1 hover:bg-slate-400/60"
+        )} />
+      </div>
+
+      {/* Other resize handles - Desktop only */}
       {!isMobile && (
         <>
-          {/* West edge */}
-          <div onMouseDown={startResize("w")} onTouchStart={startResize("w")} className={cn("absolute top-10 bottom-10 left-0 cursor-ew-resize z-50 group flex items-center justify-center", isMobile ? "w-6" : "w-3")}>
-            <div className={cn("h-14 rounded-full transition-all", isResizing && resizeDirRef.current?.includes("w") ? "bg-purple-400 w-1 shadow-[0_0_8px_rgba(168,85,247,0.6)]" : "bg-slate-600/0 group-hover:bg-slate-400/50 w-0.5")} />
-          </div>
           {/* East edge */}
           <div onMouseDown={startResize("e")} className="absolute top-10 bottom-10 right-0 w-3 cursor-ew-resize z-50 group flex items-center justify-center">
             <div className={cn("w-0.5 h-14 rounded-full transition-all", isResizing && resizeDirRef.current?.includes("e") ? "bg-purple-400 w-1 shadow-[0_0_8px_rgba(168,85,247,0.6)]" : "bg-slate-600/0 group-hover:bg-slate-400/50")} />
@@ -2017,17 +2055,7 @@ export function AIPanel({
               {proMode ? "Pro" : "Beginner"}
             </button>
 
-            {!isSmallPhone && (
-              <div className="flex items-center gap-0.5 mr-2 bg-white/5 rounded-xl p-0.5 border border-white/5">
-                <button onClick={() => setZoom((z) => Math.max(0.5, z - 0.1))} className="p-1.5 rounded-lg hover:bg-white/10 text-slate-500 hover:text-slate-300 transition-colors" title="Zoom out">
-                  <ZoomOut size={11} />
-                </button>
-                <span className="text-[9px] text-slate-500 w-9 text-center font-mono">{Math.round(zoom * 100)}%</span>
-                <button onClick={() => setZoom((z) => Math.min(2.0, z + 0.1))} className="p-1.5 rounded-lg hover:bg-white/10 text-slate-500 hover:text-slate-300 transition-colors" title="Zoom in">
-                  <ZoomIn size={11} />
-                </button>
-              </div>
-            )}
+
 
             <button onClick={() => setShowSettings(!showSettings)} className="p-2 rounded-xl hover:bg-white/5 text-slate-500 hover:text-slate-300 transition-colors" title="Settings">
               <Settings size={13} />
@@ -2035,11 +2063,81 @@ export function AIPanel({
             <button onClick={onClearChat} className="p-2 rounded-xl hover:bg-rose-500/10 text-slate-500 hover:text-rose-400 transition-colors" title="Clear chat">
               <Trash2 size={13} />
             </button>
-            <button onClick={onToggle} className="p-2 rounded-xl bg-white/10 text-slate-300 hover:bg-white/20 hover:text-white transition-colors" title="Close panel">
+            <button onClick={onToggle} className="p-2 rounded-xl bg-slate-700/80 text-slate-200 hover:bg-slate-600 hover:text-white transition-colors border border-white/10 shadow-sm" title="Close panel">
               <X size={14} />
             </button>
           </div>
         </div>
+
+        {/* Settings Panel */}
+        <AnimatePresence>
+          {showSettings && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2 }}
+              className="border-b border-white/5 bg-slate-950/80 backdrop-blur-md overflow-hidden"
+            >
+              <div className="p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-400">Panel Size</span>
+                  <span className="text-[10px] text-slate-600 font-mono">{Math.round(panelWidth)}×{Math.round(panelHeight)}</span>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => { setPanelWidth(360); setPanelHeight(500); }}
+                    className="flex-1 py-1.5 rounded-lg bg-white/5 text-[10px] text-slate-400 hover:bg-white/10 hover:text-slate-300 transition-colors border border-white/5"
+                  >
+                    Compact
+                  </button>
+                  <button
+                    onClick={() => { setPanelWidth(480); setPanelHeight(640); }}
+                    className="flex-1 py-1.5 rounded-lg bg-white/5 text-[10px] text-slate-400 hover:bg-white/10 hover:text-slate-300 transition-colors border border-white/5"
+                  >
+                    Default
+                  </button>
+                  <button
+                    onClick={() => { setPanelWidth(720); setPanelHeight(800); }}
+                    className="flex-1 py-1.5 rounded-lg bg-white/5 text-[10px] text-slate-400 hover:bg-white/10 hover:text-slate-300 transition-colors border border-white/5"
+                  >
+                    Large
+                  </button>
+                </div>
+                <div className="flex items-center justify-between pt-2 border-t border-white/5">
+                  <span className="text-xs font-semibold text-slate-400">Pro Mode</span>
+                  <button
+                    onClick={() => {
+                      const newMode = !proMode;
+                      setProMode(newMode);
+                      try { localStorage.setItem("nuvuja-pro-mode", String(newMode)); } catch {}
+                    }}
+                    className={cn(
+                      "px-2.5 py-1 rounded-lg text-[10px] font-semibold border transition-all",
+                      proMode
+                        ? "bg-purple-500/15 text-purple-400 border-purple-500/25"
+                        : "bg-sky-500/15 text-sky-400 border-sky-500/25"
+                    )}
+                  >
+                    {proMode ? "On" : "Off"}
+                  </button>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-400">Zoom</span>
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => setZoom((z) => Math.max(0.5, z - 0.1))} className="p-1 rounded-lg hover:bg-white/10 text-slate-500 transition-colors">
+                      <ZoomOut size={10} />
+                    </button>
+                    <span className="text-[10px] text-slate-500 w-10 text-center font-mono">{Math.round(zoom * 100)}%</span>
+                    <button onClick={() => setZoom((z) => Math.min(2.0, z + 0.1))} className="p-1 rounded-lg hover:bg-white/10 text-slate-500 transition-colors">
+                      <ZoomIn size={10} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Messages */}
         <div ref={scrollRef} className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4 min-h-0 scrollbar-thin">
