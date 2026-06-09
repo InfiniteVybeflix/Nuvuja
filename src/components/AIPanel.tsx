@@ -161,8 +161,6 @@ import {
   ListOrdered,
   ListChecks,
   CheckSquare,
-  Circle,
-  Radio,
   ToggleLeft,
   ToggleRight,
   Sliders,
@@ -204,8 +202,6 @@ import {
   GitPullRequest,
   GitMerge,
   GitFork,
-  Repository,
-  RepoForked,
   Watch,
   Bolt,
   Flashlight,
@@ -260,17 +256,13 @@ import {
   Ruler,
   Compass,
   DraftingCompass,
-  ScanLine,
-  ScanFace,
-  Target,
-  Crosshair,
   Focus,
   Aperture,
   Clapperboard,
   Popcorn,
   Ticket,
   Music2,
-  } from "lucide-react";
+  } from "lucide-react";,
 
 import { AIConversation, ChatSession } from "@/types";
 import { cn } from "@/lib/utils";
