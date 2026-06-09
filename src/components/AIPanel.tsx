@@ -1601,10 +1601,8 @@ export function AIPanel({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onToggle]);
 
-  // MOUSE + TOUCH Resize handlers - DESKTOP ONLY
+  // MOUSE + TOUCH Resize handlers
   useEffect(() => {
-    if (isMobile) return;
-
     const handleMove = (e: MouseEvent | TouchEvent) => {
       if (!isResizingRef.current || !resizeDirRef.current) return;
 
@@ -1665,7 +1663,6 @@ export function AIPanel({
   }, [isMobile, panelTop, panelWidth, panelHeight]);
 
   const startResize = useCallback((dir: string) => (e: React.MouseEvent | React.TouchEvent) => {
-    if (isMobile) return;
     isResizingRef.current = true;
     resizeDirRef.current = dir;
 
@@ -1856,12 +1853,14 @@ export function AIPanel({
       exit={{ x: "100%", opacity: 0 }}
       transition={{ type: "spring", damping: 25, stiffness: 200 }}
       style={{
-        top: isMobile ? panelTop : panelTop,
-        right: isMobile ? 0 : 20,
-        width: isMobile ? "100%" : panelWidth,
-        maxWidth: isMobile ? "100vw" : 900,
-        height: isMobile ? panelHeight : panelHeight,
-        borderRadius: isMobile ? 0 : "20px 0 0 20px",
+        top: isMobile ? 0 : panelTop,
+        right: 0,
+        width: isMobile ? "min(380px, 85vw)" : panelWidth,
+        maxWidth: isMobile ? "85vw" : 900,
+        height: isMobile ? "100%" : panelHeight,
+        maxHeight: "100%",
+        borderRadius: "20px 0 0 20px",
+        zIndex: 9999,
       }}
       className={cn("fixed flex flex-row shadow-2xl shadow-black/60 overflow-hidden ", isResizing && "select-none")}
     >
@@ -1890,8 +1889,8 @@ export function AIPanel({
       {!isMobile && (
         <>
           {/* West edge */}
-          <div onMouseDown={startResize("w")} className="absolute top-10 bottom-10 left-0 w-3 cursor-ew-resize z-50 group flex items-center justify-center">
-            <div className={cn("w-0.5 h-14 rounded-full transition-all", isResizing && resizeDirRef.current?.includes("w") ? "bg-purple-400 w-1 shadow-[0_0_8px_rgba(168,85,247,0.6)]" : "bg-slate-600/0 group-hover:bg-slate-400/50")} />
+          <div onMouseDown={startResize("w")} onTouchStart={startResize("w")} className={cn("absolute top-10 bottom-10 left-0 cursor-ew-resize z-50 group flex items-center justify-center", isMobile ? "w-6" : "w-3")}>
+            <div className={cn("h-14 rounded-full transition-all", isResizing && resizeDirRef.current?.includes("w") ? "bg-purple-400 w-1 shadow-[0_0_8px_rgba(168,85,247,0.6)]" : "bg-slate-600/0 group-hover:bg-slate-400/50 w-0.5")} />
           </div>
           {/* East edge */}
           <div onMouseDown={startResize("e")} className="absolute top-10 bottom-10 right-0 w-3 cursor-ew-resize z-50 group flex items-center justify-center">
@@ -2036,7 +2035,7 @@ export function AIPanel({
             <button onClick={onClearChat} className="p-2 rounded-xl hover:bg-rose-500/10 text-slate-500 hover:text-rose-400 transition-colors" title="Clear chat">
               <Trash2 size={13} />
             </button>
-            <button onClick={onToggle} className="p-2 rounded-xl hover:bg-white/5 text-slate-500 hover:text-slate-300 transition-colors" title="Close panel">
+            <button onClick={onToggle} className="p-2 rounded-xl bg-white/10 text-slate-300 hover:bg-white/20 hover:text-white transition-colors" title="Close panel">
               <X size={14} />
             </button>
           </div>
