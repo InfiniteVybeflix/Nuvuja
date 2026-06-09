@@ -262,7 +262,7 @@ import {
   Popcorn,
   Ticket,
   Music2,
-  } from "lucide-react";,
+  } from "lucide-react";
 
 import { AIConversation, ChatSession } from "@/types";
 import { cn } from "@/lib/utils";
