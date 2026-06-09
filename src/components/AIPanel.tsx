@@ -2095,44 +2095,46 @@ export function AIPanel({
                 transition={{ delay: 0.4 }}
                 className="space-y-2 mt-4"
               >
-            {suggestions.map((s, i) => (
-              <motion.button
-                key={`suggestion-${i}`}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.5 + i * 0.1 }}
-                whileHover={{ scale: 1.02, x: 6 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => { setInput(s.text.split(" — ")[0]); setShowSuggestions(false); }}
-                className={cn(
-                  "w-full flex items-center gap-4 px-5 py-3.5 rounded-xl text-xs text-left transition-all group border",
-                  s.color === "emerald" ? "bg-emerald-500/5 border-emerald-500/10 hover:bg-emerald-500/10" :
-                  s.color === "amber" ? "bg-amber-500/5 border-amber-500/10 hover:bg-amber-500/10" :
-                  s.color === "sky" ? "bg-sky-500/5 border-sky-500/10 hover:bg-sky-500/10" :
-                  "bg-purple-500/5 border-purple-500/10 hover:bg-purple-500/10"
-                )}
-              >
-                <div className={cn(
-                  "w-9 h-9 rounded-xl flex items-center justify-center shrink-0",
-                  s.color === "emerald" ? "bg-emerald-500/15" :
-                  s.color === "amber" ? "bg-amber-500/15" :
-                  s.color === "sky" ? "bg-sky-500/15" :
-                  "bg-purple-500/15"
-                )}>
-                  <s.icon size={16} className={cn(
-                    s.color === "emerald" ? "text-emerald-400" :
-                    s.color === "amber" ? "text-amber-400" :
-                    s.color === "sky" ? "text-sky-400" :
-                    "text-purple-400"
-                  )} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <span className="text-slate-200 font-semibold block">{s.text.split(" — ")[0]}</span>
-                  <span className="text-slate-600 text-[10px] block mt-0.5">{s.desc}</span>
-                </div>
-                <ChevronRight size={14} className="text-slate-700 group-hover:text-slate-400 transition-colors shrink-0" />
-              </motion.button>
-            ))}
+                {suggestions.map((s, i) => (
+                  <motion.button
+                    key={`suggestion-${i}`}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.5 + i * 0.1 }}
+                    whileHover={{ scale: 1.02, x: 6 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => { setInput(s.text.split(" — ")[0]); setShowSuggestions(false); }}
+                    className={cn(
+                      "w-full flex items-center gap-4 px-5 py-3.5 rounded-xl text-xs text-left transition-all group border",
+                      s.color === "emerald" ? "bg-emerald-500/5 border-emerald-500/10 hover:bg-emerald-500/10" :
+                      s.color === "amber" ? "bg-amber-500/5 border-amber-500/10 hover:bg-amber-500/10" :
+                      s.color === "sky" ? "bg-sky-500/5 border-sky-500/10 hover:bg-sky-500/10" :
+                      "bg-purple-500/5 border-purple-500/10 hover:bg-purple-500/10"
+                    )}
+                  >
+                    <div className={cn(
+                      "w-9 h-9 rounded-xl flex items-center justify-center shrink-0",
+                      s.color === "emerald" ? "bg-emerald-500/15" :
+                      s.color === "amber" ? "bg-amber-500/15" :
+                      s.color === "sky" ? "bg-sky-500/15" :
+                      "bg-purple-500/15"
+                    )}>
+                      <s.icon size={16} className={cn(
+                        s.color === "emerald" ? "text-emerald-400" :
+                        s.color === "amber" ? "text-amber-400" :
+                        s.color === "sky" ? "text-sky-400" :
+                        "text-purple-400"
+                      )} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-slate-200 font-semibold block">{s.text.split(" — ")[0]}</span>
+                      <span className="text-slate-600 text-[10px] block mt-0.5">{s.desc}</span>
+                    </div>
+                    <ChevronRight size={14} className="text-slate-700 group-hover:text-slate-400 transition-colors shrink-0" />
+                  </motion.button>
+                ))}
+              </motion.div>
+            )}
 
             {/* Quick action chips for pro mode */}
             {proMode && conversations.length > 0 && !isLoading && (
